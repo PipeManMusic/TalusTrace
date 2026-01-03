@@ -4,7 +4,7 @@ import os
 import subprocess
 import shutil
 
-# CONFIGURATION: Maps Source Files to their specific Test Suites
+# CONFIGURATION: Talus Trace Test Map
 TEST_MAP = {
     # Backend Logic (The Math)
     "talustrace/backend/models.py": "tests/test_models.py",
@@ -30,8 +30,17 @@ def run_tests(target_file):
     # Default to running ALL tests if mapping not found
     test_target = TEST_MAP.get(target_file, ".")
     
-    # Run pytest with color output enabled
-    result = subprocess.run(["pytest", test_target, "-v"], capture_output=False)
+    # --- FIX: Add current directory to PYTHONPATH ---
+    env = os.environ.copy()
+    # Adds the current folder to the path so 'talustrace' module is found
+    env["PYTHONPATH"] = os.getcwd() + os.pathsep + env.get("PYTHONPATH", "")
+    
+    # Run pytest with color output enabled using the modified env
+    result = subprocess.run(
+        ["pytest", test_target, "-v"], 
+        capture_output=False, 
+        env=env
+    )
     
     if result.returncode == 0:
         print(f"✅ VERIFIED: Changes to {target_file} passed tests.")
@@ -44,7 +53,6 @@ def get_editor_command(filename):
     if env_editor:
         return [env_editor, filename]
     
-    # VS Code is preferred for the "Paste & Save" workflow
     if shutil.which('code'):
         print("🔹 VS Code detected. Opening in 'Wait' mode...")
         return ['code', '--wait', filename]
@@ -54,12 +62,10 @@ def get_editor_command(filename):
 
 def edit_file(filename):
     """Opens the file, waits for user to paste content, then runs tests."""
-    # Ensure directory exists
     directory = os.path.dirname(filename)
     if directory and not os.path.exists(directory):
         os.makedirs(directory, exist_ok=True)
 
-    # Ensure file exists
     if not os.path.exists(filename):
         with open(filename, 'w') as f:
             pass
@@ -68,7 +74,6 @@ def edit_file(filename):
     print(f"📝 Opening {filename}...")
     print("👉 ACTION: Select All -> Paste New Code -> Save -> Close Tab.")
     
-    # This blocks until the editor closes the file
     subprocess.call(cmd)
     
     print("⌛ File closed. Running verification...")
@@ -77,7 +82,6 @@ def edit_file(filename):
 def main():
     if len(sys.argv) < 3:
         print("Usage: python3 dev.py [edit|test] [filename]")
-        print("Example: python3 dev.py edit talustrace/backend/models.py")
         return
         
     command = sys.argv[1]
