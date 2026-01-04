@@ -2,13 +2,23 @@ import sys
 import uuid
 import yaml
 from pathlib import Path
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget, QToolBar, QLabel, QFileDialog, QMenu
+from PySide6.QtWidgets import (
+    QApplication,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+    QToolBar,
+    QLabel,
+    QFileDialog,
+    QMenu,
+    QGraphicsItemGroup,
+)
 from PySide6.QtGui import QAction
 from PySide6.QtCore import Qt
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QMessageBox
 from talustrace.frontend.canvas import HarnessScene, HarnessView
-from talustrace.frontend.items import DeviceItem, WireItem
+from talustrace.frontend.items import DeviceItem, WireItem, TwistNodeItem, TwistedBundleItem
 from talustrace.backend.models import Device, Wire, Harness
 
 class MainWindow(QMainWindow):
@@ -31,6 +41,10 @@ class MainWindow(QMainWindow):
         self.act_add_dev.triggered.connect(self.mode_add_device)
         self.toolbar.addAction(self.act_add_dev)
 
+        self.act_add_bundle = QAction("Add Bundle", self)
+        self.act_add_bundle.triggered.connect(self.mode_add_bundle)
+        self.toolbar.addAction(self.act_add_bundle)
+
         # Menus
         self.recent_files = []
         self.recent_menu = None
@@ -52,6 +66,8 @@ class MainWindow(QMainWindow):
         # Init
         self.device_items = []
         self.wire_items = []
+        self.twist_nodes = []
+        self.bundle_items = []
         self.current_path = None
         self.dirty = False
         self.mark_clean()
@@ -70,12 +86,20 @@ class MainWindow(QMainWindow):
     def mode_add_device(self):
         dummy_model = Device(id="ghost", label="New Device", pins=0)
         ghost = DeviceItem(dummy_model, on_changed=self.mark_dirty, on_delete_device=None, on_delete_pin=None)
-        self.view.start_ghost(ghost)
+        self.view.start_ghost(ghost, mode="PLACE_DEVICE")
         self.status.setText("Place Mode: Click to drop device. Esc to cancel.")
+
+    def mode_add_bundle(self):
+        ghost_group = self._build_bundle_group()
+        self.view.start_ghost(ghost_group, mode="PLACE_BUNDLE")
+        self.status.setText("Place Mode: Click to drop twisted bundle. Esc to cancel.")
 
     def handle_canvas_click(self, x, y):
         if self.view.mode == "PLACE_DEVICE":
             self.add_device(x, y)
+            self.mark_dirty()
+        elif self.view.mode == "PLACE_BUNDLE":
+            self.add_twisted_bundle(x, y)
             self.mark_dirty()
 
     def handle_wire_creation(self, start_pin_item, end_pin_item):
@@ -116,6 +140,37 @@ class MainWindow(QMainWindow):
         if mark_dirty:
             self.mark_dirty()
         return item
+
+    def add_twisted_bundle(self, x, y, spacing=200):
+        node_a = TwistNodeItem(on_changed=self.mark_dirty)
+        node_b = TwistNodeItem(on_changed=self.mark_dirty)
+        node_a.setPos(x, y)
+        node_b.setPos(x + spacing, y)
+
+        bundle = TwistedBundleItem(node_a, node_b, on_changed=self.mark_dirty)
+        bundle.update_geometry()
+
+        self.scene.addItem(node_a)
+        self.scene.addItem(node_b)
+        self.scene.addItem(bundle)
+
+        self.twist_nodes.extend([node_a, node_b])
+        self.bundle_items.append(bundle)
+
+        return bundle
+
+    def _build_bundle_group(self, spacing=200):
+        node_a = TwistNodeItem(on_changed=None)
+        node_b = TwistNodeItem(on_changed=None)
+        node_b.setPos(spacing, 0)
+        bundle = TwistedBundleItem(node_a, node_b, on_changed=None)
+        bundle.update_geometry()
+
+        group = QGraphicsItemGroup()
+        node_a.setParentItem(group)
+        node_b.setParentItem(group)
+        bundle.setParentItem(group)
+        return group
 
     def save_file(self):
         if not self.current_path:
@@ -184,6 +239,8 @@ class MainWindow(QMainWindow):
         self.scene.clear()
         self.device_items.clear()
         self.wire_items.clear()
+        self.twist_nodes.clear()
+        self.bundle_items.clear()
 
         device_map = {}  # ID -> DeviceItem
 
@@ -220,6 +277,8 @@ class MainWindow(QMainWindow):
         self.scene.clear()
         self.device_items.clear()
         self.wire_items.clear()
+        self.twist_nodes.clear()
+        self.bundle_items.clear()
         self.current_path = None
         self.mark_clean()
         self.status.setText("New harness")

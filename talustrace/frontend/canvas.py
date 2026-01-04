@@ -50,9 +50,9 @@ class HarnessView(QGraphicsView):
         self.last_pan_pos = None
 
     # --- MODE: PLACE DEVICE ---
-    def start_ghost(self, item):
+    def start_ghost(self, item, mode="PLACE_DEVICE"):
         self.stop_ghost()
-        self.mode = "PLACE_DEVICE"
+        self.mode = mode
         self.setDragMode(QGraphicsView.NoDrag)
         self.setCursor(Qt.CrossCursor)
         self.ghost_item = item

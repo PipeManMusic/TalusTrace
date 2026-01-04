@@ -771,10 +771,6 @@ class WireItem(QGraphicsPathItem):
         self.halo_path.hide()
         self.halo_path.setZValue(-1)
 
-        self.twist_path = QGraphicsPathItem(self)
-        self.twist_path.setZValue(-0.5)
-        self.twist_path.hide()
-
         self.segment_handles = []
         self.elbow_handles = []
 
@@ -790,21 +786,7 @@ class WireItem(QGraphicsPathItem):
     def contextMenuEvent(self, event):
         menu = QMenu()
         twist_action = QAction("Twisted Pair", menu)
-        twist_action.setCheckable(True)
-        twist_action.setChecked(self.model.twisted)
-
-        def _toggle_twist(checked=False):
-            self.model.twisted = bool(checked)
-            _record_action_usage("wire.twisted")
-            self.update_visuals()
-            self.update_geometry()
-            self._update_tooltip()
-            self._notify_changed()
-
-        twist_action.triggered.connect(_toggle_twist)
-        entries = [
-            ("wire.delete", "Delete Wire", self._delete_wire_confirm),
-        ]
+        entries = [("wire.delete", "Delete Wire", self._delete_wire_confirm)]
 
         color_menu = menu.addMenu("Change Color (DIN 47100)")
         palette = [
@@ -828,9 +810,6 @@ class WireItem(QGraphicsPathItem):
         color_menu.addSeparator()
         pick_key = "wire.color.pick"
         color_menu.addAction(_make_action(color_menu, "Pick Color...", self._pick_custom_color, pick_key))
-
-        menu.addAction(twist_action)
-        menu.addSeparator()
 
         for key, text, slot in sorted(entries, key=lambda e: (-_usage_rank(e[0]), entries.index(e))):
             menu.addAction(_make_action(menu, text, slot, key))
@@ -890,13 +869,6 @@ class WireItem(QGraphicsPathItem):
             base_color = color_map.get(code, QColor(150, 150, 150))
         self.setPen(QPen(base_color, 3))
         self.halo_path.setPen(QPen(SELECTED_COLOR, 6))
-
-        overlay_color = QColor(base_color)
-        overlay_color = overlay_color.lighter(135)
-        twist_pen = QPen(overlay_color, 2, Qt.DashDotLine)
-        twist_pen.setCapStyle(Qt.RoundCap)
-        twist_pen.setJoinStyle(Qt.RoundJoin)
-        self.twist_path.setPen(twist_pen)
 
     def refresh_metadata(self):
         start_meta = getattr(self.source_dev.model, "meta", {}) if self.source_dev else {}
@@ -963,8 +935,6 @@ class WireItem(QGraphicsPathItem):
             path.lineTo(pt)
         self.setPath(path)
         self.halo_path.setPath(path)
-        self._update_twist_path(nodes)
-
         if rebuild_handles:
             self._rebuild_handles(nodes)
         else:
@@ -1038,43 +1008,6 @@ class WireItem(QGraphicsPathItem):
         if length == 0:
             return QPointF(0, 0)
         return QPointF(n.x() / length, n.y() / length)
-
-    def _offset_nodes_for_twist(self, nodes, offset=4.0):
-        if len(nodes) < 2:
-            return nodes
-        out = []
-        sign = 1.0
-        for i, p in enumerate(nodes):
-            if i == 0:
-                n = self._segment_normal(nodes[0], nodes[1])
-            elif i == len(nodes) - 1:
-                n = self._segment_normal(nodes[-2], nodes[-1])
-            else:
-                n1 = self._segment_normal(nodes[i-1], nodes[i])
-                n2 = self._segment_normal(nodes[i], nodes[i+1])
-                n = QPointF(n1.x() + n2.x(), n1.y() + n2.y())
-                length = math.hypot(n.x(), n.y())
-                if length != 0:
-                    n = QPointF(n.x() / length, n.y() / length)
-                else:
-                    n = n1
-            out.append(QPointF(p.x() + n.x() * offset * sign, p.y() + n.y() * offset * sign))
-            sign *= -1.0
-        return out
-
-    def _update_twist_path(self, nodes):
-        if not self.model.twisted:
-            self.twist_path.hide()
-            return
-        offset_nodes = self._offset_nodes_for_twist(nodes, offset=4.0)
-        if len(offset_nodes) < 2:
-            self.twist_path.hide()
-            return
-        path = QPainterPath(offset_nodes[0])
-        for pt in offset_nodes[1:]:
-            path.lineTo(pt)
-        self.twist_path.setPath(path)
-        self.twist_path.show()
 
     def add_elbow_at(self, pt: QPointF):
         pt = self._snap_point(pt)
