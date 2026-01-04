@@ -1,0 +1,40 @@
+{
+  "project_metadata": {
+    "name": "Talus Trace",
+    "version": "0.2.1",
+    "status": "Functional Prototype (Wiring & Serialization Implemented)"
+  },
+  "design_spec": {
+    "coordinate_system": {
+      "grid_snap": 20,
+      "unit": "pixels",
+      "canvas": "Infinite / QGraphicsScene"
+    },
+    "ui_ux_rules": {
+      "selection": "Halo-based (child item). Do not modify parent geometry on select.",
+      "wiring": "Point-to-point. Pins are interactive sub-items. Wires are dynamic and follow parents.",
+      "interaction_modes": ["SELECT", "PLACE_DEVICE", "WIRING"],
+      "colors": {
+        "background": "#1E1E1E",
+        "grid": "#3C3C3C",
+        "device": "#323232",
+        "selection": "#FFA500 (Orange)",
+        "pin_hover": "#00FF00 (Green)"
+      }
+    },
+    "data_integrity": {
+      "serialization": "JSON-based Harness model (Implemented).",
+      "uuid": "8-character truncated UUIDs for device/wire tracking."
+    }
+  },
+  "architecture_map": {
+    "frontend": "app.py (Entry), canvas.py (View), items.py (Components)",
+    "backend": "models.py (Schema), router.py (Pathing), sizer.py (Geometry), labels.py (Naming), printer.py (Hardware)",
+    "tooling": "dev.py (Smart Indent Patcher), manage_issues.py (Issue Tracker)"
+  },
+  "development_workflow": {
+    "issue_tracking": "Run 'python3 manage_issues.py'. AI Agents must move completed items to 'staging' for human review, never directly to 'resolved'.",
+    "environment_context": "This project runs as a desktop application (PySide6) inside a VS Code environment on Linux. Unlike a Web UI, this has direct access to local hardware (printers) and file systems, but requires X11 forwarding or a local display for the GUI."
+  },
+  "restore_command": "cat talus_trace_context.json" 
+}

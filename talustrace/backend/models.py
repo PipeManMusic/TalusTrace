@@ -18,10 +18,18 @@ class Pin(BaseModel):
     id: str
     label: Optional[str] = None
     side: Side = Side.LEFT
+    meta: Dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def default_label(self):
+        # Ensure every pin carries a user-visible label; fallback to id when omitted.
+        if not self.label:
+            self.label = self.id
+        return self
 
 class WireRoute(BaseModel):
     """Represents the physical path of a wire as a series of elbows."""
-    points: List[Tuple[float, float]] = []  # [(x1, y1), (x2, y2)...]
+    points: List[Tuple[float, float]] = Field(default_factory=list)  # [(x1, y1), (x2, y2)...]
 
 # --- Main Components ---
 class Device(BaseModel):
@@ -29,6 +37,7 @@ class Device(BaseModel):
     type: DeviceType = DeviceType.AUTO_BOX
     label: str = Field(..., description="Human readable label (e.g. 'MS3Pro')")
     pins: Union[List[Pin], int] = Field(..., description="List of pins OR count")
+    meta: Dict[str, Any] = Field(default_factory=dict)
     
     # Physical placement on canvas (Optional, defaults to 0,0)
     x: float = 0.0
@@ -42,6 +51,7 @@ class Device(BaseModel):
             return [
                 Pin(
                     id=str(i+1), 
+                    label=str(i+1),
                     side=Side.LEFT if i % 2 == 0 else Side.RIGHT
                 ) 
                 for i in range(v)
@@ -60,10 +70,13 @@ class Wire(BaseModel):
     color: str = "WH"
     stripe: Optional[str] = None
     gauge: Union[int, str] = 18
+    twisted: bool = False
+    pair_id: Optional[str] = None
     
     # Logic & Fabrication
     signal: Optional[str] = None  # The "Signal Name" for Label Generation
-    route: List[Tuple[float, float]] = [] # User-defined elbows
+    meta: Dict[str, Any] = Field(default_factory=dict)
+    route: List[Tuple[float, float]] = Field(default_factory=list) # User-defined elbows
 
     @model_validator(mode='after')
     def validate_endpoints(self):
@@ -74,7 +87,7 @@ class Wire(BaseModel):
 
 # --- The Root Document ---
 class Harness(BaseModel):
-    meta: Dict[str, Any] = {}
-    settings: Dict[str, Any] = {"grid_size": 20}
-    devices: List[Device] = []
-    wires: List[Wire] = []
+    meta: Dict[str, Any] = Field(default_factory=dict)
+    settings: Dict[str, Any] = Field(default_factory=lambda: {"grid_size": 20})
+    devices: List[Device] = Field(default_factory=list)
+    wires: List[Wire] = Field(default_factory=list)

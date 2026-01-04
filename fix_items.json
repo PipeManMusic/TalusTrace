@@ -1,0 +1,109 @@
+[
+  {
+    "id": 17,
+    "type": "feature",
+    "title": "Delete device via context menu",
+    "description": "Right-click a device to delete it (with confirm), removing attached wires and marking dirty.",
+    "status": "staging",
+    "created_at": "2026-01-03T21:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-03T21:15:00.000000",
+        "content": "Implemented delete action on device context menu with confirmation; deletion removes attached wires, updates scene lists, and marks dirty."
+      }
+    ]
+  },
+  {
+    "id": 18,
+    "type": "feature",
+    "title": "Delete pin via context menu",
+    "description": "Right-click a pin to delete it (with confirm), removing attached wires, re-laying pins, and marking dirty.",
+    "status": "staging",
+    "created_at": "2026-01-03T21:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-03T22:20:00.000000",
+        "content": "Implemented pin delete action with confirmation; removes attached wires, updates model/layout, and marks dirty. Added regression test."
+      }
+    ]
+  },
+  {
+    "id": 19,
+    "type": "feature",
+    "title": "Delete wire via context menu",
+    "description": "Right-click a wire to delete it and mark dirty.",
+    "status": "staging",
+    "created_at": "2026-01-03T21:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-04T00:20:00.000000",
+        "content": "Implemented wire delete action on context menu with confirmation; deletes from scene, detaches from devices, updates lists, and marks dirty. Added regression test." 
+      }
+    ]
+  },
+  {
+    "id": 20,
+    "type": "feature",
+    "title": "Change wire color via context menu",
+    "description": "Right-click a wire to pick a color (palette or dialog), update model/pen, and mark dirty.",
+    "status": "staging",
+    "created_at": "2026-01-03T21:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-04T00:40:00.000000",
+        "content": "Added wire color context menu with DIN 47100 palette and custom picker; updates model color, refreshes pen, and marks dirty. Added regression test." 
+      }
+    ]
+  },
+  {
+    "id": 21,
+    "type": "bug",
+    "title": "Save dialog should add .yaml extension",
+    "description": "File save dialog does not append .yaml automatically; ensure saved files get the .yaml suffix by default.",
+    "status": "staging",
+    "created_at": "2026-01-03T22:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-04T01:05:00.000000",
+        "content": "Added .yaml suffix enforcement via save-as; keeps .yml, appends .yaml when missing; added regression test and Path normalization." 
+      }
+    ]
+  },
+  {
+    "id": 22,
+    "type": "feature",
+    "title": "Wire metadata inheritance from pins",
+    "description": "Allow wires to carry metadata that inherits or aggregates attributes from the connected pins (e.g., function, signal type).",
+    "status": "staging",
+    "created_at": "2026-01-04T01:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-04T01:20:00.000000",
+        "content": "Added pin and wire meta fields; wire creation merges pin meta (end pin overrides); regression tests cover merge behavior." 
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "type": "feature",
+    "title": "Draw twisted pair",
+    "description": "Provide a drawing/visualization option for twisted pair wires, including coupled rendering and metadata to mark pairs.",
+    "status": "staging",
+    "created_at": "2026-01-04T01:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-04T12:20:00.000000",
+        "content": "Implemented twisted-pair rendering: Wire model supports twisted flag/pair_id; context menu toggle; dual-path overlay with alternating offset and styled tooltip row."
+      }
+    ]
+  },
+  {
+    "id": 24,
+    "type": "bug",
+    "title": "Segment handle drag oscillation",
+    "description": "Dragging rectangular line-segment grips sometimes jitters/oscillates away from the cursor (same behavior as issue 15 but for segment handles).",
+    "status": "open",
+    "created_at": "2026-01-04T12:00:00.000000",
+    "notes": []
+  }
+]

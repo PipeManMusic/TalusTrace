@@ -1,98 +1,121 @@
-#!/usr/bin/env python3
 import sys
 import os
 import subprocess
-import shutil
+import json
 
-# CONFIGURATION: Talus Trace Test Map
-TEST_MAP = {
-    # Backend Logic (The Math)
-    "talustrace/backend/models.py": "tests/test_models.py",
-    "talustrace/backend/router.py": "tests/test_geometry.py",
-    "talustrace/backend/sizer.py": "tests/test_sizer.py",
-    "talustrace/backend/labels.py": "tests/test_labels.py",
+# Configuration
+TEST_DIR = "tests"
 
-    # Frontend (The Canvas)
-    "talustrace/frontend/canvas.py": "tests/test_gui.py",
-    "talustrace/frontend/app.py": "tests/test_gui.py",
-    "talustrace/frontend/items.py": "tests/test_rendering.py",
-
-    # Test Files (Self-Verification)
-    "tests/test_models.py": "tests/test_models.py",
-    "tests/test_geometry.py": "tests/test_geometry.py",
-    "tests/test_gui.py": "tests/test_gui.py",
-}
-
-def run_tests(target_file):
-    """Runs the specific test suite associated with the edited file."""
-    print(f"⚡ Verifying {target_file}...")
-    
-    # Default to running ALL tests if mapping not found
-    test_target = TEST_MAP.get(target_file, ".")
-    
-    # --- FIX: Add current directory to PYTHONPATH ---
-    env = os.environ.copy()
-    # Adds the current folder to the path so 'talustrace' module is found
-    env["PYTHONPATH"] = os.getcwd() + os.pathsep + env.get("PYTHONPATH", "")
-    
-    # Run pytest with color output enabled using the modified env
-    result = subprocess.run(
-        ["pytest", test_target, "-v"], 
-        capture_output=False, 
-        env=env
-    )
-    
-    if result.returncode == 0:
-        print(f"✅ VERIFIED: Changes to {target_file} passed tests.")
-    else:
-        print(f"❌ FAILED: Changes to {target_file} broke the build.")
-
-def get_editor_command(filename):
-    """Determines the best editor to use (VS Code > Editor Env > Nano)."""
-    env_editor = os.getenv('EDITOR')
-    if env_editor:
-        return [env_editor, filename]
-    
-    if shutil.which('code'):
-        print("🔹 VS Code detected. Opening in 'Wait' mode...")
-        return ['code', '--wait', filename]
-    
-    print("🔸 VS Code not found. Falling back to nano.")
-    return ['nano', filename]
-
-def edit_file(filename):
-    """Opens the file, waits for user to paste content, then runs tests."""
-    directory = os.path.dirname(filename)
-    if directory and not os.path.exists(directory):
-        os.makedirs(directory, exist_ok=True)
-
-    if not os.path.exists(filename):
-        with open(filename, 'w') as f:
-            pass
-
-    cmd = get_editor_command(filename)
-    print(f"📝 Opening {filename}...")
-    print("👉 ACTION: Select All -> Paste New Code -> Save -> Close Tab.")
-    
-    subprocess.call(cmd)
-    
+def run_tests():
+    """Runs pytest and reports results. Returns True if passed."""
     print("⌛ File closed. Running verification...")
-    run_tests(filename)
-
-def main():
-    if len(sys.argv) < 3:
-        print("Usage: python3 dev.py [edit|test] [filename]")
-        return
-        
-    command = sys.argv[1]
-    target = sys.argv[2]
-    
-    if command == "edit":
-        edit_file(target)
-    elif command == "test":
-        run_tests(target)
+    print("⚡ Verifying...")
+    env = os.environ.copy()
+    env["PYTHONPATH"] = os.getcwd()
+    result = subprocess.run(["pytest", TEST_DIR], capture_output=False, env=env)
+    if result.returncode == 0:
+        print("✅ VERIFIED: Changes passed tests.")
+        return True
     else:
-        print(f"Unknown command: {command}")
+        print("❌ FAILED: Changes broke the build.")
+        return False
+
+def edit_file(filepath):
+    print(f"🔹 VS Code detected. Opening {filepath}...")
+    subprocess.call(["code", "--wait", filepath])
+    run_tests()
+
+def get_indent(line):
+    return line[:len(line) - len(line.lstrip())]
+
+def apply_patches_from_data(data):
+    patches = []
+    post_exec = None
+    if isinstance(data, list):
+        patches = data
+    elif isinstance(data, dict):
+        patches = data.get("patches", [])
+        post_exec = data.get("exec")
+    
+    file_groups = {}
+    for p in patches:
+        path = p.get('file')
+        if not path: continue
+        if path not in file_groups:
+            file_groups[path] = []
+        file_groups[path].append(p)
+
+    for filepath, group in file_groups.items():
+        # NEW: Ensure directory exists
+        dir_name = os.path.dirname(filepath)
+        if dir_name and not os.path.exists(dir_name):
+            os.makedirs(dir_name)
+
+        # NEW: If file doesn't exist, start with an empty list
+        if not os.path.exists(filepath):
+            print(f"🆕 Creating new file: {filepath}")
+            lines = []
+        else:
+            print(f"🔹 Patching {filepath}...")
+            with open(filepath, 'r') as f:
+                lines = f.readlines()
+
+        group.sort(key=lambda x: int(x['start']), reverse=True)
+
+        for patch in group:
+            s = int(patch['start'])
+            e = int(patch['end'])
+            content = patch['content']
+            if isinstance(content, str): content = [content]
+            
+            target_idx = max(0, s - 1)
+            target_indent = get_indent(lines[target_idx]) if target_idx < len(lines) else ""
+            patch_base_indent = get_indent(content[0]) if content else ""
+            
+            aligned_content = []
+            for line in content:
+                stripped = line.lstrip()
+                if not stripped:
+                    aligned_content.append('\n')
+                else:
+                    current_indent = get_indent(line)
+                    relative_indent = current_indent[len(patch_base_indent):]
+                    new_line = target_indent + relative_indent + stripped
+                    if not new_line.endswith('\n'): new_line += '\n'
+                    aligned_content.append(new_line)
+
+            idx_start = max(0, s - 1)
+            idx_end = e 
+            lines[idx_start:idx_end] = aligned_content
+
+        with open(filepath, 'w') as f:
+            f.writelines(lines)
+
+    print("✅ All patches applied.")
+    if run_tests():
+        if post_exec:
+            print(f"\n🚀 Tests Passed. Executing: {post_exec}\n")
+            subprocess.call(post_exec, shell=True)
+
+def apply_json_interactive():
+    temp_file = "_patch_input.json"
+    template = {"patches": [{"file": "new_file.py", "start": 1, "end": 0, "content": ["print('hello')"]}], "exec": "ls"}
+    with open(temp_file, 'w') as f:
+        json.dump(template, f, indent=2)
+    print("🔹 Opening Interactive JSON Patch...")
+    subprocess.call(["code", "--wait", temp_file])
+    try:
+        with open(temp_file, 'r') as f:
+            data = json.load(f)
+        apply_patches_from_data(data)
+    except json.JSONDecodeError as e:
+        print(f"❌ Error: Invalid JSON provided: {e}")
+    finally:
+        if os.path.exists(temp_file): os.remove(temp_file)
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2: pass
+    else:
+        arg1 = sys.argv[1]
+        if arg1 == "--json": apply_json_interactive()
+        elif arg1 == "edit" and len(sys.argv) > 2: edit_file(sys.argv[2])
