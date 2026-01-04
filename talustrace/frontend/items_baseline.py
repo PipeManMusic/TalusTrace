@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QColorDialog,
 )
-from PySide6.QtGui import QPen, QBrush, QColor, QFont, QAction, QPainterPath, QPainterPathStroker
+from PySide6.QtGui import QPen, QBrush, QColor, QFont, QAction, QPainterPath, QPainterPathStroker, QPainter
 from PySide6.QtCore import Qt, QRectF, QLineF, QPointF, QTimer
 from talustrace.backend.models import Side, Pin as PinModel
 from talustrace.backend.sizer import AutoSizer
