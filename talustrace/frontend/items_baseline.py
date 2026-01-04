@@ -1072,33 +1072,30 @@ class WireItem(QGraphicsPathItem):
 
 
 class TwistNodeItem(QGraphicsItem):
-    """Compact connector block for twisted-pair bundles.
+    """Minimal junction for twisted-pair bundles.
 
-    Auto-creates three pins: High (left), Low (right), Shield (bottom).
-    Uses a halo sibling for selection to avoid geometry churn.
+    Layout: two pins on the left (High/Low), one on the right (Shield).
+    Compact visual, no label.
     """
 
-    WIDTH = 120
-    HEIGHT = 80
+    WIDTH = 44
+    HEIGHT = 26
 
     def __init__(self, label="Twist", on_changed=None):
         super().__init__()
         self.on_changed = on_changed
         self.attached_wires: dict[str, list] = defaultdict(list)
+        self.bundle_refs: list = []
 
         self._rect = QRectF(0, 0, self.WIDTH, self.HEIGHT)
-        self._brush = QBrush(QColor(40, 60, 85))
-        self._pen = QPen(QColor(180, 210, 255), 2)
+        self._brush = QBrush(QColor(55, 55, 65))
+        self._pen = QPen(QColor(170, 200, 255), 1.8)
 
         self.halo = QGraphicsRectItem()
         self.halo.setPen(QPen(SELECTED_COLOR, 4))
         self.halo.setBrush(Qt.NoBrush)
         self.halo.hide()
         self.halo.setZValue(-1)
-
-        self.label_item = QGraphicsSimpleTextItem(label, self)
-        self.label_item.setBrush(QBrush(TEXT_COLOR))
-        self.label_item.setFont(QFont("Arial", 9, QFont.Bold))
 
         self.pins: dict[str, PinItem] = {}
         self._build_pins()
@@ -1113,16 +1110,15 @@ class TwistNodeItem(QGraphicsItem):
                 pin.scene().removeItem(pin)
         self.pins = {}
 
-        high = PinModel(id="H", label="High", side=Side.LEFT)
-        low = PinModel(id="L", label="Low", side=Side.RIGHT)
-        shield = PinModel(id="S", label="Shield", side=Side.BOTTOM)
+        high = PinModel(id="H", label="H", side=Side.LEFT)
+        low = PinModel(id="L", label="L", side=Side.LEFT)
+        shield = PinModel(id="S", label="S", side=Side.RIGHT)
 
-        self._add_pin(high, x1=0, y1=self.HEIGHT * 0.35, x2=-6, y2=self.HEIGHT * 0.35)
-        self._add_pin(low, x1=self.WIDTH, y1=self.HEIGHT * 0.35, x2=self.WIDTH + 6, y2=self.HEIGHT * 0.35)
-        self._add_pin(shield, x1=self.WIDTH * 0.5, y1=self.HEIGHT, x2=self.WIDTH * 0.5, y2=self.HEIGHT + 6)
-
-        lb = self.label_item.boundingRect()
-        self.label_item.setPos((self.WIDTH - lb.width()) / 2, (self.HEIGHT - lb.height()) / 2)
+        y_top = self.HEIGHT * 0.35
+        y_bottom = self.HEIGHT * 0.65
+        self._add_pin(high, x1=0, y1=y_top, x2=-6, y2=y_top)
+        self._add_pin(low, x1=0, y1=y_bottom, x2=-6, y2=y_bottom)
+        self._add_pin(shield, x1=self.WIDTH, y1=self.HEIGHT * 0.5, x2=self.WIDTH + 6, y2=self.HEIGHT * 0.5)
 
     def _add_pin(self, pin_model: PinModel, x1, y1, x2, y2):
         pin = PinItem(pin_model, self)
@@ -1131,6 +1127,10 @@ class TwistNodeItem(QGraphicsItem):
 
     def register_wire(self, pin_id: str, wire_item):
         self.attached_wires[pin_id].append(wire_item)
+
+    def register_bundle(self, bundle_item):
+        if bundle_item not in self.bundle_refs:
+            self.bundle_refs.append(bundle_item)
 
     def unregister_wire(self, pin_id: str, wire_item):
         if pin_id in self.attached_wires and wire_item in self.attached_wires[pin_id]:
@@ -1198,6 +1198,9 @@ class TwistNodeItem(QGraphicsItem):
             self.halo.setPos(self.pos())
             if callable(self.on_changed):
                 self.on_changed()
+            for b in list(self.bundle_refs):
+                if b:
+                    b.update_geometry()
         return super().itemChange(change, value)
 
 

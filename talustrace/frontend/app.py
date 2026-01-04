@@ -157,6 +157,9 @@ class MainWindow(QMainWindow):
         self.twist_nodes.extend([node_a, node_b])
         self.bundle_items.append(bundle)
 
+        node_a.register_bundle(bundle)
+        node_b.register_bundle(bundle)
+
         return bundle
 
     def _build_bundle_group(self, spacing=200):
