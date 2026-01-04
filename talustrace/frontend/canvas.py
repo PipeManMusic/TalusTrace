@@ -91,8 +91,8 @@ class HarnessView(QGraphicsView):
 
         pos = self.mapToScene(event.position().toPoint())
 
-        # Logic 1: Moving a Ghost Device
-        if self.mode == "PLACE_DEVICE" and self.ghost_item:
+        # Logic 1: Moving a ghost (device or bundle)
+        if self.mode in ("PLACE_DEVICE", "PLACE_BUNDLE") and self.ghost_item:
             snap_x = round(pos.x() / GRID_SIZE) * GRID_SIZE
             snap_y = round(pos.y() / GRID_SIZE) * GRID_SIZE
             self.ghost_item.setPos(snap_x, snap_y)
@@ -115,8 +115,8 @@ class HarnessView(QGraphicsView):
         if event.button() == Qt.LeftButton:
             scene_pos = self.mapToScene(event.position().toPoint())
 
-            # 1. Place Device
-            if self.mode == "PLACE_DEVICE":
+            # 1. Place device/bundle
+            if self.mode in ("PLACE_DEVICE", "PLACE_BUNDLE"):
                 snap_x = round(scene_pos.x() / GRID_SIZE) * GRID_SIZE
                 snap_y = round(scene_pos.y() / GRID_SIZE) * GRID_SIZE
                 self.canvas_clicked.emit(snap_x, snap_y)
