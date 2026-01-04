@@ -24,7 +24,7 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtGui import QPen, QBrush, QColor, QFont, QAction, QPainterPath, QPainterPathStroker
 from PySide6.QtCore import Qt, QRectF, QLineF, QPointF, QTimer
-from talustrace.backend.models import Side
+from talustrace.backend.models import Side, Pin as PinModel
 from talustrace.backend.sizer import AutoSizer
 from talustrace.backend.printer import Printer
 from talustrace.backend.labels import LabelManager
@@ -1136,3 +1136,313 @@ class WireItem(QGraphicsPathItem):
     def _notify_changed(self):
         if callable(self.on_changed):
             self.on_changed()
+
+
+class TwistNodeItem(QGraphicsItem):
+    """Compact connector block for twisted-pair bundles.
+
+    Auto-creates three pins: High (left), Low (right), Shield (bottom).
+    Uses a halo sibling for selection to avoid geometry churn.
+    """
+
+    WIDTH = 120
+    HEIGHT = 80
+
+    def __init__(self, label="Twist", on_changed=None):
+        super().__init__()
+        self.on_changed = on_changed
+        self.attached_wires: dict[str, list] = defaultdict(list)
+
+        self._rect = QRectF(0, 0, self.WIDTH, self.HEIGHT)
+        self._brush = QBrush(QColor(40, 60, 85))
+        self._pen = QPen(QColor(180, 210, 255), 2)
+
+        self.halo = QGraphicsRectItem()
+        self.halo.setPen(QPen(SELECTED_COLOR, 4))
+        self.halo.setBrush(Qt.NoBrush)
+        self.halo.hide()
+        self.halo.setZValue(-1)
+
+        self.label_item = QGraphicsSimpleTextItem(label, self)
+        self.label_item.setBrush(QBrush(TEXT_COLOR))
+        self.label_item.setFont(QFont("Arial", 9, QFont.Bold))
+
+        self.pins: dict[str, PinItem] = {}
+        self._build_pins()
+
+        self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemSendsGeometryChanges)
+        self._drag_start_pos = None
+        self._item_start_pos = None
+
+    def _build_pins(self):
+        for pin in list(self.pins.values()):
+            if pin.scene():
+                pin.scene().removeItem(pin)
+        self.pins = {}
+
+        high = PinModel(id="H", label="High", side=Side.LEFT)
+        low = PinModel(id="L", label="Low", side=Side.RIGHT)
+        shield = PinModel(id="S", label="Shield", side=Side.BOTTOM)
+
+        self._add_pin(high, x1=0, y1=self.HEIGHT * 0.35, x2=-6, y2=self.HEIGHT * 0.35)
+        self._add_pin(low, x1=self.WIDTH, y1=self.HEIGHT * 0.35, x2=self.WIDTH + 6, y2=self.HEIGHT * 0.35)
+        self._add_pin(shield, x1=self.WIDTH * 0.5, y1=self.HEIGHT, x2=self.WIDTH * 0.5, y2=self.HEIGHT + 6)
+
+        lb = self.label_item.boundingRect()
+        self.label_item.setPos((self.WIDTH - lb.width()) / 2, (self.HEIGHT - lb.height()) / 2)
+
+    def _add_pin(self, pin_model: PinModel, x1, y1, x2, y2):
+        pin = PinItem(pin_model, self)
+        pin.set_visual_geometry(x1, y1, x2, y2)
+        self.pins[pin_model.id] = pin
+
+    def register_wire(self, pin_id: str, wire_item):
+        self.attached_wires[pin_id].append(wire_item)
+
+    def unregister_wire(self, pin_id: str, wire_item):
+        if pin_id in self.attached_wires and wire_item in self.attached_wires[pin_id]:
+            self.attached_wires[pin_id].remove(wire_item)
+
+    def first_wire_color(self, pin_id: str):
+        wires = self.attached_wires.get(pin_id) or []
+        if not wires:
+            return None
+        pen = getattr(wires[0], "pen", None)
+        return pen().color() if callable(pen) else None
+
+    def get_pin_tip_scene_pos(self, pin_id: str):
+        pin = self.pins.get(pin_id)
+        if not pin:
+            return self.mapToScene(self._rect.center())
+        return pin.get_tip_scene_pos()
+
+    def boundingRect(self):
+        return self._rect
+
+    def paint(self, painter, option, widget=None):
+        painter.setBrush(self._brush)
+        painter.setPen(self._pen)
+        painter.drawRoundedRect(self._rect, 6, 6)
+
+    def _snap(self, v):
+        return round(v / GRID_SIZE) * GRID_SIZE
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            self._drag_start_pos = event.scenePos()
+            self._item_start_pos = self.pos()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if self._drag_start_pos and (event.buttons() & Qt.LeftButton):
+            delta = event.scenePos() - self._drag_start_pos
+            new_pos = self._item_start_pos + delta
+            new_pos.setX(self._snap(new_pos.x()))
+            new_pos.setY(self._snap(new_pos.y()))
+            self.setPos(new_pos)
+            if callable(self.on_changed):
+                self.on_changed()
+            event.accept()
+            return
+        event.ignore()
+
+    def mouseReleaseEvent(self, event):
+        self._drag_start_pos = None
+        self._item_start_pos = None
+        super().mouseReleaseEvent(event)
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemSceneChange:
+            if value:
+                value.addItem(self.halo)
+            elif self.halo.scene():
+                self.halo.scene().removeItem(self.halo)
+        if change == QGraphicsItem.ItemSelectedHasChanged:
+            self.halo.setVisible(value)
+            if value:
+                self.halo.setPos(self.pos())
+        if change == QGraphicsItem.ItemPositionHasChanged:
+            self.halo.setPos(self.pos())
+            if callable(self.on_changed):
+                self.on_changed()
+        return super().itemChange(change, value)
+
+
+class TwistedBundleItem(QGraphicsPathItem):
+    """Double-helix visual connecting two TwistNodeItems with a single elbow handle."""
+
+    def __init__(self, source_node: TwistNodeItem, target_node: TwistNodeItem, on_changed=None):
+        super().__init__()
+        self.source_node = source_node
+        self.target_node = target_node
+        self.on_changed = on_changed
+
+        self.amplitude = 5.0
+        self.wavelength = 40.0
+        self.samples = 60
+
+        self.color_a = QColor(255, 80, 80)
+        self.color_b = QColor(80, 180, 255)
+
+        self.path_a = QPainterPath()
+        self.path_b = QPainterPath()
+
+        self.halo_path = QGraphicsPathItem(self)
+        self.halo_path.setPen(QPen(SELECTED_COLOR, 8))
+        self.halo_path.setOpacity(0.45)
+        self.halo_path.hide()
+        self.halo_path.setZValue(-1)
+
+        self.setFlags(QGraphicsItem.ItemIsSelectable)
+        self.setZValue(-0.8)
+
+        s = self._start_point()
+        e = self._end_point()
+        self.elbow_pos = QPointF((s.x() + e.x()) / 2, (s.y() + e.y()) / 2)
+
+        self.handle = QGraphicsEllipseItem(-7, -7, 14, 14, self)
+        self.handle.setBrush(QBrush(QColor(200, 200, 200)))
+        self.handle.setPen(QPen(Qt.NoPen))
+        self.handle.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+        self.handle.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.handle.setZValue(2)
+        self.handle.mouseMoveEvent = self._handle_move
+
+        self.recalculate_path()
+        self.handle.setPos(self.elbow_pos)
+
+    def _start_point(self):
+        return self.source_node.get_pin_tip_scene_pos("H")
+
+    def _end_point(self):
+        return self.target_node.get_pin_tip_scene_pos("L")
+
+    def _poly_points(self):
+        return [self._start_point(), self.elbow_pos, self._end_point()]
+
+    def _segment_lengths(self, pts):
+        lengths = []
+        total = 0.0
+        for i in range(len(pts) - 1):
+            seg_len = QLineF(pts[i], pts[i + 1]).length()
+            lengths.append(seg_len)
+            total += seg_len
+        return lengths, total
+
+    def _point_at(self, pts, seg_lengths, total_len, t):
+        if total_len == 0:
+            return pts[0], QPointF(0, -1)
+        target_dist = t * total_len
+        acc = 0.0
+        for i, seg_len in enumerate(seg_lengths):
+            if seg_len == 0:
+                continue
+            if acc + seg_len >= target_dist:
+                local_t = (target_dist - acc) / seg_len
+                a, b = pts[i], pts[i + 1]
+                x = a.x() + (b.x() - a.x()) * local_t
+                y = a.y() + (b.y() - a.y()) * local_t
+                dir_vec = QPointF(b.x() - a.x(), b.y() - a.y())
+                return QPointF(x, y), dir_vec
+            acc += seg_len
+        return pts[-1], QPointF(0, -1)
+
+    def _normal(self, dir_vec: QPointF):
+        dx, dy = dir_vec.x(), dir_vec.y()
+        if dx == 0 and dy == 0:
+            return QPointF(0, -1)
+        n = QPointF(-dy, dx)
+        length = math.hypot(n.x(), n.y())
+        if length == 0:
+            return QPointF(0, -1)
+        return QPointF(n.x() / length, n.y() / length)
+
+    def recalculate_path(self):
+        pts = self._poly_points()
+        seg_lengths, total_len = self._segment_lengths(pts)
+        if total_len == 0:
+            base_path = QPainterPath(pts[0])
+            self.path_a = base_path
+            self.path_b = base_path
+            self.setPath(base_path)
+            self.halo_path.setPath(base_path)
+            return
+
+        step = 1.0 / max(self.samples - 1, 1)
+        k = (2 * math.pi) / max(self.wavelength, 1.0)
+
+        def build_path(phase_shift):
+            p0, _ = self._point_at(pts, seg_lengths, total_len, 0.0)
+            path = QPainterPath(p0)
+            for i in range(1, self.samples):
+                t = i * step
+                base_pt, dir_vec = self._point_at(pts, seg_lengths, total_len, t)
+                n = self._normal(dir_vec)
+                phase = k * (t * total_len) + phase_shift
+                offset = math.sin(phase) * self.amplitude
+                offset_pt = QPointF(base_pt.x() + n.x() * offset, base_pt.y() + n.y() * offset)
+                path.lineTo(offset_pt)
+            return path
+
+        self.path_a = build_path(0.0)
+        self.path_b = build_path(math.pi)
+
+        # Envelope path for selection/hit area
+        env = QPainterPath(self.path_a.pointAtPercent(0))
+        env.addPath(self.path_a)
+        env.addPath(self.path_b)
+        self.setPath(env)
+        self.halo_path.setPath(env)
+        self._update_colors_from_nodes()
+
+    def _update_colors_from_nodes(self):
+        c_high = self.source_node.first_wire_color("H") or self.target_node.first_wire_color("H")
+        c_low = self.source_node.first_wire_color("L") or self.target_node.first_wire_color("L")
+        if c_high:
+            self.color_a = c_high
+        if c_low:
+            self.color_b = c_low
+
+    def paint(self, painter, option, widget=None):
+        pen_a = QPen(self.color_a, 3)
+        pen_b = QPen(self.color_b, 3)
+        pen_a.setCapStyle(Qt.RoundCap)
+        pen_b.setCapStyle(Qt.RoundCap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setPen(pen_a)
+        painter.drawPath(self.path_a)
+        painter.setPen(pen_b)
+        painter.drawPath(self.path_b)
+
+    def shape(self):
+        stroker = QPainterPathStroker()
+        stroker.setWidth(14)
+        return stroker.createStroke(self.path())
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemSelectedHasChanged:
+            self.halo_path.setVisible(value)
+        return super().itemChange(change, value)
+
+    def update_geometry(self):
+        self.recalculate_path()
+        self.handle.setPos(self.elbow_pos)
+        if callable(self.on_changed):
+            self.on_changed()
+
+    def set_elbow(self, scene_pos: QPointF):
+        snapped = QPointF(round(scene_pos.x() / GRID_SIZE) * GRID_SIZE, round(scene_pos.y() / GRID_SIZE) * GRID_SIZE)
+        self.elbow_pos = snapped
+        self.update_geometry()
+
+    # Hook handle movement to elbow updates
+    def mouseMoveEvent(self, event):
+        if event.buttons() & Qt.LeftButton and self.handle.isUnderMouse():
+            self.set_elbow(event.scenePos())
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+    def _handle_move(self, event):
+        self.set_elbow(event.scenePos())
+        event.accept()
