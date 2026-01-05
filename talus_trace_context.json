@@ -14,6 +14,7 @@
       "selection": "Halo-based (child item). Do not modify parent geometry on select.",
       "wiring": "Point-to-point. Pins are interactive sub-items. Wires are dynamic and follow parents.",
       "interaction_modes": ["SELECT", "PLACE_DEVICE", "WIRING"],
+      "bundle_handle_policy": "Elbows are explicit only; no implicit main handle on TwistedPair bundles.",
       "colors": {
         "background": "#1E1E1E",
         "grid": "#3C3C3C",

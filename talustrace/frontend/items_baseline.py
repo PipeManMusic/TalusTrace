@@ -28,6 +28,11 @@ from talustrace.backend.models import Side, Pin as PinModel
 from talustrace.backend.sizer import AutoSizer
 from talustrace.backend.printer import Printer
 from talustrace.backend.labels import LabelManager
+import os
+
+# Debugging flag (set TALUSTRACE_HANDLE_DEBUG=1 to enable verbose handle debug prints)
+HANDLE_DEBUG = bool(os.environ.get('TALUSTRACE_HANDLE_DEBUG'))
+HANDLE_DEBUG_VERBOSE = bool(os.environ.get('TALUSTRACE_HANDLE_DEBUG_VERBOSE'))
 
 # Visual Constants
 GRID_SIZE = 20
@@ -168,22 +173,44 @@ class PinItem(QGraphicsRectItem):
         self.setPen(Qt.NoPen)
         self.line = QGraphicsLineItem(self)
         self.line.setPen(QPen(PIN_COLOR, 3))
+        # Visual tip circle at the end of the pin line
+        # Restore original smaller tip for open-wire appearance
+        self.tip = QGraphicsEllipseItem(-3, -3, 6, 6, self)
+        self.tip.setBrush(QBrush(PIN_COLOR))
+        self.tip.setPen(Qt.NoPen)
+        self.tip.setZValue(1)
         self.setAcceptHoverEvents(True)
+        # Keep hover feedback simple (color change)
+        self._hovered = False
+
     def set_visual_geometry(self, x1, y1, x2, y2):
         self.setPos(x1, y1)
         self.line.setLine(0, 0, x2-x1, y2-y1)
+        # Place tip at the end of the line
+        p2 = self.line.line().p2()
+        self.tip.setPos(p2)
+
     def hoverEnterEvent(self, event):
         self.line.setPen(QPen(PIN_HOVER_COLOR, 3))
+        self.tip.setBrush(QBrush(PIN_HOVER_COLOR))
+        # scale tip slightly for visual feedback
+        self.tip.setScale(1.2)
+        self._hovered = True
         super().hoverEnterEvent(event)
+
     def hoverLeaveEvent(self, event):
         self.line.setPen(QPen(PIN_COLOR, 2))
+        self.tip.setBrush(QBrush(PIN_COLOR))
+        self.tip.setScale(1.0)
+        self._hovered = False
         super().hoverLeaveEvent(event)
+
     def get_scene_pos(self):
         return self.mapToScene(0, 0)
 
     def get_tip_scene_pos(self):
         # Tip is the end of the drawn pin line, in scene coords
-        return self.line.mapToScene(self.line.line().p2())
+        return self.tip.mapToScene(self.tip.boundingRect().center())
 
     def contextMenuEvent(self, event):
         menu = QMenu()
@@ -258,6 +285,18 @@ class DeviceItem(QGraphicsItem):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
+            # If a handle (segment/elbow) is on top at this location, let it handle the event instead
+            try:
+                items = self.scene().items(event.scenePos())
+                for it in items:
+                    if it is self:
+                        continue
+                    if it.__class__.__name__ in ('SegmentHandle', 'ElbowHandle'):
+                        event.ignore()
+                        return
+            except Exception:
+                pass
+
             self._drag_start_pos = event.scenePos()
             self._item_start_pos = self.pos()
             # Don't accept yet, let super handle selection
@@ -698,10 +737,18 @@ class ElbowHandle(QGraphicsEllipseItem):
         self.index = index
         self.setBrush(QBrush(ELBOW_COLOR))
         self.setPen(Qt.NoPen)
+        # Tag this item so diagnostics can identify elbow handles vs other ellipse items
+        try:
+            self.setData(0, "elbow_handle")
+        except Exception:
+            pass
         # Keep size fixed on zoom; still accept drags so we can drive model updates.
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
-        self.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.setZValue(3)
+        # Do not let Qt move this item automatically; drives moves via model updates to avoid oscillation.
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setAcceptHoverEvents(True)
+        self.setAcceptedMouseButtons(Qt.LeftButton)
+        self.setZValue(1003)
 
     def mouseMoveEvent(self, event):
         pos = event.scenePos()
@@ -727,27 +774,109 @@ class SegmentHandle(QGraphicsRectItem):
         self.setBrush(QBrush(SEGMENT_HANDLE_COLOR))
         self.setPen(QPen(Qt.NoPen))
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
-        self.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.setZValue(2)
+        # Do not let Qt move this item automatically; drives moves via model updates to avoid oscillation.
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setAcceptHoverEvents(True)
+        self.setAcceptedMouseButtons(Qt.LeftButton)
+        self.setZValue(1002)
         self._anchor_mid = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2)
+        # Snapshot of route at press time to prevent cumulative updates
+        self._press_route_snapshot = None
+
+    def mousePressEvent(self, event):
+        # Capture anchor and snapshot on press so moves are computed relative to press state
+        if self.wire_item:
+            try:
+                nodes = self.wire_item._build_nodes()
+            except AttributeError:
+                try:
+                    nodes = self.wire_item._poly_points()
+                except Exception:
+                    nodes = []
+            if self.segment_index < len(nodes) - 1:
+                p1, p2 = nodes[self.segment_index], nodes[self.segment_index + 1]
+                mid = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2)
+                # Snap anchor to grid to ensure press-time baseline aligns with snapped moves
+                self._anchor_mid = QPointF(round(mid.x() / GRID_SIZE) * GRID_SIZE, round(mid.y() / GRID_SIZE) * GRID_SIZE)
+        # Capture route snapshot
+        if hasattr(self.wire_item, 'route'):
+            self._press_route_snapshot = list(self.wire_item.route)
+        else:
+            self._press_route_snapshot = list(getattr(self.wire_item.model, 'route', []))
+        if HANDLE_DEBUG_VERBOSE:
+            print(f"VERBOSE SegmentHandle.mousePressEvent: seg={self.segment_index} anchor_mid={self._anchor_mid} press_route={self._press_route_snapshot}")
+        super().mousePressEvent(event)
+        # Grab mouse so subsequent mouseMoveEvent calls are delivered to this handle
+        try:
+            self.grabMouse()
+            event.accept()
+        except Exception:
+            pass
 
     def mouseMoveEvent(self, event):
         new_mid = event.scenePos()
-        self.wire_item.move_segment_handle(self.segment_index, new_mid, self._anchor_mid)
+        # Compute snapped cursor first and set the visual handle position immediately so it tracks the mouse
+        snapped_cursor = QPointF(round(new_mid.x() / GRID_SIZE) * GRID_SIZE, round(new_mid.y() / GRID_SIZE) * GRID_SIZE)
+        try:
+            # Map the snapped scene point to the parent item's coordinates for correctness
+            parent = self.parentItem() or self.wire_item
+            mapped = parent.mapFromScene(snapped_cursor)
+            if HANDLE_DEBUG_VERBOSE:
+                print(f"VERBOSE SegmentHandle.mouseMoveEvent: seg={self.segment_index} snapped_cursor={snapped_cursor} mapped={mapped} before_pos={self.pos()}")
+            self.setPos(mapped)
+            if HANDLE_DEBUG_VERBOSE:
+                print(f"VERBOSE SegmentHandle.mouseMoveEvent: after_setpos scene={self.mapToScene(self.boundingRect().center())} local={self.pos()}")
+        except Exception:
+            pass
+        # Now update the model using the press snapshot so route changes from a stable baseline
+        # Use snapped cursor as the new midpoint to keep model moves consistent with visual snaps
+        self.wire_item.move_segment_handle(self.segment_index, snapped_cursor, self._anchor_mid, original_route=self._press_route_snapshot)
+        # Also ensure handle is placed at the computed midpoint after model update
+        try:
+            nodes = self.wire_item._build_nodes()
+        except AttributeError:
+            try:
+                nodes = self.wire_item._poly_points()
+            except Exception:
+                nodes = []
+        if 0 <= self.segment_index < len(nodes) - 1:
+            p1, p2 = nodes[self.segment_index], nodes[self.segment_index + 1]
+            mid = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2)
+            try:
+                parent = self.parentItem() or self.wire_item
+                self.setPos(parent.mapFromScene(mid))
+            except Exception:
+                try:
+                    self.setPos(mid)
+                except Exception:
+                    pass
+            if HANDLE_DEBUG:
+                print(f"DEBUG SegmentHandle.mouseMoveEvent: seg={self.segment_index} mid_scene={mid} handle_scene={self.mapToScene(self.boundingRect().center())}")
         event.accept()
 
     def itemChange(self, change, value):
-        if change == QGraphicsItem.ItemPositionChange:
-            return self.pos()
         return super().itemChange(change, value)
 
     def mouseReleaseEvent(self, event):
         # refresh anchor after a completed drag
         if self.wire_item:
-            nodes = self.wire_item._build_nodes()
+            # WireItem implements _build_nodes(); TwistedBundleItem uses _poly_points
+            try:
+                nodes = self.wire_item._build_nodes()
+            except AttributeError:
+                try:
+                    nodes = self.wire_item._poly_points()
+                except Exception:
+                    nodes = []
             if self.segment_index < len(nodes) - 1:
                 p1, p2 = nodes[self.segment_index], nodes[self.segment_index + 1]
                 self._anchor_mid = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2)
+        # Release mouse grab and clear snapshot
+        try:
+            self.ungrabMouse()
+        except Exception:
+            pass
+        self._press_route_snapshot = None
         super().mouseReleaseEvent(event)
 
 
@@ -774,10 +903,18 @@ class WireItem(QGraphicsPathItem):
         self.segment_handles = []
         self.elbow_handles = []
 
+        # Register wires with devices or twist nodes appropriately. DeviceItem expects a list
+        # of attached_wires, while TwistNodeItem exposes register_wire(pin_id, wire_item).
         if self.source_dev:
-            self.source_dev.attached_wires.append(self)
+            if hasattr(self.source_dev, "register_wire"):
+                self.source_dev.register_wire(self.src_pin_id, self)
+            else:
+                self.source_dev.attached_wires.append(self)
         if self.target_dev:
-            self.target_dev.attached_wires.append(self)
+            if hasattr(self.target_dev, "register_wire"):
+                self.target_dev.register_wire(self.tgt_pin_id, self)
+            else:
+                self.target_dev.attached_wires.append(self)
 
         self.update_visuals()
         self.update_geometry()
@@ -843,6 +980,15 @@ class WireItem(QGraphicsPathItem):
         self.update_visuals()
         self._update_tooltip()
         self._notify_changed()
+        # If this wire is attached to any twist node, ensure the bundle visuals update to reflect color changes.
+        if self.source_dev and hasattr(self.source_dev, 'bundle_refs'):
+            for b in self.source_dev.bundle_refs:
+                if b:
+                    b.update_geometry()
+        if self.target_dev and hasattr(self.target_dev, 'bundle_refs'):
+            for b in self.target_dev.bundle_refs:
+                if b:
+                    b.update_geometry()
 
     def update_visuals(self):
         # DIN 47100-inspired palette
@@ -871,12 +1017,13 @@ class WireItem(QGraphicsPathItem):
         self.halo_path.setPen(QPen(SELECTED_COLOR, 6))
 
     def refresh_metadata(self):
-        start_meta = getattr(self.source_dev.model, "meta", {}) if self.source_dev else {}
-        end_meta = getattr(self.target_dev.model, "meta", {}) if self.target_dev else {}
-        src_pin = self.source_dev.pins.get(self.src_pin_id) if self.source_dev else None
-        tgt_pin = self.target_dev.pins.get(self.tgt_pin_id) if self.target_dev else None
-        src_meta = getattr(src_pin.model, "meta", {}) if src_pin else {}
-        tgt_meta = getattr(tgt_pin.model, "meta", {}) if tgt_pin else {}
+        # Devices (DeviceItem) have .model.meta; TwistNodeItem may be visual-only and lack .model.
+        start_meta = getattr(getattr(self.source_dev, "model", None), "meta", {}) if self.source_dev else {}
+        end_meta = getattr(getattr(self.target_dev, "model", None), "meta", {}) if self.target_dev else {}
+        src_pin = self.source_dev.pins.get(self.src_pin_id) if (self.source_dev and hasattr(self.source_dev, "pins")) else None
+        tgt_pin = self.target_dev.pins.get(self.tgt_pin_id) if (self.target_dev and hasattr(self.target_dev, "pins")) else None
+        src_meta = getattr(getattr(src_pin, "model", None), "meta", {}) if src_pin else {}
+        tgt_meta = getattr(getattr(tgt_pin, "model", None), "meta", {}) if tgt_pin else {}
 
         # Preserve existing custom meta, then overlay device/pin meta (end pin wins conflicts)
         merged = {**(self.model.meta or {}), **start_meta, **end_meta, **src_meta, **tgt_meta}
@@ -887,10 +1034,17 @@ class WireItem(QGraphicsPathItem):
         def fmt_endpoint(dev, pin_id):
             if not dev:
                 return "?"
-            dev_label = dev.model.label or dev.model.id
-            pin = dev.pins.get(pin_id)
-            pin_label = pin.model.label if pin and pin.model.label else pin_id
-            return f"{html.escape(dev_label)} ({html.escape(dev.model.id)}) / {html.escape(pin_label)} ({html.escape(pin_id)})"
+            # If the endpoint is backed by a device model, use its label/id; otherwise fall back to the visual item type.
+            if hasattr(dev, 'model') and getattr(dev, 'model') is not None:
+                dev_label = dev.model.label or dev.model.id
+                pin = dev.pins.get(pin_id)
+                pin_label = pin.model.label if pin and pin.model.label else pin_id
+                return f"{html.escape(dev_label)} ({html.escape(dev.model.id)}) / {html.escape(pin_label)} ({html.escape(pin_id)})"
+            else:
+                typ = dev.__class__.__name__
+                pin = dev.pins.get(pin_id)
+                pin_label = pin.model.label if pin and getattr(pin, 'model', None) and pin.model.label else pin_id
+                return f"{html.escape(typ)} / {html.escape(pin_label)} ({html.escape(pin_id)})"
 
         meta_text = json.dumps(self.model.meta or {}, sort_keys=True, indent=2)
         twist_line = "<tr><td style='padding-bottom:6px; background:#303030; border:0;'><b>Twisted:</b> Yes" + (f" (Pair {html.escape(self.model.pair_id)})" if self.model.pair_id else "") + "</td></tr>" if self.model.twisted else ""
@@ -952,7 +1106,11 @@ class WireItem(QGraphicsPathItem):
         for idx, (x, y) in enumerate(self.model.route):
             handle = ElbowHandle(self, idx)
             handle.setParentItem(self)
-            handle.setPos(x, y)
+            try:
+                # route points are in scene coords; map to parent local coordinates
+                handle.setPos(self.mapFromScene(QPointF(x, y)))
+            except Exception:
+                handle.setPos(x, y)
             self.elbow_handles.append(handle)
 
         # segments
@@ -961,7 +1119,10 @@ class WireItem(QGraphicsPathItem):
             mid = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2)
             handle = SegmentHandle(self, i, p1, p2)
             handle.setParentItem(self)
-            handle.setPos(mid)
+            try:
+                handle.setPos(self.mapFromScene(mid))
+            except Exception:
+                handle.setPos(mid)
             self.segment_handles.append(handle)
 
     def _update_handle_positions(self, nodes):
@@ -969,7 +1130,41 @@ class WireItem(QGraphicsPathItem):
         for idx, handle in enumerate(self.elbow_handles):
             if idx < len(self.model.route):
                 x, y = self.model.route[idx]
-                handle.setPos(x, y)
+                try:
+                    handle.setPos(self.mapFromScene(QPointF(x, y)))
+                except Exception:
+                    handle.setPos(x, y)
+                if HANDLE_DEBUG:
+                    scene_pos = handle.mapToScene(handle.boundingRect().center())
+                    print(f"DEBUG Wire._update_handle_positions: elbow idx={idx} route=({x},{y}) handle_scene={scene_pos} handle_local={handle.pos()}")
+                # Correction watchdog: if handle diverged from route, snap it to exact model position
+                try:
+                    scene_pos = handle.mapToScene(handle.boundingRect().center())
+                    route_scene = QPointF(x, y)
+                    dx = scene_pos.x() - route_scene.x()
+                    dy = scene_pos.y() - route_scene.y()
+                    if (dx*dx + dy*dy) ** 0.5 > 1.0:
+                        handle.setPos(self.mapFromScene(route_scene))
+                        handle.update()
+                        try:
+                            sc = self.scene()
+                            if sc:
+                                sc.update()
+                                for v in sc.views():
+                                    try:
+                                        v.viewport().repaint()
+                                    except Exception:
+                                        pass
+                        except Exception:
+                            pass
+                        if HANDLE_DEBUG or HANDLE_DEBUG_VERBOSE:
+                            print(f"WATCHDOG: corrected elbow idx={idx} from {scene_pos} to {route_scene}")
+                except Exception:
+                    pass
+                if HANDLE_DEBUG:
+                    print(f"DEBUG Bundle._rebuild_elbow_handles: set elbow idx={idx} pos_scene=({x},{y}) pos_local={handle.pos()}")
+                if HANDLE_DEBUG:
+                    print(f"DEBUG Wire._rebuild_handles: set elbow idx={idx} pos_scene=({x},{y}) pos_local={handle.pos()}")
 
         if len(self.segment_handles) != len(nodes) - 1:
             # topology changed; rebuild fully
@@ -979,7 +1174,10 @@ class WireItem(QGraphicsPathItem):
         for i, handle in enumerate(self.segment_handles):
             p1, p2 = nodes[i], nodes[i+1]
             mid = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2)
-            handle.setPos(mid)
+            try:
+                handle.setPos(self.mapFromScene(mid))
+            except Exception:
+                handle.setPos(mid)
 
     def _segment_insert_index(self, pt: QPointF, nodes):
         best_idx = 0
@@ -1034,7 +1232,7 @@ class WireItem(QGraphicsPathItem):
         self.update_geometry(rebuild_handles=True)
         self._notify_changed()
 
-    def move_segment_handle(self, segment_index: int, new_mid: QPointF, anchor_mid: QPointF):
+    def move_segment_handle(self, segment_index: int, new_mid: QPointF, anchor_mid: QPointF, original_route: list | None = None):
         nodes = self._build_nodes()
         if segment_index < 0 or segment_index >= len(nodes) - 1:
             return
@@ -1045,14 +1243,26 @@ class WireItem(QGraphicsPathItem):
         start_is_pin = segment_index == 0
         end_is_pin = segment_index + 1 == len(nodes) - 1
 
-        # Only move elbows (route points)
-        if not start_is_pin:
-            ridx = segment_index - 1
-            self.model.route[ridx] = (self.model.route[ridx][0] + delta.x(), self.model.route[ridx][1] + delta.y())
-        if not end_is_pin:
-            ridx = segment_index
-            if ridx < len(self.model.route):
+        if original_route is not None and len(original_route) == len(self.model.route):
+            # Compute new route positions based on the original snapshot + delta (press-time anchored)
+            new_route = list(original_route)
+            if not start_is_pin:
+                ridx = segment_index - 1
+                new_route[ridx] = (original_route[ridx][0] + delta.x(), original_route[ridx][1] + delta.y())
+            if not end_is_pin:
+                ridx = segment_index
+                if ridx < len(new_route):
+                    new_route[ridx] = (original_route[ridx][0] + delta.x(), original_route[ridx][1] + delta.y())
+            self.model.route = new_route
+        else:
+            # Only move elbows (route points)
+            if not start_is_pin:
+                ridx = segment_index - 1
                 self.model.route[ridx] = (self.model.route[ridx][0] + delta.x(), self.model.route[ridx][1] + delta.y())
+            if not end_is_pin:
+                ridx = segment_index
+                if ridx < len(self.model.route):
+                    self.model.route[ridx] = (self.model.route[ridx][0] + delta.x(), self.model.route[ridx][1] + delta.y())
 
         self.update_geometry(rebuild_handles=False)
         self._notify_changed()
@@ -1098,31 +1308,170 @@ class TwistNodeItem(QGraphicsItem):
         self.halo.setZValue(-1)
 
         self.pins: dict[str, PinItem] = {}
+        self._rotation = 0  # rotation state (0..3), clockwise 90deg steps
         self._build_pins()
 
         self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemSendsGeometryChanges)
         self._drag_start_pos = None
         self._item_start_pos = None
+        # Track previous position so we can compute deltas when the node moves
+        self._prev_pos = self.pos()
+
+    def itemChange(self, change, value):
+        # Scene bookkeeping for the halo sibling
+        if change == QGraphicsItem.ItemSceneChange:
+            if value: value.addItem(self.halo)
+            elif self.halo.scene(): self.halo.scene().removeItem(self.halo)
+
+        if change == QGraphicsItem.ItemSelectedHasChanged:
+            self.halo.setVisible(value)
+            if value: self.halo.setPos(self.pos())
+
+        if change == QGraphicsItem.ItemPositionHasChanged:
+            # Compute delta from previous position and update attached wires & bundles
+            try:
+                new_pos = value if isinstance(value, QPointF) else self.pos()
+                delta = QPointF(new_pos.x() - self._prev_pos.x(), new_pos.y() - self._prev_pos.y())
+                self._prev_pos = QPointF(new_pos)
+            except Exception:
+                delta = QPointF(0, 0)
+
+            # Notify attached wires to refresh geometry
+            for pwires in self.attached_wires.values():
+                for w in pwires:
+                    try:
+                        w.update_geometry()
+                    except Exception:
+                        pass
+
+            # Notify any attached bundles so they can translate implicit/explicit elbows
+            for b in list(self.bundle_refs):
+                try:
+                    b.node_moved(self, delta)
+                except Exception:
+                    pass
+
+            if callable(self.on_changed):
+                self.on_changed()
+
+        return super().itemChange(change, value)
 
     def _build_pins(self):
+        # Recreate pin visuals based on the current rotation state.
         for pin in list(self.pins.values()):
             if pin.scene():
                 pin.scene().removeItem(pin)
         self.pins = {}
 
+        # Base (unrotated) geometry for pins
         high = PinModel(id="H", label="H", side=Side.LEFT)
         low = PinModel(id="L", label="L", side=Side.LEFT)
         shield = PinModel(id="S", label="S", side=Side.RIGHT)
 
+        # Local positions in unrotated coordinates
         y_top = self.HEIGHT * 0.35
         y_bottom = self.HEIGHT * 0.65
-        self._add_pin(high, x1=0, y1=y_top, x2=-6, y2=y_top)
-        self._add_pin(low, x1=0, y1=y_bottom, x2=-6, y2=y_bottom)
-        self._add_pin(shield, x1=self.WIDTH, y1=self.HEIGHT * 0.5, x2=self.WIDTH + 6, y2=self.HEIGHT * 0.5)
+        # Determine which side should hold the High/Low pins for external connections.
+        # If a bundle is attached to one side, place H/L on the opposite side so users can
+        # connect regular wires there. Shield pin is placed on the bundle side.
+        bundle_side = getattr(self, '_bundle_side', None)
+        def opp(side):
+            return {
+                Side.LEFT: Side.RIGHT,
+                Side.RIGHT: Side.LEFT,
+                Side.TOP: Side.BOTTOM,
+                Side.BOTTOM: Side.TOP,
+            }.get(side, Side.RIGHT)
 
-    def _add_pin(self, pin_model: PinModel, x1, y1, x2, y2):
+        if bundle_side is None:
+            hl_side = Side.LEFT
+            shield_side = Side.RIGHT
+        else:
+            hl_side = opp(bundle_side)
+            shield_side = bundle_side
+
+        # Map side to coordinates
+        def side_coords(side, x_offset):
+            if side == Side.LEFT:
+                return (0.0, x_offset, -6.0, x_offset)
+            if side == Side.RIGHT:
+                return (self.WIDTH, x_offset, self.WIDTH + 6.0, x_offset)
+            if side == Side.TOP:
+                return (self.WIDTH * 0.5 + x_offset, 0.0, self.WIDTH * 0.5 + x_offset, -6.0)
+            # bottom
+            return (self.WIDTH * 0.5 + x_offset, self.HEIGHT, self.WIDTH * 0.5 + x_offset, self.HEIGHT + 6.0)
+
+        coords = {
+            "H": (*side_coords(hl_side, y_top), hl_side, True),
+            "L": (*side_coords(hl_side, y_bottom), hl_side, True),
+            # Shield is on the bundle side and should be hidden visually
+            "S": (*side_coords(shield_side, self.HEIGHT * 0.5), shield_side, False),
+        }
+
+        # Apply rotation (0..3) clockwise by 90 degrees increments around a pivot.
+        # Pivot is offset slightly toward the bundle side (if present) so the edit grip
+        # doesn't overlap connectors visually.
+        cx = self.WIDTH / 2.0
+        cy = self.HEIGHT / 2.0
+
+        # Compute pivot positioned outside the node on the bundle side so it acts as
+        # an edit grip and does not interfere with selecting the pins. The pivot is
+        # placed a small distance beyond the node's edge toward the bundle.
+        bundle_side = shield_side
+        outward = getattr(self, '_pivot_outward', 14.0)
+
+        if bundle_side == Side.LEFT:
+            pivot_x = -outward
+            pivot_y = cy
+        elif bundle_side == Side.RIGHT:
+            pivot_x = self.WIDTH + outward
+            pivot_y = cy
+        elif bundle_side == Side.TOP:
+            pivot_x = cx
+            pivot_y = -outward
+        else:  # bottom
+            pivot_x = cx
+            pivot_y = self.HEIGHT + outward
+
+        # store pivot for use by paint and tests
+        self._pivot = QPointF(pivot_x, pivot_y)
+
+        def rotate_point(x, y, rot):
+            # Translate to pivot
+            rx = x - pivot_x
+            ry = y - pivot_y
+            if rot == 0:
+                nx, ny = rx, ry
+            elif rot == 1:
+                nx, ny = ry, -rx
+            elif rot == 2:
+                nx, ny = -rx, -ry
+            else:
+                nx, ny = -ry, rx
+            return nx + pivot_x, ny + pivot_y
+
+        # Side rotation mapping clockwise
+        side_order = [Side.LEFT, Side.TOP, Side.RIGHT, Side.BOTTOM]
+
+        for pid, (x1, y1, x2, y2, base_side, show_flag) in coords.items():
+            nx1, ny1 = rotate_point(x1, y1, getattr(self, '_rotation', 0))
+            nx2, ny2 = rotate_point(x2, y2, getattr(self, '_rotation', 0))
+            # Compute rotated side
+            base_idx = side_order.index(base_side) if base_side in side_order else 0
+            rotated_side = side_order[(base_idx + getattr(self, '_rotation', 0)) % 4]
+            pm = PinModel(id=pid, label=pid, side=rotated_side)
+            # Determine whether to show this pin visually after accounting for rotation
+            show_after_rot = show_flag
+            # If rotation rotates the bundle side into view, hide accordingly (simple approach assumes flag rotates too)
+            self._add_pin(pm, x1=nx1, y1=ny1, x2=nx2, y2=ny2, show=show_after_rot)
+
+    def _add_pin(self, pin_model: PinModel, x1, y1, x2, y2, show: bool = True):
         pin = PinItem(pin_model, self)
         pin.set_visual_geometry(x1, y1, x2, y2)
+        # Show or hide the pin visuals (hidden pins still exist for bookkeeping but are not visible/interactive)
+        if not show:
+            pin.hide()
+            pin.setAcceptHoverEvents(False)
         self.pins[pin_model.id] = pin
 
     def register_wire(self, pin_id: str, wire_item):
@@ -1131,6 +1480,104 @@ class TwistNodeItem(QGraphicsItem):
     def register_bundle(self, bundle_item):
         if bundle_item not in self.bundle_refs:
             self.bundle_refs.append(bundle_item)
+        # When a bundle attaches, compute which side of this node the bundle sits on
+        # using the vector toward the other node. Reserve that side so external wires
+        # cannot connect to pins on the bundle side.
+        if hasattr(bundle_item, 'source_node') and hasattr(bundle_item, 'target_node'):
+            other = bundle_item.source_node if bundle_item.target_node is self else bundle_item.target_node
+            vec = other.pos() - self.pos()
+            # Decide side by largest component
+            if abs(vec.x()) >= abs(vec.y()):
+                self._bundle_side = Side.RIGHT if vec.x() > 0 else Side.LEFT
+            else:
+                self._bundle_side = Side.BOTTOM if vec.y() > 0 else Side.TOP
+        # Rebuild pins so H/L appear on the non-bundle side (connectable)
+        self._build_pins()
+        # Show pivot/marker on top of bundle; default unhighlighted
+        self._pivot_highlight = False
+        if callable(self.on_changed):
+            self.on_changed()
+
+    def unregister_wire(self, pin_id: str, wire_item):
+        # backward compatibility; unused for bundles
+        pass
+
+    def unregister_bundle(self, bundle_item):
+        if bundle_item in self.bundle_refs:
+            self.bundle_refs.remove(bundle_item)
+        # Clear _bundle_side if no bundles remain
+        if not self.bundle_refs:
+            self._bundle_side = None
+        # Otherwise recompute side from remaining bundles (take first)
+        elif self.bundle_refs:
+            b = self.bundle_refs[0]
+            other = b.source_node if b.target_node is self else b.target_node
+            vec = other.pos() - self.pos()
+            if abs(vec.x()) >= abs(vec.y()):
+                self._bundle_side = Side.RIGHT if vec.x() > 0 else Side.LEFT
+            else:
+                self._bundle_side = Side.BOTTOM if vec.y() > 0 else Side.TOP
+        # Rebuild pins to reflect changed reservation
+        self._build_pins()
+        # Reset pivot highlight
+        self._pivot_highlight = False
+        if callable(self.on_changed):
+            self.on_changed()
+
+    def pin_connectable(self, pin_id: str) -> bool:
+        """Return True if a pin with given id is allowed to be connected by external wires.
+        Pins on the node's reserved bundle side are not connectable.
+        """
+        pin = self.pins.get(pin_id)
+        if not pin:
+            return False
+        if getattr(self, '_bundle_side', None) is None:
+            return True
+        return pin.model.side != getattr(self, '_bundle_side', None)
+
+    def rotate_cw(self, steps: int = 1):
+        """Rotate this node clockwise by 90deg * steps and rebuild pins.
+        Skip any rotation that would point the H/L side at the bundle side (disallowed).
+        """
+        # Try up to 4 steps to find a valid rotation
+        attempts = 0
+        while attempts < 4:
+            new_rot = (self._rotation + (steps % 4)) % 4
+            # Determine resulting H/L side after rotation
+            side_order = [Side.LEFT, Side.TOP, Side.RIGHT, Side.BOTTOM]
+            # Current H/L is calculated in _build_pins based on _bundle_side; infer current HL before rotation
+            # Simpler approach: compute base HL (when rotation=0 it is the computed HL), and simulate time to new_rot
+            # To be conservative, check resulting rotated HL against bundle side
+            # Temporarily set rotation and ask _build_pins to compute (without committing long-term change)
+            old_rot = self._rotation
+            self._rotation = new_rot
+            # Recompute pins in-memory to inspect HL location
+            # Use a shallow rebuild: call _build_pins and then read where H ended up
+            self._build_pins()
+            # Determine where H's side is now
+            h_pin = self.pins.get('H')
+            resulting_h_side = h_pin.model.side if h_pin else None
+            # revert to previous rotation and pins (we will set again below as needed)
+            self._rotation = old_rot
+            self._build_pins()
+
+            if getattr(self, '_bundle_side', None) is not None and resulting_h_side == self._bundle_side:
+                # rotation would point H at bundle side; skip by advancing one more step
+                steps = (steps + 1) % 4
+                attempts += 1
+                continue
+
+            # Accept this rotation
+            self._rotation = new_rot
+            self._build_pins()
+            for b in list(self.bundle_refs):
+                if b:
+                    b.update_geometry()
+            if callable(self.on_changed):
+                self.on_changed()
+            return
+        # If no safe rotation found, do nothing
+        return
 
     def unregister_wire(self, pin_id: str, wire_item):
         if pin_id in self.attached_wires and wire_item in self.attached_wires[pin_id]:
@@ -1153,9 +1600,18 @@ class TwistNodeItem(QGraphicsItem):
         return self._rect
 
     def paint(self, painter, option, widget=None):
-        painter.setBrush(self._brush)
-        painter.setPen(self._pen)
-        painter.drawRoundedRect(self._rect, 6, 6)
+        # Visual style: render as two open wire ends (no device box)
+        # Draw the pivot marker (edit grip). If pivot is highlighted, use the selected color.
+        pivot = getattr(self, '_pivot', None) or self._rect.center()
+        r = 5
+        if getattr(self, '_pivot_highlight', False):
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QBrush(SELECTED_COLOR))
+            painter.drawEllipse(pivot, r, r)
+        else:
+            painter.setPen(QPen(QColor(120, 120, 120), 1))
+            painter.setBrush(QBrush(QColor(80, 80, 90, 200)))
+            painter.drawEllipse(pivot, r, r)
 
     def _snap(self, v):
         return round(v / GRID_SIZE) * GRID_SIZE
@@ -1196,10 +1652,25 @@ class TwistNodeItem(QGraphicsItem):
                 self.halo.setPos(self.pos())
         if change == QGraphicsItem.ItemPositionHasChanged:
             self.halo.setPos(self.pos())
+            new_pos = value if isinstance(value, QPointF) else self.pos()
+            # Compute delta from previous position to allow bundles to adjust their route points
+            prev = getattr(self, '_prev_pos', None)
+            if prev is None:
+                self._prev_pos = new_pos
+                delta = QPointF(0, 0)
+            else:
+                delta = QPointF(new_pos.x() - prev.x(), new_pos.y() - prev.y())
+                self._prev_pos = new_pos
+
             if callable(self.on_changed):
                 self.on_changed()
             for b in list(self.bundle_refs):
                 if b:
+                    # Inform bundle about node motion so it can translate route points
+                    try:
+                        b.node_moved(self, delta)
+                    except Exception:
+                        pass
                     b.update_geometry()
         return super().itemChange(change, value)
 
@@ -1207,11 +1678,12 @@ class TwistNodeItem(QGraphicsItem):
 class TwistedBundleItem(QGraphicsPathItem):
     """Double-helix visual connecting two TwistNodeItems with a single elbow handle."""
 
-    def __init__(self, source_node: TwistNodeItem, target_node: TwistNodeItem, on_changed=None):
+    def __init__(self, source_node: TwistNodeItem, target_node: TwistNodeItem, on_changed=None, on_delete=None):
         super().__init__()
         self.source_node = source_node
         self.target_node = target_node
         self.on_changed = on_changed
+        self.on_delete = on_delete
 
         self.amplitude = 5.0
         self.wavelength = 40.0
@@ -1219,6 +1691,9 @@ class TwistedBundleItem(QGraphicsPathItem):
 
         self.color_a = QColor(255, 80, 80)
         self.color_b = QColor(80, 180, 255)
+
+        # Route points (elbow list). Each element is a (x, y) tuple in scene coords.
+        self.route: list[tuple[float, float]] = []
 
         self.path_a = QPainterPath()
         self.path_b = QPainterPath()
@@ -1236,25 +1711,95 @@ class TwistedBundleItem(QGraphicsPathItem):
         e = self._end_point()
         self.elbow_pos = QPointF((s.x() + e.x()) / 2, (s.y() + e.y()) / 2)
 
-        self.handle = QGraphicsEllipseItem(-7, -7, 14, 14, self)
-        self.handle.setBrush(QBrush(QColor(200, 200, 200)))
-        self.handle.setPen(QPen(Qt.NoPen))
-        self.handle.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
-        self.handle.setFlag(QGraphicsItem.ItemIsMovable, True)
-        self.handle.setZValue(2)
-        self.handle.mouseMoveEvent = self._handle_move
+        # Implicit main handle removed: do not create a separate ellipse control here.
+        # Users create explicit elbows via double-click (add_elbow_at) which will create
+        # ElbowHandle items. Keeping an implicit handle caused stray visuals that could
+        # appear detached from the bundle during interactive edits.
+        pass
+
+        # Elbow & segment handles for interactive editing
+        self.elbow_handles: list[ElbowHandle] = []
+        self.segment_handles: list[SegmentHandle] = []
 
         self.recalculate_path()
-        self.handle.setPos(self.elbow_pos)
+        # No implicit handle to position (implicit handle removed). Explicit elbow handles
+        # will be created when the user adds elbows via double-click or programmatic calls.
+
+        # Register this bundle with the nodes so node-side events (e.g. wire recolor) can
+        # notify the bundle even if creation didn't happen via the higher-level app helper.
+        if hasattr(self.source_node, 'register_bundle'):
+            self.source_node.register_bundle(self)
+        if hasattr(self.target_node, 'register_bundle'):
+            self.target_node.register_bundle(self)
+
+    def contextMenuEvent(self, event):
+        from PySide6.QtWidgets import QMenu
+        menu = QMenu()
+        menu.addAction("Delete Bundle", self._delete_via_menu)
+        menu.exec(event.screenPos())
+
+    def _delete_via_menu(self):
+        # If an owner callback is present, call it; otherwise perform local deletion
+        if callable(self.on_delete):
+            try:
+                self.on_delete(self)
+                return
+            except Exception:
+                pass
+        # Default deletion: unregister from nodes and remove from scene
+        if hasattr(self.source_node, 'unregister_bundle'):
+            self.source_node.unregister_bundle(self)
+        if hasattr(self.target_node, 'unregister_bundle'):
+            self.target_node.unregister_bundle(self)
+        if self.scene():
+            self.scene().removeItem(self)
+        if callable(self.on_changed):
+            self.on_changed()
 
     def _start_point(self):
-        return self.source_node.get_pin_tip_scene_pos("H")
+        # Midpoint of H/L tips on the source node (where bundle visually connects)
+        h = self.source_node.get_pin_tip_scene_pos("H")
+        l = self.source_node.get_pin_tip_scene_pos("L")
+        return QPointF((h.x() + l.x()) / 2, (h.y() + l.y()) / 2)
 
     def _end_point(self):
-        return self.target_node.get_pin_tip_scene_pos("L")
+        # Midpoint of H/L tips on the target node
+        h = self.target_node.get_pin_tip_scene_pos("H")
+        l = self.target_node.get_pin_tip_scene_pos("L")
+        return QPointF((h.x() + l.x()) / 2, (h.y() + l.y()) / 2)
 
     def _poly_points(self):
-        return [self._start_point(), self.elbow_pos, self._end_point()]
+        # Build polyline including start, a short segment to the node pivot (edit grip),
+        # any route elbows, and end.
+        pts = []
+        start = self._start_point()
+        pts.append(start)
+        # Insert a pivot point near the node so the bundle bends around the edit node
+        try:
+            p1 = self.source_node.mapToScene(getattr(self.source_node, '_pivot', self.source_node._rect.center()))
+            pts.append(p1)
+        except Exception:
+            pass
+
+        for x, y in self.route:
+            pts.append(QPointF(x, y))
+
+        try:
+            p2 = self.target_node.mapToScene(getattr(self.target_node, '_pivot', self.target_node._rect.center()))
+            pts.append(p2)
+        except Exception:
+            pass
+        end = self._end_point()
+        pts.append(end)
+        return pts
+
+    def _poly_points(self):
+        # Build polyline including start, route elbows, and end
+        pts = [self._start_point()]
+        for x, y in self.route:
+            pts.append(QPointF(x, y))
+        pts.append(self._end_point())
+        return pts
 
     def _segment_lengths(self, pts):
         lengths = []
@@ -1293,7 +1838,7 @@ class TwistedBundleItem(QGraphicsPathItem):
             return QPointF(0, -1)
         return QPointF(n.x() / length, n.y() / length)
 
-    def recalculate_path(self):
+    def recalculate_path(self, rebuild_handles: bool = True):
         pts = self._poly_points()
         seg_lengths, total_len = self._segment_lengths(pts)
         if total_len == 0:
@@ -1330,13 +1875,79 @@ class TwistedBundleItem(QGraphicsPathItem):
         self.setPath(env)
         self.halo_path.setPath(env)
         self._update_colors_from_nodes()
+        # Rebuild elbow handles to reflect any route edits (optional during interactive drags)
+        if rebuild_handles:
+            self._rebuild_elbow_handles()
+        else:
+            # Update positions of existing handles to keep them attached during interactive operations
+            self._update_elbow_handle_positions()
+        # Note: implicit main handle was removed; elbow position is stored in self.elbow_pos
+        # and explicit ElbowHandle items are created when route points exist.
+        pass
+
+    def _snap_point(self, pt: QPointF) -> QPointF:
+        return QPointF(round(pt.x() / GRID_SIZE) * GRID_SIZE, round(pt.y() / GRID_SIZE) * GRID_SIZE)
+
+    def _segment_insert_index(self, pt: QPointF, nodes):
+        best_idx = 0
+        best_dist = float('inf')
+        for i in range(len(nodes) - 1):
+            a = nodes[i]
+            b = nodes[i+1]
+            ab = b - a
+            denom = ab.x() * ab.x() + ab.y() * ab.y()
+            t = 0.0 if denom == 0 else ((pt - a).x() * ab.x() + (pt - a).y() * ab.y()) / denom
+            t = max(0.0, min(1.0, t))
+            proj = QPointF(a.x() + ab.x() * t, a.y() + ab.y() * t)
+            dist = QLineF(pt, proj).length()
+            if dist < best_dist:
+                best_dist = dist
+                best_idx = i
+        return best_idx
+        if total_len == 0:
+            base_path = QPainterPath(pts[0])
+            self.path_a = base_path
+            self.path_b = base_path
+            self.setPath(base_path)
+            self.halo_path.setPath(base_path)
+            return
+
+        step = 1.0 / max(self.samples - 1, 1)
+        k = (2 * math.pi) / max(self.wavelength, 1.0)
+
+        def build_path(phase_shift):
+            p0, _ = self._point_at(pts, seg_lengths, total_len, 0.0)
+            path = QPainterPath(p0)
+            for i in range(1, self.samples):
+                t = i * step
+                base_pt, dir_vec = self._point_at(pts, seg_lengths, total_len, t)
+                n = self._normal(dir_vec)
+                phase = k * (t * total_len) + phase_shift
+                offset = math.sin(phase) * self.amplitude
+                offset_pt = QPointF(base_pt.x() + n.x() * offset, base_pt.y() + n.y() * offset)
+                path.lineTo(offset_pt)
+            return path
+
+        self.path_a = build_path(0.0)
+        self.path_b = build_path(math.pi)
+
+        # Envelope path for selection/hit area
+        env = QPainterPath(self.path_a.pointAtPercent(0))
+        env.addPath(self.path_a)
+        env.addPath(self.path_b)
+        self.setPath(env)
+        self.halo_path.setPath(env)
+        self._update_colors_from_nodes()
+        # Rebuild elbow handles to reflect any route edits
+        self._rebuild_elbow_handles()
 
     def _update_colors_from_nodes(self):
+        # Look for colors attached to High/Low pins on either node (prefer source then target)
         c_high = self.source_node.first_wire_color("H") or self.target_node.first_wire_color("H")
         c_low = self.source_node.first_wire_color("L") or self.target_node.first_wire_color("L")
-        if c_high:
+        if isinstance(c_high, QColor):
             self.color_a = c_high
-        if c_low:
+        if isinstance(c_low, QColor):
             self.color_b = c_low
 
     def paint(self, painter, option, widget=None):
@@ -1350,6 +1961,84 @@ class TwistedBundleItem(QGraphicsPathItem):
         painter.setPen(pen_b)
         painter.drawPath(self.path_b)
 
+    def _rebuild_elbow_handles(self):
+        # Remove old
+        for h in list(getattr(self, 'elbow_handles', [])) + list(getattr(self, 'segment_handles', [])):
+            if h.scene():
+                h.scene().removeItem(h)
+        self.elbow_handles = []
+        self.segment_handles = []
+
+        # Create elbow handles for route points
+        for idx, (x, y) in enumerate(self.route):
+            handle = ElbowHandle(self, idx)
+            handle.setParentItem(self)
+            # Position handle using parent's coordinates
+            handle.setPos(self.mapFromScene(QPointF(x, y)))
+            # override handle context menu to delete
+            def _ctx(ev, index=idx):
+                self.delete_elbow(index)
+                ev.accept()
+            handle.contextMenuEvent = _ctx
+            self.elbow_handles.append(handle)
+
+        # Create segment handles between poly points
+        pts = self._poly_points()
+        for i in range(len(pts) - 1):
+            p1, p2 = pts[i], pts[i+1]
+            mid = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2)
+            sh = SegmentHandle(self, i, p1, p2)
+            sh.setParentItem(self)
+            sh.setPos(self.mapFromScene(mid))
+            self.segment_handles.append(sh)
+
+    def _update_elbow_handle_positions(self):
+        # Update existing handle positions (parent-local coordinates) without recreating items.
+        # Keep the same handle counts; if topology changed, request a rebuild instead.
+        if len(self.elbow_handles) != len(self.route):
+            self._rebuild_elbow_handles()
+            return
+        # Update elbow handles
+        for idx, handle in enumerate(self.elbow_handles):
+            x, y = self.route[idx]
+            handle.setPos(self.mapFromScene(QPointF(x, y)))
+            if HANDLE_DEBUG:
+                scene_pos = handle.mapToScene(handle.boundingRect().center())
+                print(f"DEBUG Bundle._update_elbow_handle_positions: elbow idx={idx} route=({x},{y}) handle_scene={scene_pos} handle_local={handle.pos()}")
+            # Correction watchdog: ensure handle matches model route precisely to avoid visual orphaning
+            try:
+                scene_pos = handle.mapToScene(handle.boundingRect().center())
+                route_scene = QPointF(x, y)
+                dx = scene_pos.x() - route_scene.x()
+                dy = scene_pos.y() - route_scene.y()
+                if (dx*dx + dy*dy) ** 0.5 > 1.0:
+                    handle.setPos(self.mapFromScene(route_scene))
+                    handle.update()
+                    try:
+                        sc = self.scene()
+                        if sc:
+                            sc.update()
+                            for v in sc.views():
+                                try:
+                                    v.viewport().repaint()
+                                except Exception:
+                                    pass
+                    except Exception:
+                        pass
+                    if HANDLE_DEBUG or HANDLE_DEBUG_VERBOSE:
+                        print(f"WATCHDOG: corrected bundle elbow idx={idx} from {scene_pos} to {route_scene}")
+            except Exception:
+                pass
+        # Update segment handles
+        pts = self._poly_points()
+        if len(self.segment_handles) != max(0, len(pts) - 1):
+            self._rebuild_elbow_handles()
+            return
+        for i, sh in enumerate(self.segment_handles):
+            p1, p2 = pts[i], pts[i+1]
+            mid = QPointF((p1.x() + p2.x()) / 2, (p1.y() + p2.y()) / 2)
+            sh.setPos(self.mapFromScene(mid))
+
     def shape(self):
         stroker = QPainterPathStroker()
         stroker.setWidth(14)
@@ -1358,27 +2047,163 @@ class TwistedBundleItem(QGraphicsPathItem):
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedHasChanged:
             self.halo_path.setVisible(value)
+            # Change handle color when selected so user sees the edit grip is active
+            if getattr(self, 'handle', None):
+                if value:
+                    self.handle.setBrush(QBrush(SELECTED_COLOR))
+                else:
+                    self.handle.setBrush(QBrush(QColor(200, 200, 200)))
+            # Also highlight node pivots when the bundle is selected
+            try:
+                if value:
+                    self.source_node._pivot_highlight = True
+                    self.target_node._pivot_highlight = True
+                else:
+                    self.source_node._pivot_highlight = False
+                    self.target_node._pivot_highlight = False
+                self.source_node.update()
+                self.target_node.update()
+            except Exception:
+                pass
         return super().itemChange(change, value)
 
-    def update_geometry(self):
-        self.recalculate_path()
-        self.handle.setPos(self.elbow_pos)
+    def update_geometry(self, rebuild_handles: bool = True):
+        self.recalculate_path(rebuild_handles=rebuild_handles)
+        # Ensure colors are refreshed after any external changes (e.g. wire recolor)
+        self._update_colors_from_nodes()
+        # No implicit handle to position; optionally dump nearby items if debug enabled
+        if HANDLE_DEBUG_VERBOSE:
+            try:
+                sc = self.scene()
+                if sc:
+                    rect = QRectF(self.elbow_pos.x() - 4, self.elbow_pos.y() - 4, 8, 8)
+                    nearby = sc.items(rect)
+                    entries = []
+                    for it in nearby:
+                        data = None
+                        try:
+                            data = it.data(0)
+                        except Exception:
+                            data = None
+                        entries.append((it.__class__.__name__, data, it.parentItem().__class__.__name__ if it.parentItem() else None))
+                    print(f"VERBOSE Bundle.debug_near_elbow: elbow_pos={self.elbow_pos} nearby={entries}")
+            except Exception:
+                pass
+        self.update()
         if callable(self.on_changed):
             self.on_changed()
 
     def set_elbow(self, scene_pos: QPointF):
-        snapped = QPointF(round(scene_pos.x() / GRID_SIZE) * GRID_SIZE, round(scene_pos.y() / GRID_SIZE) * GRID_SIZE)
+        snapped = self._snap_point(scene_pos)
+        # If there are no route points, preserve single-handle behavior by treating this as the sole route
+        if not self.route:
+            self.route = [(snapped.x(), snapped.y())]
+        else:
+            # move the midpoint (use index in middle)
+            mid_idx = len(self.route) // 2
+            self.route[mid_idx] = (snapped.x(), snapped.y())
         self.elbow_pos = snapped
+        # During interactive drags, avoid rebuilding handles (preserve the handle being dragged)
+        self.update_geometry(rebuild_handles=False)
+
+    def add_elbow_at(self, pt: QPointF):
+        pt = QPointF(round(pt.x() / GRID_SIZE) * GRID_SIZE, round(pt.y() / GRID_SIZE) * GRID_SIZE)
+        pts = self._poly_points()
+        if len(pts) < 2:
+            return
+        idx = self._segment_insert_index(pt, pts)
+        self.route.insert(idx, (pt.x(), pt.y()))
         self.update_geometry()
+
+    def move_elbow(self, index: int, pt: QPointF):
+        if index < 0 or index >= len(self.route):
+            return
+        pt = self._snap_point(pt)
+        self.route[index] = (pt.x(), pt.y())
+        self.elbow_pos = QPointF(pt.x(), pt.y())
+        # During interactive drags, avoid rebuilding handles which can remove the handle under the cursor
+        self.update_geometry(rebuild_handles=False)
+
+    def move_segment_handle(self, segment_index: int, new_mid: QPointF, anchor_mid: QPointF, original_route: list | None = None):
+        pts = self._poly_points()
+        if segment_index < 0 or segment_index >= len(pts) - 1:
+            return
+        new_mid = self._snap_point(new_mid)
+        delta = QPointF(new_mid.x() - anchor_mid.x(), new_mid.y() - anchor_mid.y())
+        if delta.isNull():
+            return
+        start_is_pin = segment_index == 0
+        end_is_pin = (segment_index + 1) == (len(pts) - 1)
+
+        if original_route is not None:
+            # Use the press-time snapshot as a stable baseline to avoid non-monotonic jumps
+            new_route = list(original_route)
+            if not start_is_pin:
+                ridx = segment_index - 1
+                if 0 <= ridx < len(new_route):
+                    new_route[ridx] = (original_route[ridx][0] + delta.x(), original_route[ridx][1] + delta.y())
+            if not end_is_pin:
+                ridx = segment_index
+                if 0 <= ridx < len(new_route):
+                    new_route[ridx] = (original_route[ridx][0] + delta.x(), original_route[ridx][1] + delta.y())
+            self.route = new_route
+            if HANDLE_DEBUG or HANDLE_DEBUG_VERBOSE:
+                print(f"DEBUG Bundle.move_segment_handle (snapshot): seg={segment_index} delta=({delta.x()},{delta.y()}) original_len={len(original_route)} new_route={self.route} start_is_pin={start_is_pin} end_is_pin={end_is_pin}")
+                if HANDLE_DEBUG_VERBOSE:
+                    print(f"VERBOSE Bundle.move_segment_handle: original_route={original_route}")
+        else:
+            # Only move route points (elbows) that abut this segment (fallback incremental behavior)
+            if not start_is_pin:
+                ridx = segment_index - 1
+                self.route[ridx] = (self.route[ridx][0] + delta.x(), self.route[ridx][1] + delta.y())
+            if not end_is_pin:
+                ridx = segment_index
+                if ridx < len(self.route):
+                    self.route[ridx] = (self.route[ridx][0] + delta.x(), self.route[ridx][1] + delta.y())
+            if HANDLE_DEBUG:
+                print(f"DEBUG Bundle.move_segment_handle (incremental): seg={segment_index} delta=({delta.x()},{delta.y()}) route={self.route}")
+        # Avoid rebuilding handles mid-drag
+        self.update_geometry(rebuild_handles=False)
+
+    def delete_elbow(self, index: int):
+        if index < 0 or index >= len(self.route):
+            return
+        self.route.pop(index)
+        # update elbow_pos to midpoint if any remain
+        if self.route:
+            mid = self.route[len(self.route)//2]
+            self.elbow_pos = QPointF(mid[0], mid[1])
+        else:
+            s = self._start_point(); e = self._end_point();
+            self.elbow_pos = QPointF((s.x()+e.x())/2, (s.y()+e.y())/2)
+        self.update_geometry()
+
+    def node_moved(self, node, delta: QPointF):
+        """Called when a connected TwistNode moves. Translate route points or implicit elbow by delta
+        so the bundle follows the device movement in an intuitive way.
+        """
+        if not delta or (delta.x() == 0 and delta.y() == 0):
+            return
+        if not self.route:
+            # No user-defined elbows -> just move the implicit elbow
+            self.elbow_pos = QPointF(self.elbow_pos.x() + delta.x(), self.elbow_pos.y() + delta.y())
+        else:
+            self.route = [(x + delta.x(), y + delta.y()) for (x, y) in self.route]
+        # After modifying, ensure geometry is updated
+        # Avoid rebuilding handles during node movement to keep handles attached
+        self.update_geometry(rebuild_handles=False)
 
     # Hook handle movement to elbow updates
     def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.LeftButton and self.handle.isUnderMouse():
-            self.set_elbow(event.scenePos())
-            event.accept()
-            return
+        # Implicit dragging of a main handle was removed. Users can add elbows (double-click)
+        # and then drag those explicit elbow handles to edit their position.
         super().mouseMoveEvent(event)
 
-    def _handle_move(self, event):
-        self.set_elbow(event.scenePos())
-        event.accept()
+    def mouseDoubleClickEvent(self, event):
+        # Add an elbow where the user double-clicks on the bundle
+        try:
+            self.add_elbow_at(event.scenePos())
+            event.accept()
+        except Exception:
+            pass
+

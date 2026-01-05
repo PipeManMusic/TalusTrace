@@ -37,7 +37,7 @@
     "notes": [
       {
         "timestamp": "2026-01-04T00:20:00.000000",
-        "content": "Implemented wire delete action on context menu with confirmation; deletes from scene, detaches from devices, updates lists, and marks dirty. Added regression test." 
+        "content": "Implemented wire delete action on context menu with confirmation; deletes from scene, detaches from devices, updates lists, and marks dirty. Added regression test."
       }
     ]
   },
@@ -51,7 +51,7 @@
     "notes": [
       {
         "timestamp": "2026-01-04T00:40:00.000000",
-        "content": "Added wire color context menu with DIN 47100 palette and custom picker; updates model color, refreshes pen, and marks dirty. Added regression test." 
+        "content": "Added wire color context menu with DIN 47100 palette and custom picker; updates model color, refreshes pen, and marks dirty. Added regression test."
       }
     ]
   },
@@ -65,7 +65,7 @@
     "notes": [
       {
         "timestamp": "2026-01-04T01:05:00.000000",
-        "content": "Added .yaml suffix enforcement via save-as; keeps .yml, appends .yaml when missing; added regression test and Path normalization." 
+        "content": "Added .yaml suffix enforcement via save-as; keeps .yml, appends .yaml when missing; added regression test and Path normalization."
       }
     ]
   },
@@ -79,7 +79,7 @@
     "notes": [
       {
         "timestamp": "2026-01-04T01:20:00.000000",
-        "content": "Added pin and wire meta fields; wire creation merges pin meta (end pin overrides); regression tests cover merge behavior." 
+        "content": "Added pin and wire meta fields; wire creation merges pin meta (end pin overrides); regression tests cover merge behavior."
       }
     ]
   },
@@ -104,6 +104,97 @@
     "description": "Dragging rectangular line-segment grips sometimes jitters/oscillates away from the cursor (same behavior as issue 15 but for segment handles).",
     "status": "open",
     "created_at": "2026-01-04T12:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-04T23:50:00.000000",
+        "content": "Related visual artifact (orphaned white circle) traced to an implicit bundle handle; implicit handle removed and tests added to guard against stray ellipses. This may reduce occurrences of perceived oscillation in some workflows."
+      }
+    ]
+  },
+  {
+    "type": "feature",
+    "title": "Twisted Pair: middle & elbow grips parity",
+    "description": "Make twisted pair wires expose middle grips and elbow grips identical to regular wires so users can add/move/delete elbows and create segment grips.",
+    "status": "open",
+    "id": 25,
+    "created_at": "2026-01-04T23:15:52",
     "notes": []
+  },
+  {
+    "type": "feature",
+    "title": "Twisted Pair: end behaves as pseudo-elbow",
+    "description": "Treat the end of a twisted pair as a selectable/pivotable pseudo-elbow so the wire end can be dragged and used as a pivot similar to regular wire ends.",
+    "status": "open",
+    "id": 26,
+    "created_at": "2026-01-04T23:15:52",
+    "notes": []
+  },
+  {
+    "type": "feature",
+    "title": "Suppress pin context menu for Twisted Pair pins",
+    "description": "Prevent right-click pin context menu on pins that belong to a Twisted Pair since their attributes inherit from connected wires and should not be edited directly.",
+    "status": "open",
+    "id": 27,
+    "created_at": "2026-01-04T23:15:52",
+    "notes": []
+  },
+  {
+    "type": "feature",
+    "title": "Color inheritance on connect across Twisted Pair",
+    "description": "When a wire is connected to one end of a Twisted Pair, wires on the other end should inherit color/metadata from the original connecting wire.",
+    "status": "open",
+    "id": 28,
+    "created_at": "2026-01-04T23:15:52",
+    "notes": []
+  },
+  {
+    "type": "feature",
+    "title": "Propagate color changes to all connecting wires and pins",
+    "description": "Changing the color of a wire connected to either end of a Twisted Pair should update all connected wires and the device pin visual colors to maintain consistency.",
+    "status": "open",
+    "id": 29,
+    "created_at": "2026-01-04T23:15:52",
+    "notes": []
+  },
+  {
+    "type": "feature",
+    "title": "Rename Bundle \u2192 TwistedPair",
+    "description": "Rename code and UI references from 'bundle' to 'twisted pair' (TwistedPair) to reflect the tool's intended use and reserve 'bundle' for larger multi-wire bundles later.",
+    "status": "open",
+    "id": 30,
+    "created_at": "2026-01-04T23:15:52",
+    "notes": []
+  },
+  {
+    "type": "feature",
+    "title": "Add TwistedPair unit tests",
+    "description": "Add unit tests for grips, pseudo-elbow behavior, pin context suppression, color inheritance, propagation, persistence, and rename coverage.",
+    "status": "open",
+    "id": 31,
+    "created_at": "2026-01-04T23:15:52",
+    "notes": []
+  },
+  {
+    "type": "feature",
+    "title": "Persistence migration for TwistedPair model",
+    "description": "Update persistence / loading code and migration steps to reflect TwistedPair renames and ensure backwards compatibility with existing 'bundle' entries.",
+    "status": "open",
+    "id": 32,
+    "created_at": "2026-01-04T23:15:52",
+    "notes": []
+  },
+  {
+    "id": 33,
+    "type": "bug",
+    "title": "Stray implicit bundle handle causes orphaned circle",
+    "description": "An implicit ellipse handle was present on TwistedBundle creation which could appear as a detached white circle during edits. The implicit handle was removed in favor of explicit ElbowHandle items created by the user.",
+    "status": "resolved",
+    "created_at": "2026-01-04T23:40:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-04T23:45:00.000000",
+        "content": "Removed implicit handle from TwistedBundleItem; added unit tests to assert no stray ellipse at bundle creation and updated behavior to use explicit ElbowHandle items. Full test suite passes locally (83 tests)."
+      }
+    ]
   }
 ]

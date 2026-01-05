@@ -85,9 +85,24 @@ class Wire(BaseModel):
             raise ValueError("Endpoints must be 'DeviceID.PinID'")
         return self
 
+class TwistNode(BaseModel):
+    id: str
+    x: float = 0.0
+    y: float = 0.0
+
+class TwistedBundle(BaseModel):
+    id: str
+    from_node: str
+    to_node: str
+    elbow: Tuple[float, float]
+    amplitude: Optional[float] = None
+    wavelength: Optional[float] = None
+
 # --- The Root Document ---
 class Harness(BaseModel):
     meta: Dict[str, Any] = Field(default_factory=dict)
     settings: Dict[str, Any] = Field(default_factory=lambda: {"grid_size": 20})
     devices: List[Device] = Field(default_factory=list)
     wires: List[Wire] = Field(default_factory=list)
+    twist_nodes: List[TwistNode] = Field(default_factory=list)
+    bundles: List[TwistedBundle] = Field(default_factory=list)

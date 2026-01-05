@@ -82,28 +82,33 @@ class HarnessView(QGraphicsView):
         self.scale(factor, factor)
 
     def mouseMoveEvent(self, event):
-        if self.last_pan_pos:
-            delta = event.position() - self.last_pan_pos
-            self.last_pan_pos = event.position()
-            self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
-            self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
-            return
+        try:
+            if self.last_pan_pos:
+                delta = event.position() - self.last_pan_pos
+                self.last_pan_pos = event.position()
+                self.horizontalScrollBar().setValue(self.horizontalScrollBar().value() - delta.x())
+                self.verticalScrollBar().setValue(self.verticalScrollBar().value() - delta.y())
+                return
 
-        pos = self.mapToScene(event.position().toPoint())
+            pos = self.mapToScene(event.position().toPoint())
 
-        # Logic 1: Moving a ghost (device or bundle)
-        if self.mode in ("PLACE_DEVICE", "PLACE_BUNDLE") and self.ghost_item:
-            snap_x = round(pos.x() / GRID_SIZE) * GRID_SIZE
-            snap_y = round(pos.y() / GRID_SIZE) * GRID_SIZE
-            self.ghost_item.setPos(snap_x, snap_y)
-            
-        # Logic 2: Dragging a Wire
-        if self.mode == "WIRING" and self.temp_wire and self.start_pin:
-            # Update end of line to follow mouse
-            p1 = self.start_pin.get_scene_pos()
-            self.temp_wire.setLine(QLineF(p1, pos))
-            
-        super().mouseMoveEvent(event)
+            # Logic 1: Moving a ghost (device or bundle)
+            if self.mode in ("PLACE_DEVICE", "PLACE_BUNDLE") and self.ghost_item:
+                snap_x = round(pos.x() / GRID_SIZE) * GRID_SIZE
+                snap_y = round(pos.y() / GRID_SIZE) * GRID_SIZE
+                self.ghost_item.setPos(snap_x, snap_y)
+                
+            # Logic 2: Dragging a Wire
+            if self.mode == "WIRING" and self.temp_wire and self.start_pin:
+                # Update end of line to follow mouse
+                p1 = self.start_pin.get_scene_pos()
+                self.temp_wire.setLine(QLineF(p1, pos))
+
+        except Exception as e:
+            import traceback
+            traceback.print_exc()
+        finally:
+            super().mouseMoveEvent(event)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MiddleButton:
@@ -126,6 +131,12 @@ class HarnessView(QGraphicsView):
             pin_clicked = None
             for item in self.scene().items(scene_pos):
                 if isinstance(item, PinItem):
+                    # If parent is a TwistNode and the pin is on the reserved bundle side, ignore it
+                    parent = item.parentItem()
+                    if parent and parent.__class__.__name__ == 'TwistNodeItem':
+                        # Avoid importing here to keep imports local to tests and runtime
+                        if not parent.pin_connectable(item.model.id):
+                            continue
                     pin_clicked = item
                     break
                 parent = item.parentItem()

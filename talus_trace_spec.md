@@ -25,7 +25,7 @@ A "Smart-Manual" CAD tool for designing automotive wiring harnesses, focusing on
 * **Canvas (`frontend/canvas.py`):** A specialized `QGraphicsScene` with:
     * **Infinite Grid:** 20px Snap.
     * **Layered Rendering:** Background (Halo) -> Middle (Stripe) -> Foreground (Color).
-* **Interaction:** Double-click to add elbows; Drag to snap orthogonal.
+* **Interaction:** Double-click to add elbows; Drag to snap orthogonal. Note: Twisted-pair bundles do not create an implicit main handle — elbows are explicit only (user-added).
 
 ## 🛠 Developer Workflow: The "Full-Overwrite" Protocol
 To eliminate merge conflicts and logic drift, we utilize a strict **Full-File Overwrite Strategy**.

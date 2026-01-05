@@ -1,53 +1,27 @@
 meta: {}
 settings:
   grid_size: 20
-devices:
-- id: '1'
-  type: AutoBox
-  label: ECU
-  pins:
-  - id: '1'
-    label: Fatty
-    side: right
-    meta: {}
-  - id: '2'
-    label: '2'
-    side: right
-    meta: {}
-  meta: {}
-  x: -360.0
-  y: -80.0
-- id: db197117
-  type: AutoBox
-  label: New Device
-  pins:
-  - id: '1'
-    label: '1'
-    side: left
-    meta: {}
-  - id: '2'
-    label: '2'
-    side: left
-    meta: {}
-  meta: {}
-  x: 180.0
-  y: -80.0
-wires:
-- id: 785bd430
-  from_conn: '1.1'
-  to_conn: db197117.1
-  color: BU
-  stripe: null
-  gauge: 18
-  signal: null
-  meta: {}
-  route: []
-- id: b35d919f
-  from_conn: '1.2'
-  to_conn: db197117.2
-  color: RD
-  stripe: null
-  gauge: 18
-  signal: null
-  meta: {}
-  route: []
+devices: []
+wires: []
+twist_nodes:
+- id: 2a8d1ab4
+  x: -140.0
+  y: -60.0
+- id: af002ba3
+  x: 60.0
+  y: -60.0
+- id: 9abb97f7
+  x: -40.0
+  y: -220.0
+- id: 3b4a8adc
+  x: 160.0
+  y: -220.0
+bundles:
+- id: 98e54132
+  from_node: 9abb97f7
+  to_node: 3b4a8adc
+  elbow:
+  - 100.0
+  - -220.0
+  amplitude: 5.0
+  wavelength: 40.0

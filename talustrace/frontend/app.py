@@ -14,7 +14,7 @@ from PySide6.QtWidgets import (
     QGraphicsItemGroup,
 )
 from PySide6.QtGui import QAction
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QPointF
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QMessageBox
 from talustrace.frontend.canvas import HarnessScene, HarnessView
@@ -62,6 +62,9 @@ class MainWindow(QMainWindow):
         # Signals
         self.view.canvas_clicked.connect(self.handle_canvas_click)
         self.view.wire_connected.connect(self.handle_wire_creation)
+        # Allow view to send key events to the main window via eventFilter so we can
+        # implement shortcuts like rotating twist nodes with Space.
+        self.view.installEventFilter(self)
 
         # Init
         self.device_items = []
@@ -104,16 +107,35 @@ class MainWindow(QMainWindow):
 
     def handle_wire_creation(self, start_pin_item, end_pin_item):
         """Called when user successfully connects two pins."""
-        # 1. Get Device and Pin IDs
+        # Validate connectability for twist nodes: pins on a node's reserved bundle side are not connectable.
         dev_start = start_pin_item.parentItem()
         dev_end = end_pin_item.parentItem()
-        
-        start_id = f"{dev_start.model.id}.{start_pin_item.model.id}"
-        end_id = f"{dev_end.model.id}.{end_pin_item.model.id}"
+
+        # If either endpoint is a TwistNode and the pin is not connectable, abort creation
+        if hasattr(dev_start, 'pin_connectable') and not dev_start.pin_connectable(start_pin_item.model.id):
+            self.status.setText("Cannot connect to bundle side pin")
+            return
+        if hasattr(dev_end, 'pin_connectable') and not dev_end.pin_connectable(end_pin_item.model.id):
+            self.status.setText("Cannot connect to bundle side pin")
+            return
+
+        # 1. Get Device and Pin IDs. If endpoint is a visual TwistNode (no .model), use a
+        # stable _persist_id (creating one if necessary) as the 'device' id so wires can
+        # reference the node.
+        def endpoint_device_id(dev):
+            if hasattr(dev, 'model') and getattr(dev, 'model') is not None:
+                return dev.model.id
+            if not hasattr(dev, '_persist_id') or not dev._persist_id:
+                import uuid
+                dev._persist_id = str(uuid.uuid4())[:8]
+            return f"NODE{dev._persist_id}"
+
+        start_id = f"{endpoint_device_id(dev_start)}.{start_pin_item.model.id}"
+        end_id = f"{endpoint_device_id(dev_end)}.{end_pin_item.model.id}"
 
         # Merge metadata from devices and pins (end overrides start on key conflict)
-        start_dev_meta = getattr(dev_start.model, "meta", {}) or {}
-        end_dev_meta = getattr(dev_end.model, "meta", {}) or {}
+        start_dev_meta = getattr(getattr(dev_start, 'model', None), 'meta', {}) or {}
+        end_dev_meta = getattr(getattr(dev_end, 'model', None), 'meta', {}) or {}
         start_meta = getattr(start_pin_item.model, "meta", {}) or {}
         end_meta = getattr(end_pin_item.model, "meta", {}) or {}
         merged_meta = {**start_dev_meta, **end_dev_meta, **start_meta, **end_meta}
@@ -147,7 +169,14 @@ class MainWindow(QMainWindow):
         node_a.setPos(x, y)
         node_b.setPos(x + spacing, y)
 
-        bundle = TwistedBundleItem(node_a, node_b, on_changed=self.mark_dirty)
+        # Ensure persistent IDs exist for wire endpoints
+        import uuid
+        if not hasattr(node_a, '_persist_id'):
+            node_a._persist_id = str(uuid.uuid4())[:8]
+        if not hasattr(node_b, '_persist_id'):
+            node_b._persist_id = str(uuid.uuid4())[:8]
+
+        bundle = TwistedBundleItem(node_a, node_b, on_changed=self.mark_dirty, on_delete=self._delete_bundle_item)
         bundle.update_geometry()
 
         self.scene.addItem(node_a)
@@ -161,6 +190,19 @@ class MainWindow(QMainWindow):
         node_b.register_bundle(bundle)
 
         return bundle
+
+    def _delete_bundle_item(self, bundle_item: TwistedBundleItem):
+        if not bundle_item:
+            return
+        if bundle_item in self.bundle_items:
+            self.bundle_items.remove(bundle_item)
+        if bundle_item.source_node and bundle_item in bundle_item.source_node.bundle_refs:
+            bundle_item.source_node.unregister_bundle(bundle_item)
+        if bundle_item.target_node and bundle_item in bundle_item.target_node.bundle_refs:
+            bundle_item.target_node.unregister_bundle(bundle_item)
+        if bundle_item.scene():
+            bundle_item.scene().removeItem(bundle_item)
+        self.mark_dirty()
 
     def _build_bundle_group(self, spacing=200):
         node_a = TwistNodeItem(on_changed=None)
@@ -198,14 +240,32 @@ class MainWindow(QMainWindow):
     def _build_harness_model(self):
         devices = []
         wires = []
+        twist_nodes = []
+        bundles = []
 
+        # Build primary devices/wires as before
         for item in self.scene.items():
             if isinstance(item, DeviceItem):
                 devices.append(item.model)
             elif isinstance(item, WireItem):
                 wires.append(item.model)
 
-        return Harness(devices=devices, wires=wires)
+        # For twist nodes/bundles, scene items may be TwistNodeItem and TwistedBundleItem
+        # Assign stable IDs for nodes and persist positions and bundle elbow info.
+        node_map = {}
+        import uuid
+        for node in self.twist_nodes:
+            if not hasattr(node, '_persist_id'):
+                node._persist_id = str(uuid.uuid4())[:8]
+            node_map[node._persist_id] = node
+            twist_nodes.append({"id": node._persist_id, "x": node.pos().x(), "y": node.pos().y()})
+
+        for b in self.bundle_items:
+            bid = getattr(b, 'model_id', None) or str(uuid.uuid4())[:8]
+            # elbow stored as tuple
+            bundles.append({"id": bid, "from_node": b.source_node._persist_id, "to_node": b.target_node._persist_id, "elbow": (b.elbow_pos.x(), b.elbow_pos.y()), "amplitude": b.amplitude, "wavelength": b.wavelength})
+
+        return Harness(devices=devices, wires=wires, twist_nodes=twist_nodes, bundles=bundles)
 
     def save_harness(self, path):
         harness = self._build_harness_model()
@@ -265,6 +325,33 @@ class MainWindow(QMainWindow):
                 self.scene.addItem(wire_item)
                 self.wire_items.append(wire_item)
 
+        # Reconstruct twist nodes and bundles if present
+        node_map = {}
+        if hasattr(harness, 'twist_nodes') and harness.twist_nodes:
+            for node_model in harness.twist_nodes:
+                node_item = TwistNodeItem(on_changed=self.mark_dirty)
+                # node_model is a Pydantic object; use attributes
+                node_item.setPos(node_model.x, node_model.y)
+                node_item._persist_id = node_model.id
+                self.scene.addItem(node_item)
+                self.twist_nodes.append(node_item)
+                node_map[node_model.id] = node_item
+
+        if hasattr(harness, 'bundles') and harness.bundles:
+            for b in harness.bundles:
+                a = node_map.get(b.from_node)
+                c = node_map.get(b.to_node)
+                if a and c:
+                    bundle_item = TwistedBundleItem(a, c, on_changed=self.mark_dirty)
+                    if getattr(b, 'elbow', None):
+                        bundle_item.elbow_pos = QPointF(b.elbow[0], b.elbow[1])
+                    bundle_item.model_id = b.id
+                    bundle_item.update_geometry()
+                    self.scene.addItem(bundle_item)
+                    self.bundle_items.append(bundle_item)
+                    a.register_bundle(bundle_item)
+                    c.register_bundle(bundle_item)
+
         if set_current:
             self.current_path = Path(path)
         else:
@@ -291,6 +378,27 @@ class MainWindow(QMainWindow):
             event.ignore()
             return
         super().closeEvent(event)
+
+    def eventFilter(self, obj, event):
+        # Intercept key presses from the view so we can handle Space.
+        from PySide6.QtCore import QEvent, Qt
+        if obj is self.view and event.type() == QEvent.KeyPress:
+            if event.key() == Qt.Key_Space:
+                # Determine selected nodes to rotate
+                nodes_to_rotate = set()
+                for item in self.scene.selectedItems():
+                    if isinstance(item, TwistNodeItem):
+                        nodes_to_rotate.add(item)
+                    if isinstance(item, TwistedBundleItem):
+                        nodes_to_rotate.add(item.source_node)
+                        nodes_to_rotate.add(item.target_node)
+                for n in nodes_to_rotate:
+                    if hasattr(n, 'rotate_cw'):
+                        n.rotate_cw()
+                        # notify change
+                        self.mark_dirty()
+                return True
+        return super().eventFilter(obj, event)
 
     # --- Menus and helpers ---
     def _build_menus(self):
@@ -467,10 +575,24 @@ class MainWindow(QMainWindow):
             return
         if wire_item in self.wire_items:
             self.wire_items.remove(wire_item)
-        if wire_item.source_dev and wire_item in wire_item.source_dev.attached_wires:
-            wire_item.source_dev.attached_wires.remove(wire_item)
-        if wire_item.target_dev and wire_item in wire_item.target_dev.attached_wires:
-            wire_item.target_dev.attached_wires.remove(wire_item)
+        # Unregister from source/target, supporting both DeviceItem (list) and TwistNodeItem (dict/register API).
+        if wire_item.source_dev:
+            if hasattr(wire_item.source_dev, 'unregister_wire'):
+                wire_item.source_dev.unregister_wire(wire_item.src_pin_id, wire_item)
+                # Refresh any bundles referencing this node
+                if hasattr(wire_item.source_dev, 'bundle_refs'):
+                    for b in wire_item.source_dev.bundle_refs:
+                        if b: b.update_geometry()
+            elif wire_item in getattr(wire_item.source_dev, 'attached_wires', []):
+                wire_item.source_dev.attached_wires.remove(wire_item)
+        if wire_item.target_dev:
+            if hasattr(wire_item.target_dev, 'unregister_wire'):
+                wire_item.target_dev.unregister_wire(wire_item.tgt_pin_id, wire_item)
+                if hasattr(wire_item.target_dev, 'bundle_refs'):
+                    for b in wire_item.target_dev.bundle_refs:
+                        if b: b.update_geometry()
+            elif wire_item in getattr(wire_item.target_dev, 'attached_wires', []):
+                wire_item.target_dev.attached_wires.remove(wire_item)
         if wire_item.scene():
             wire_item.scene().removeItem(wire_item)
         self.mark_dirty()
