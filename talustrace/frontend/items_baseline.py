@@ -184,8 +184,20 @@ class PinItem(QGraphicsRectItem):
         self._hovered = False
 
     def set_visual_geometry(self, x1, y1, x2, y2):
+        # Set initial local head pos
         self.setPos(x1, y1)
-        self.line.setLine(0, 0, x2-x1, y2-y1)
+        # Snap head to grid in scene coordinates to ensure global grid-lock
+        try:
+            head_scene = self.mapToScene(0, 0)
+            snapped_scene = QPointF(round(head_scene.x() / GRID_SIZE) * GRID_SIZE, round(head_scene.y() / GRID_SIZE) * GRID_SIZE)
+            new_local = self.parentItem().mapFromScene(snapped_scene) if self.parentItem() else snapped_scene
+            self.setPos(new_local)
+        except Exception:
+            pass
+        # Recompute line to tail based on snapped head local position so leader attaches correctly
+        dx = x2 - self.pos().x()
+        dy = y2 - self.pos().y()
+        self.line.setLine(0, 0, dx, dy)
         # Place tip at the end of the line
         p2 = self.line.line().p2()
         self.tip.setPos(p2)
@@ -729,6 +741,24 @@ class DeviceItem(QGraphicsItem):
     def _clear_side_highlight(self):
         self._side_highlight = None
         self.update()
+
+    def _enforce_pin_grid(self):
+        """Snap pin head positions to the global GRID_SIZE so that pin tips remain grid-locked.
+        This adjusts the pin local position and recomputes the leader line to preserve the tail anchor."""
+        for pid, pin in list(self.pins.items()):
+            try:
+                # Determine current pin head scene position
+                head_scene = pin.mapToScene(0, 0)
+                snapped_scene = QPointF(round(head_scene.x() / GRID_SIZE) * GRID_SIZE, round(head_scene.y() / GRID_SIZE) * GRID_SIZE)
+                # Map snapped scene point back to node-local coords
+                new_local = self.mapFromScene(snapped_scene)
+                # Determine current tail (tip) scene position and convert to local
+                tail_scene = pin.get_tip_scene_pos()
+                tail_local = self.mapFromScene(tail_scene)
+                # Update pin geometry to snapped head and preserved tail
+                pin.set_visual_geometry(new_local.x(), new_local.y(), tail_local.x(), tail_local.y())
+            except Exception:
+                pass
 
 class ElbowHandle(QGraphicsEllipseItem):
     def __init__(self, wire_item, index):
@@ -1320,8 +1350,15 @@ class TwistNodeItem(QGraphicsItem):
     def itemChange(self, change, value):
         # Scene bookkeeping for the halo sibling
         if change == QGraphicsItem.ItemSceneChange:
-            if value: value.addItem(self.halo)
-            elif self.halo.scene(): self.halo.scene().removeItem(self.halo)
+            if value:
+                value.addItem(self.halo)
+                # Ensure pins align to the global grid once this node is added to a scene
+                try:
+                    self._enforce_pin_grid()
+                except Exception:
+                    pass
+            elif self.halo.scene():
+                self.halo.scene().removeItem(self.halo)
 
         if change == QGraphicsItem.ItemSelectedHasChanged:
             self.halo.setVisible(value)
@@ -1350,6 +1387,12 @@ class TwistNodeItem(QGraphicsItem):
                     b.node_moved(self, delta)
                 except Exception:
                     pass
+
+            # Enforce pin grid alignment on node moves as well
+            try:
+                self._enforce_pin_grid()
+            except Exception:
+                pass
 
             if callable(self.on_changed):
                 self.on_changed()
@@ -1416,9 +1459,10 @@ class TwistNodeItem(QGraphicsItem):
 
         # Compute pivot positioned outside the node on the bundle side so it acts as
         # an edit grip and does not interfere with selecting the pins. The pivot is
-        # placed a small distance beyond the node's edge toward the bundle.
+        # placed a fixed distance beyond the node's edge toward the bundle (GRID_SIZE).
         bundle_side = shield_side
-        outward = getattr(self, '_pivot_outward', 14.0)
+        # Use GRID_SIZE so pivot distance aligns with the standard snap grid (20px)
+        outward = getattr(self, '_pivot_outward', GRID_SIZE)
 
         if bundle_side == Side.LEFT:
             pivot_x = -outward
@@ -1464,6 +1508,11 @@ class TwistNodeItem(QGraphicsItem):
             show_after_rot = show_flag
             # If rotation rotates the bundle side into view, hide accordingly (simple approach assumes flag rotates too)
             self._add_pin(pm, x1=nx1, y1=ny1, x2=nx2, y2=ny2, show=show_after_rot)
+        # After building pins, enforce grid lock so pin heads are positioned on the GRID
+        try:
+            self._enforce_pin_grid()
+        except Exception:
+            pass
 
     def _add_pin(self, pin_model: PinModel, x1, y1, x2, y2, show: bool = True):
         pin = PinItem(pin_model, self)
@@ -1602,8 +1651,14 @@ class TwistNodeItem(QGraphicsItem):
     def paint(self, painter, option, widget=None):
         # Visual style: render as two open wire ends (no device box)
         # Draw the pivot marker (edit grip). If pivot is highlighted, use the selected color.
+        # If this node is attached to a TwistedPair bundle, suppress drawing the pivot
+        # here to avoid duplicate/conflicting visuals (we use the bundle endpoint markers).
         pivot = getattr(self, '_pivot', None) or self._rect.center()
         r = 5
+        # Suppress pivot when a bundle is attached
+        if getattr(self, 'bundle_refs', None):
+            # Still ensure we update selection halo, but avoid drawing the pivot ellipse
+            return
         if getattr(self, '_pivot_highlight', False):
             painter.setPen(Qt.NoPen)
             painter.setBrush(QBrush(SELECTED_COLOR))
