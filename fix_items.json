@@ -102,12 +102,16 @@
     "type": "bug",
     "title": "Segment handle drag oscillation",
     "description": "Dragging rectangular line-segment grips sometimes jitters/oscillates away from the cursor (same behavior as issue 15 but for segment handles).",
-    "status": "open",
+    "status": "resolved",
     "created_at": "2026-01-04T12:00:00.000000",
     "notes": [
       {
         "timestamp": "2026-01-04T23:50:00.000000",
         "content": "Related visual artifact (orphaned white circle) traced to an implicit bundle handle; implicit handle removed and tests added to guard against stray ellipses. This may reduce occurrences of perceived oscillation in some workflows."
+      },
+      {
+        "timestamp": "2026-01-04T23:59:30.000000",
+        "content": "Marked resolved: implicit bundle handle removed and explicit ElbowHandle items enforced; tests added and changes pushed to main (commits 61a31af, f83c30a). Monitor for any remaining oscillation reports and re-open if necessary."
       }
     ]
   },
