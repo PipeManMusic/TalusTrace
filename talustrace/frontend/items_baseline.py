@@ -1412,8 +1412,16 @@ class TwistNodeItem(QGraphicsItem):
         shield = PinModel(id="S", label="S", side=Side.RIGHT)
 
         # Local positions in unrotated coordinates
-        y_top = self.HEIGHT * 0.35
-        y_bottom = self.HEIGHT * 0.65
+        # Place H/L pins orthogonally with fixed spacing equal to 3 * GRID_SIZE (60px)
+        # so the control pivot can sit on the grid line between them. Pins will then
+        # snap to the global GRID via _enforce_pin_grid.
+        spacing = GRID_SIZE * 3
+        half = spacing / 2.0
+        cy = self.HEIGHT / 2.0
+        cx = self.WIDTH / 2.0
+        y_top = cy - half
+        y_bottom = cy + half
+
         # Determine which side should hold the High/Low pins for external connections.
         # If a bundle is attached to one side, place H/L on the opposite side so users can
         # connect regular wires there. Shield pin is placed on the bundle side.
