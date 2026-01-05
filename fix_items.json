@@ -120,11 +120,17 @@
     "type": "feature",
     "title": "Twisted Pair: middle & elbow grips parity",
     "description": "Make twisted pair wires expose middle grips and elbow grips identical to regular wires so users can add/move/delete elbows and create segment grips.",
-    "status": "open",
+    "status": "staging",
     "id": 25,
     "created_at": "2026-01-04T23:15:52",
-    "notes": []
+    "notes": [
+      {
+        "timestamp": "2026-01-04T23:59:59.000000",
+        "content": "Moved to 'staging' per project policy: changes implemented and awaiting human review before marking as 'resolved'."
+      }
+    ]
   },
+
   {
     "type": "feature",
     "title": "Twisted Pair: end behaves as pseudo-elbow",
