@@ -135,13 +135,17 @@
     "type": "feature",
     "title": "Twisted Pair: end behaves as pseudo-elbow",
     "description": "Treat the end of a twisted pair as a selectable/pivotable pseudo-elbow so the wire end can be dragged and used as a pivot similar to regular wire ends.",
-    "status": "staging",
+    "status": "open",
     "id": 26,
     "created_at": "2026-01-04T23:15:52",
     "notes": [
       {
         "timestamp": "2026-01-05T12:00:00.000000",
         "content": "Plan moved to staging. Implementation plan and stubs added: (1) Pin grid-lock: enforce pin tip snap to GRID in TwistNodeItem._build_pins and add tests (files: items_baseline.py, tests/test_twistnode_pins.py). (2) Atomic deletion: ensure deleting any part (anchor/pin/body) removes the TwistedPair (files: app.py eventFilter + helper _delete_bundle_item; tests: tests/test_twisted_atomic_delete.py). (3) Endpoint markers: permanent non-editable markers already implemented; verify selection highlighting and non-movability (tests present). (4) Color propagation: wire connect events should propagate color/metadata to opposite end and update helix; hook into WireItem.set_color_code and TwistedBundleItem._update_colors_from_nodes (tests: tests/test_twisted_color_propagation.py). (5) Backend TwistedPair model & persistence: add Pydantic model, save/load support and migration from legacy 'bundles' (files: backend/models.py, app.py load/save_harness; tests: tests/test_twisted_persistence_and_migration.py). (6) Add TwistedPair unit tests and interactive tests (see issue #31). (7) Defer renaming 'bundle'->'TwistedPair' to a separate rename PR to avoid churn. Each step will include unit tests, and interactive QTest use-cases where applicable."
+      },
+      {
+        "timestamp": "2026-01-05T12:30:00.000000",
+        "content": "Decision: revert to pending/open status for human review and proceed with visual-change option C (change endpoint markers to outlined rings to avoid confusion with pin tips). Implementation will be applied and tests added; will move back to 'staging' once you approve the visuals."
       }
     ]
   },

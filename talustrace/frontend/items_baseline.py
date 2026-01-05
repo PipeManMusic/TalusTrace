@@ -1721,9 +1721,38 @@ class TwistedBundleItem(QGraphicsPathItem):
         self.elbow_handles: list[ElbowHandle] = []
         self.segment_handles: list[SegmentHandle] = []
 
+        # Permanent non-editable endpoint markers (pseudo-elbows). These are always present
+        # near the start/end pins and highlight when the bundle is selected.
+        self.start_marker = QGraphicsEllipseItem(-5, -5, 10, 10, self)
+        # Use a hollow ring (outline) so it doesn't compete visually with filled pin tips.
+        self.start_marker.setBrush(Qt.NoBrush)
+        self.start_marker.setPen(QPen(QColor(140, 140, 140), 1.6))
+        self.start_marker.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+        self.start_marker.setAcceptedMouseButtons(Qt.NoButton)
+        self.start_marker.setZValue(2)
+        try:
+            self.start_marker.setData(0, "bundle_endpoint_start")
+        except Exception:
+            pass
+
+        self.end_marker = QGraphicsEllipseItem(-5, -5, 10, 10, self)
+        self.end_marker.setBrush(Qt.NoBrush)
+        self.end_marker.setPen(QPen(QColor(140, 140, 140), 1.6))
+        self.end_marker.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+        self.end_marker.setAcceptedMouseButtons(Qt.NoButton)
+        self.end_marker.setZValue(2)
+        try:
+            self.end_marker.setData(0, "bundle_endpoint_end")
+        except Exception:
+            pass
+
         self.recalculate_path()
-        # No implicit handle to position (implicit handle removed). Explicit elbow handles
-        # will be created when the user adds elbows via double-click or programmatic calls.
+        # Position markers according to current endpoints
+        try:
+            self.start_marker.setPos(self.mapFromScene(self._start_point()))
+            self.end_marker.setPos(self.mapFromScene(self._end_point()))
+        except Exception:
+            pass
 
         # Register this bundle with the nodes so node-side events (e.g. wire recolor) can
         # notify the bundle even if creation didn't happen via the higher-level app helper.
@@ -1881,9 +1910,12 @@ class TwistedBundleItem(QGraphicsPathItem):
         else:
             # Update positions of existing handles to keep them attached during interactive operations
             self._update_elbow_handle_positions()
-        # Note: implicit main handle was removed; elbow position is stored in self.elbow_pos
-        # and explicit ElbowHandle items are created when route points exist.
-        pass
+        # Update endpoint markers positions
+        try:
+            self.start_marker.setPos(self.mapFromScene(self._start_point()))
+            self.end_marker.setPos(self.mapFromScene(self._end_point()))
+        except Exception:
+            pass
 
     def _snap_point(self, pt: QPointF) -> QPointF:
         return QPointF(round(pt.x() / GRID_SIZE) * GRID_SIZE, round(pt.y() / GRID_SIZE) * GRID_SIZE)
@@ -2047,12 +2079,20 @@ class TwistedBundleItem(QGraphicsPathItem):
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedHasChanged:
             self.halo_path.setVisible(value)
-            # Change handle color when selected so user sees the edit grip is active
-            if getattr(self, 'handle', None):
-                if value:
-                    self.handle.setBrush(QBrush(SELECTED_COLOR))
-                else:
-                    self.handle.setBrush(QBrush(QColor(200, 200, 200)))
+            # Change endpoint marker outline color when selected so user sees the bundle is active
+            try:
+                if getattr(self, 'start_marker', None):
+                    if value:
+                        self.start_marker.setPen(QPen(SELECTED_COLOR, 1.6))
+                    else:
+                        self.start_marker.setPen(QPen(QColor(140, 140, 140), 1.6))
+                if getattr(self, 'end_marker', None):
+                    if value:
+                        self.end_marker.setPen(QPen(SELECTED_COLOR, 1.6))
+                    else:
+                        self.end_marker.setPen(QPen(QColor(140, 140, 140), 1.6))
+            except Exception:
+                pass
             # Also highlight node pivots when the bundle is selected
             try:
                 if value:
