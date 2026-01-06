@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   width="210mm"
+   height="297mm"
+   viewBox="0 0 210 297"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs1" />
+  <g
+     id="layer1"
+     style="display:inline">
+    <circle
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linejoin:round;paint-order:stroke fill markers"
+       id="path1"
+       cx="132.22603"
+       cy="110.77397"
+       r="4.9931502" />
+  </g>
+  <g
+     id="layer2"
+     style="display:inline">
+    <ellipse
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linejoin:round;paint-order:stroke fill markers"
+       id="path3"
+       cx="116.90509"
+       cy="103.73038"
+       rx="1.4384295"
+       ry="1.4711212" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linejoin:round;paint-order:stroke fill markers"
+       d="m 118.0493,103.59962 h 4.6422"
+       id="path4" />
+  </g>
+  <g
+     id="layer3"
+     style="display:inline">
+    <ellipse
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linejoin:round;paint-order:stroke fill markers"
+       id="ellipse3"
+       cx="116.90509"
+       cy="116.28394"
+       rx="1.4384295"
+       ry="1.4711212" />
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linejoin:round;paint-order:stroke fill markers"
+       d="m 118.0493,116.34934 h 4.6422"
+       id="path5" />
+  </g>
+  <g
+     id="layer4"
+     style="display:inline">
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linejoin:round;paint-order:stroke fill markers"
+       d="m 122.2992,116.42289 10.00957,-5.71798"
+       id="path6" />
+  </g>
+  <g
+     id="layer5"
+     style="display:inline">
+    <path
+       style="fill:none;fill-rule:evenodd;stroke:#000000;stroke-width:1;stroke-linejoin:round;paint-order:stroke fill markers"
+       d="m 122.37276,103.49337 9.91687,7.28486"
+       id="path7" />
+  </g>
+</svg>

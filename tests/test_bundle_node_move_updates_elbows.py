@@ -33,10 +33,15 @@ def test_route_translates_with_node(qapp):
     bundle.add_elbow_at(QPointF(120, 0))
     before = list(bundle.route)
 
-    # move node a
+    # move node a (note: node positions snap to GRID_SIZE)
+    old_node_snapped = QPointF(round(a.pos().x() / 20) * 20, round(a.pos().y() / 20) * 20)
     a.setPos(a.pos().x() + 30, a.pos().y() + 5)
 
     after = list(bundle.route)
     dx = round(after[0][0] - before[0][0], 6)
     dy = round(after[0][1] - before[0][1], 6)
-    assert dx == 30 and dy == 5
+    # Compute expected delta honoring snap-to-grid
+    new_node_snapped = QPointF(round((a.pos().x()) / 20) * 20, round((a.pos().y()) / 20) * 20)
+    expected_dx = round(new_node_snapped.x() - old_node_snapped.x(), 6)
+    expected_dy = round(new_node_snapped.y() - old_node_snapped.y(), 6)
+    assert dx == expected_dx and dy == expected_dy

@@ -40,12 +40,26 @@ BOX_COLOR = QColor(50, 50, 50)
 BORDER_COLOR = QColor(200, 200, 200)
 SELECTED_COLOR = QColor(255, 165, 0)
 TEXT_COLOR = QColor(255, 255, 255)
+
 PIN_COLOR = QColor(200, 200, 200)
 PIN_HOVER_COLOR = QColor(0, 255, 0)
 PIN_PITCH = 20
 ELBOW_COLOR = QColor(0, 122, 255)
+# Pivot color (dark blue) used for unselected control pivot fill
+PIVOT_COLOR = QColor(0, 70, 140)
 SEGMENT_HANDLE_COLOR = QColor(180, 180, 180)
 TEXT_INSET = 6
+WIRE_THICKNESS = 3  # Shared thickness for wires and leader lines
+# Control pivot visual sizes
+CONTROL_PIVOT_DIAM = 10  # diameter in device pixels for control pivot ellipse (fixed device-space size)
+CONTROL_DOT_DIAM = 6     # diameter of the small always-visible dot
+PIVOT_HIT_RADIUS = 16  # Scene-pixel radius around pivot that counts as clicking the grip
+
+# Selection visuals for making the pivot unambiguous
+SELECTED_RING_PAD = 5        # extra radius (device pixels) around pivot for the selection ring
+SELECTED_RING_WIDTH = 3      # pen width for selection ring
+SELECTED_LABEL_TEXT = "Pivot"
+
 CONFIG_PATH = Path(__file__).resolve().parents[2] / "configure.json"
 CONFIG_USAGE_KEY = "context_menu_usage"
 _ACTION_USAGE = defaultdict(int)
@@ -168,61 +182,199 @@ class PinItem(QGraphicsRectItem):
         super().__init__(parent)
         self.model = pin_model
         # Enlarge pick box for easier hover/selection and context menu access.
+        # Restore visual pin geometry (small line + tip), but keep leader lines removed
+        # This makes pins visible in renders while not drawing leader lines that previously inflated bounds.
         self.setRect(-8, -8, 16, 16)
         self.setBrush(Qt.NoBrush)
         self.setPen(Qt.NoPen)
+        # Visual line from head to tail
         self.line = QGraphicsLineItem(self)
-        self.line.setPen(QPen(PIN_COLOR, 3))
+        self.line.setPen(QPen(PIN_COLOR, WIRE_THICKNESS))
         # Visual tip circle at the end of the pin line
-        # Restore original smaller tip for open-wire appearance
         self.tip = QGraphicsEllipseItem(-3, -3, 6, 6, self)
         self.tip.setBrush(QBrush(PIN_COLOR))
         self.tip.setPen(Qt.NoPen)
         self.tip.setZValue(1)
         self.setAcceptHoverEvents(True)
-        # Keep hover feedback simple (color change)
+        # Leader line connects the pin tail to the node control pivot.
+        # It is drawn as a child of the node so coordinates are in node-local space.
+        try:
+            parent_item = parent or self.parentItem()
+            if parent_item is not None:
+                self.leader = QGraphicsLineItem(parent_item)
+                self.leader.setPen(QPen(PIN_COLOR, WIRE_THICKNESS))
+                self.leader.setZValue(0)
+            else:
+                self.leader = None
+        except Exception:
+            self.leader = None
+        # Keep hover flag for compatibility
         self._hovered = False
+        # Track the current visual color for the pin so hover leave can restore it
+        self._pending_color = PIN_COLOR
 
     def set_visual_geometry(self, x1, y1, x2, y2):
-        # Set initial local head pos
+        # Set head (local) position and snap to grid
         self.setPos(x1, y1)
-        # Snap head to grid in scene coordinates to ensure global grid-lock
         try:
             head_scene = self.mapToScene(0, 0)
             snapped_scene = QPointF(round(head_scene.x() / GRID_SIZE) * GRID_SIZE, round(head_scene.y() / GRID_SIZE) * GRID_SIZE)
             new_local = self.parentItem().mapFromScene(snapped_scene) if self.parentItem() else snapped_scene
             self.setPos(new_local)
+            # Ensure head is centered on a grid intersection (both X and Y)
+            head_scene = self.mapToScene(0, 0)
+            head_snapped = QPointF(round(head_scene.x() / GRID_SIZE) * GRID_SIZE, round(head_scene.y() / GRID_SIZE) * GRID_SIZE)
+            if head_snapped != head_scene:
+                new_local2 = self.parentItem().mapFromScene(head_snapped) if self.parentItem() else head_snapped
+                self.setPos(new_local2)
         except Exception:
             pass
-        # Recompute line to tail based on snapped head local position so leader attaches correctly
-        dx = x2 - self.pos().x()
-        dy = y2 - self.pos().y()
-        self.line.setLine(0, 0, dx, dy)
-        # Place tip at the end of the line
-        p2 = self.line.line().p2()
-        self.tip.setPos(p2)
+        # Recompute line to tail based on snapped head local position
+        # Tail (tip) should be snapped to the global grid in scene coordinates to keep it aligned.
+        try:
+            # Tail should point from the head toward the bundle (pivot) by a short stub
+            side = getattr(self.model, 'side', None)
+            tip_off = 6.0
+            try:
+                parent = self.parentItem() or self
+                head_scene = parent.mapToScene(self.pos())
+                pivot_scene = parent.mapToScene(getattr(parent, '_pivot', parent._rect.center()))
+                vec_x = pivot_scene.x() - head_scene.x()
+                vec_y = pivot_scene.y() - head_scene.y()
+                length = (vec_x * vec_x + vec_y * vec_y) ** 0.5
+                if length == 0:
+                    # fallback axis-aligned stub based on side
+                    if side == Side.LEFT:
+                        vec_x, vec_y = -1.0, 0.0
+                    elif side == Side.RIGHT:
+                        vec_x, vec_y = 1.0, 0.0
+                    elif side == Side.TOP:
+                        vec_x, vec_y = 0.0, -1.0
+                    elif side == Side.BOTTOM:
+                        vec_x, vec_y = 0.0, 1.0
+                    else:
+                        vec_x, vec_y = -1.0, 0.0
+                    length = 1.0
+                ux = vec_x / length
+                uy = vec_y / length
+                # Compute tail scene position a small distance toward pivot
+                tail_scene = QPointF(head_scene.x() + ux * tip_off, head_scene.y() + uy * tip_off)
+                tail_local = parent.mapFromScene(tail_scene)
+                dx = tail_local.x() - self.pos().x()
+                dy = tail_local.y() - self.pos().y()
+            except Exception:
+                # fallback to previous approach
+                dx = x2 - self.pos().x()
+                dy = y2 - self.pos().y()
+        except Exception:
+            dx = x2 - self.pos().x()
+            dy = y2 - self.pos().y()
+
+        try:
+            self.line.setLine(0, 0, dx, dy)
+        except Exception:
+            pass
+        # Place head ellipse at the local origin (head) and keep tip as the line end (tail)
+        try:
+            self.tip.setPos(0, 0)
+        except Exception:
+            pass
+        # Update leader/visual color if attached to a bundle
+        try:
+            # Keep existing color unless bundle has overridden it via set_color
+            if hasattr(self, '_pending_color') and isinstance(self._pending_color, QColor):
+                self.set_color(self._pending_color)
+        except Exception:
+            pass
+        # Update leader line
+        try:
+            self.update_leader()
+        except Exception:
+            pass
+
+    def set_color(self, color: QColor):
+        try:
+            if not isinstance(color, QColor):
+                return
+            self.line.setPen(QPen(color, WIRE_THICKNESS))
+            self.tip.setBrush(QBrush(color))
+            if self.leader:
+                self.leader.setPen(QPen(color, WIRE_THICKNESS))
+            # Store pending color so future geometry updates can reapply
+            self._pending_color = color
+        except Exception:
+            pass
 
     def hoverEnterEvent(self, event):
-        self.line.setPen(QPen(PIN_HOVER_COLOR, 3))
-        self.tip.setBrush(QBrush(PIN_HOVER_COLOR))
-        # scale tip slightly for visual feedback
-        self.tip.setScale(1.2)
+        try:
+            self.line.setPen(QPen(PIN_HOVER_COLOR, WIRE_THICKNESS))
+            self.tip.setBrush(QBrush(PIN_HOVER_COLOR))
+            self.tip.setScale(1.2)
+        except Exception:
+            pass
         self._hovered = True
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
-        self.line.setPen(QPen(PIN_COLOR, 2))
-        self.tip.setBrush(QBrush(PIN_COLOR))
-        self.tip.setScale(1.0)
+        try:
+            # Restore the pin's previous color (may be bundle-applied) and the standard wire thickness
+            color = getattr(self, '_pending_color', PIN_COLOR)
+            self.line.setPen(QPen(color, WIRE_THICKNESS))
+            self.tip.setBrush(QBrush(color))
+            self.tip.setScale(1.0)
+            # Also restore leader pen if present
+            if self.leader:
+                try:
+                    self.leader.setPen(QPen(color, WIRE_THICKNESS))
+                except Exception:
+                    pass
+        except Exception:
+            pass
         self._hovered = False
         super().hoverLeaveEvent(event)
+
+    def update_leader(self):
+        """Update the leader line from this pin's tail (line end) to the parent node's control pivot (node._pivot).
+        The leader is drawn as a child of the node so coordinates are set in node-local space."""
+        try:
+            node = self.parentItem()
+            if not node or not hasattr(node, '_pivot') or not self.leader:
+                return
+            tail_scene = self.get_tail_scene_pos()
+            # tail in node-local coords
+            tail_local = node.mapFromScene(tail_scene)
+            # Compute pivot in scene coords then map back to node-local to ensure consistency
+            pivot_scene = node.mapToScene(getattr(node, '_pivot', node._rect.center()))
+            pivot_local = node.mapFromScene(pivot_scene)
+
+            self.leader.setLine(tail_local.x(), tail_local.y(), pivot_local.x(), pivot_local.y())
+        except Exception:
+            pass
 
     def get_scene_pos(self):
         return self.mapToScene(0, 0)
 
     def get_tip_scene_pos(self):
-        # Tip is the end of the drawn pin line, in scene coords
-        return self.tip.mapToScene(self.tip.boundingRect().center())
+        # Tip (head) is the ellipse at the pin head; return its scene coordinates
+        try:
+            return self.tip.mapToScene(self.tip.boundingRect().center())
+        except Exception:
+            try:
+                return self.mapToScene(0, 0)
+            except Exception:
+                return self.mapToScene(0, 0)
+
+    def get_tail_scene_pos(self):
+        # Tail is the end of the pin's line; return its scene coordinates
+        try:
+            p2 = self.line.line().p2()
+            return self.mapToScene(p2)
+        except Exception:
+            try:
+                # Fallback to head
+                return self.get_tip_scene_pos()
+            except Exception:
+                return self.mapToScene(0, 0)
 
     def contextMenuEvent(self, event):
         menu = QMenu()
@@ -278,12 +430,8 @@ class DeviceItem(QGraphicsItem):
         # Removed ItemIsMovable to handle manual snapping/moving
         self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemSendsGeometryChanges)
         
-        # Selection Halo (Sibling Item)
-        self.halo = QGraphicsRectItem() # No parent
-        self.halo.setPen(QPen(SELECTED_COLOR, 4))
-        self.halo.setBrush(Qt.NoBrush)
-        self.halo.hide()
-        self.halo.setZValue(-1) # Behind the device box
+        # Removed rectangular halo; selection visuals should use the control pivot ellipse where applicable
+        self.halo = None
 
         self.id_text = QGraphicsSimpleTextItem(f"({self.model.id})", self)
         self.id_text.setBrush(QBrush(TEXT_COLOR))
@@ -549,10 +697,20 @@ class DeviceItem(QGraphicsItem):
             pid = self._next_pin_id()
             self.add_pin_model(side=side, label=None, pin_id=pid)
     def layout_pins(self):
-        # Remove existing pin graphics before rebuild
+        # Remove existing pin graphics before rebuild; ensure we also remove any
+        # leader lines that are children of the node so they don't persist as stray geometry.
         for pin in self.pins.values():
-            if pin.scene():
-                pin.scene().removeItem(pin)
+            try:
+                # Remove leader first
+                if getattr(pin, 'leader', None) and pin.leader.scene():
+                    pin.leader.scene().removeItem(pin.leader)
+            except Exception:
+                pass
+            try:
+                if pin.scene():
+                    pin.scene().removeItem(pin)
+            except Exception:
+                pass
         self.pins = {}
 
         # Use Backend AutoSizer for dimensions
@@ -560,7 +718,8 @@ class DeviceItem(QGraphicsItem):
         
         self.prepareGeometryChange()
         self._rect = QRectF(0, 0, width, height)
-        self.halo.setRect(self._rect.adjusted(-2, -2, 2, 2))
+        if getattr(self, 'halo', None) is not None:
+            self.halo.setRect(self._rect.adjusted(-2, -2, 2, 2))
         
         id_br = self.id_text.boundingRect()
         lb = self.label.boundingRect()
@@ -719,15 +878,16 @@ class DeviceItem(QGraphicsItem):
     def _snap(self, value): return round(value / GRID_SIZE) * GRID_SIZE
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSceneChange:
-            if value: value.addItem(self.halo)
-            elif self.halo.scene(): self.halo.scene().removeItem(self.halo)
+            if value and getattr(self, 'halo', None) is not None:
+                value.addItem(self.halo)
+            elif getattr(self, 'halo', None) and self.halo.scene():
+                self.halo.scene().removeItem(self.halo)
 
-        if change == QGraphicsItem.ItemSelectedHasChanged:
-            self.halo.setVisible(value)
-            if value: self.halo.setPos(self.pos())
+        # Do not display rectangular halos; selection visuals (where needed) are handled
+        # at the node level using a control pivot ellipse.
 
         if change == QGraphicsItem.ItemPositionHasChanged:
-             self.halo.setPos(self.pos())
+             # Keep model coordinates and attached wires in sync
              self.model.x, self.model.y = self.pos().x(), self.pos().y()
              for wire in self.attached_wires: wire.update_geometry()
 
@@ -747,9 +907,50 @@ class DeviceItem(QGraphicsItem):
         This adjusts the pin local position and recomputes the leader line to preserve the tail anchor."""
         for pid, pin in list(self.pins.items()):
             try:
-                # Determine current pin head scene position
+                # Determine current pin head scene position and snap horizontally to GRID while preserving Y
                 head_scene = pin.mapToScene(0, 0)
-                snapped_scene = QPointF(round(head_scene.x() / GRID_SIZE) * GRID_SIZE, round(head_scene.y() / GRID_SIZE) * GRID_SIZE)
+                # Preserve Y (so we move the entire pin horizontally), but snap X to nearest grid
+                snapped_x = round(head_scene.x() / GRID_SIZE) * GRID_SIZE
+                snapped_scene = QPointF(snapped_x, head_scene.y())
+
+                # If this node has a defined pivot/bundle side, enforce that the pin head
+                # lies exactly one GRID unit away from the pivot along the outward axis.
+                try:
+                    side = getattr(self, '_bundle_side', None)
+                    if not side and getattr(self, 'bundle_refs', None):
+                        b = self.bundle_refs[0]
+                        other = b.source_node if b.target_node is self else b.target_node
+                        vec = other.pos() - self.pos()
+                        if abs(vec.x()) >= abs(vec.y()):
+                            side = Side.RIGHT if vec.x() > 0 else Side.LEFT
+                        else:
+                            side = Side.BOTTOM if vec.y() > 0 else Side.TOP
+                except Exception:
+                    side = getattr(self, '_bundle_side', None)
+
+                try:
+                    if hasattr(self, '_pivot') and side is not None:
+                        pivot_scene = self.mapToScene(self._pivot)
+                        # For LEFT/RIGHT nodes, enforce H above and L below the pivot by one GRID unit.
+                        if side in (Side.LEFT, Side.RIGHT):
+                            if side == Side.LEFT:
+                                snapped_scene.setX(pivot_scene.x() + GRID_SIZE)
+                            else:
+                                snapped_scene.setX(pivot_scene.x() - GRID_SIZE)
+                            # Enforce vertical offset for H / L pins
+                            if pid == 'H':
+                                snapped_scene.setY(pivot_scene.y() - GRID_SIZE)
+                            elif pid == 'L':
+                                snapped_scene.setY(pivot_scene.y() + GRID_SIZE)
+                        else:
+                            # For TOP/BOTTOM, preserve previous behavior (align along outward axis)
+                            if side == Side.TOP:
+                                snapped_scene.setY(pivot_scene.y() + GRID_SIZE)
+                            elif side == Side.BOTTOM:
+                                snapped_scene.setY(pivot_scene.y() - GRID_SIZE)
+                except Exception:
+                    pass
+
                 # Map snapped scene point back to node-local coords
                 new_local = self.mapFromScene(snapped_scene)
                 # Determine current tail (tip) scene position and convert to local
@@ -1043,7 +1244,7 @@ class WireItem(QGraphicsPathItem):
             base_color = QColor(code)
         else:
             base_color = color_map.get(code, QColor(150, 150, 150))
-        self.setPen(QPen(base_color, 3))
+        self.setPen(QPen(base_color, WIRE_THICKNESS))
         self.halo_path.setPen(QPen(SELECTED_COLOR, 6))
 
     def refresh_metadata(self):
@@ -1118,7 +1319,8 @@ class WireItem(QGraphicsPathItem):
         for pt in nodes[1:]:
             path.lineTo(pt)
         self.setPath(path)
-        self.halo_path.setPath(path)
+        if getattr(self, 'halo_path', None) is not None:
+            self.halo_path.setPath(path)
         if rebuild_handles:
             self._rebuild_handles(nodes)
         else:
@@ -1331,43 +1533,216 @@ class TwistNodeItem(QGraphicsItem):
         self._brush = QBrush(QColor(55, 55, 65))
         self._pen = QPen(QColor(170, 200, 255), 1.8)
 
-        self.halo = QGraphicsRectItem()
-        self.halo.setPen(QPen(SELECTED_COLOR, 4))
-        self.halo.setBrush(Qt.NoBrush)
-        self.halo.hide()
-        self.halo.setZValue(-1)
+        # Removed rectangular halo; use the control pivot ellipse for selection highlight
+        self.halo = None
 
         self.pins: dict[str, PinItem] = {}
         self._rotation = 0  # rotation state (0..3), clockwise 90deg steps
         self._build_pins()
 
+        # Control pivot: visible ellipse representing control node center (10px dia)
+        try:
+            # Control pivot ellipse centered at the node pivot (size governed by CONTROL_PIVOT_DIAM)
+            r = CONTROL_PIVOT_DIAM / 2.0
+            self.control_pivot = QGraphicsEllipseItem(-r, -r, CONTROL_PIVOT_DIAM, CONTROL_PIVOT_DIAM, self)
+            # Default: filled dark blue for unselected pivot (device-space fixed size)
+            try:
+                self.control_pivot.setBrush(QBrush(PIVOT_COLOR))
+            except Exception:
+                self.control_pivot.setBrush(Qt.NoBrush)
+            self.control_pivot.setPen(Qt.NoPen)
+            self.control_pivot.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+            # Keep the pivot non-interactive so the node's shape handles clicks
+            try:
+                self.control_pivot.setAcceptedMouseButtons(Qt.NoButton)
+            except Exception:
+                pass
+            self.control_pivot.setZValue(3)
+            try:
+                self.control_pivot.setData(0, 'control_pivot')
+            except Exception:
+                pass
+            # Position it using current pivot value
+            try:
+                self.control_pivot.setPos(self._pivot)
+            except Exception:
+                pass
+
+            # Selection ring (hidden by default) to make the pivot selection unmistakable
+            try:
+                ring_r = r + SELECTED_RING_PAD
+                ring_diam = ring_r * 2
+                self.control_pivot_ring = QGraphicsEllipseItem(-ring_r, -ring_r, ring_diam, ring_diam, self)
+                self.control_pivot_ring.setBrush(Qt.NoBrush)
+                self.control_pivot_ring.setPen(QPen(SELECTED_COLOR, SELECTED_RING_WIDTH))
+                self.control_pivot_ring.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+                self.control_pivot_ring.setZValue(4)
+                self.control_pivot_ring.setVisible(False)
+                try:
+                    self.control_pivot_ring.setData(0, 'control_pivot_ring')
+                except Exception:
+                    pass
+                try:
+                    self.control_pivot_ring.setPos(self._pivot)
+                except Exception:
+                    pass
+            except Exception:
+                self.control_pivot_ring = None
+
+            # Selection label (hidden by default)
+            try:
+                self.control_pivot_label = QGraphicsSimpleTextItem(SELECTED_LABEL_TEXT, self)
+                f = QFont()
+                f.setPointSize(10)
+                f.setBold(True)
+                self.control_pivot_label.setFont(f)
+                # Make the label highly visible (white)
+                try:
+                    self.control_pivot_label.setBrush(QBrush(TEXT_COLOR))
+                except Exception:
+                    pass
+                self.control_pivot_label.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+                self.control_pivot_label.setZValue(5)
+                self.control_pivot_label.setVisible(False)
+                try:
+                    br = self.control_pivot_label.boundingRect()
+                    self.control_pivot_label.setPos(self._pivot + QPointF(ring_r + 4, -br.height() / 2))
+                except Exception:
+                    pass
+            except Exception:
+                self.control_pivot_label = None
+            # Add a small always-visible dot (device-coordinate fixed) so the pivot remains visible
+            # regardless of zoom level. This dot is independent of the hollow pivot outline used for
+            # selection highlighting so tests that expect the pivot brush to be NoBrush still pass.
+            try:
+                # Small always-visible dot centered on pivot (size governed by CONTROL_DOT_DIAM)
+                dr = CONTROL_DOT_DIAM / 2.0
+                self.control_dot = QGraphicsEllipseItem(-dr, -dr, CONTROL_DOT_DIAM, CONTROL_DOT_DIAM, self)
+                self.control_dot.setBrush(QBrush(QColor(180, 180, 180)))
+                self.control_dot.setPen(Qt.NoPen)
+                self.control_dot.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
+                # Keep the small always-visible dot non-interactive so node shape receives clicks
+                try:
+                    self.control_dot.setAcceptedMouseButtons(Qt.NoButton)
+                except Exception:
+                    pass
+                self.control_dot.setZValue(4)
+                try:
+                    self.control_dot.setData(0, 'control_dot')
+                except Exception:
+                    pass
+                self.control_dot.setPos(self._pivot)
+            except Exception:
+                self.control_dot = None
+        except Exception:
+            self.control_pivot = None
+
         self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemSendsGeometryChanges)
         self._drag_start_pos = None
         self._item_start_pos = None
+        # Hover state for proximity highlighting
+        self._pivot_hover = False
         # Track previous position so we can compute deltas when the node moves
         self._prev_pos = self.pos()
+        # Pivot relocation state: allow user to explicitly relocate pivot via Shift+drag
+        self._pivot_dragging = False
+        self._pivot_locked = False
+        self._pivot_drag_start_scene = None
+        self._pivot_start_local = None
+
+    def set_pivot_hover(self, hover: bool):
+        """Set transient hover highlight for control pivot (non-selection visual)."""
+        try:
+            if getattr(self, 'control_pivot', None) is None:
+                return
+            # Do not override selection state
+            if self.isSelected():
+                self._pivot_hover = False
+                return
+            if hover:
+                self._pivot_hover = True
+                # Use a subtle highlight (semi-transparent fill)
+                try:
+                    self.control_pivot.setBrush(QBrush(QColor(255, 200, 50, 120)))
+                    self.control_pivot.setPen(QPen(QColor(255, 200, 50), 1.6))
+                except Exception:
+                    pass
+            else:
+                self._pivot_hover = False
+                try:
+                    # Restore to default: filled blue for free nodes, hollow when bundle attached
+                    if getattr(self, 'bundle_refs', None):
+                        self.control_pivot.setBrush(Qt.NoBrush)
+                    else:
+                        self.control_pivot.setBrush(QBrush(ELBOW_COLOR))
+                    self.control_pivot.setPen(Qt.NoPen)
+                except Exception:
+                    pass
+            try:
+                self.update()
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def itemChange(self, change, value):
-        # Scene bookkeeping for the halo sibling
+        # Ensure pins align to the global grid once this node is added to a scene
         if change == QGraphicsItem.ItemSceneChange:
             if value:
-                value.addItem(self.halo)
-                # Ensure pins align to the global grid once this node is added to a scene
                 try:
                     self._enforce_pin_grid()
                 except Exception:
                     pass
-            elif self.halo.scene():
-                self.halo.scene().removeItem(self.halo)
+
 
         if change == QGraphicsItem.ItemSelectedHasChanged:
-            self.halo.setVisible(value)
-            if value: self.halo.setPos(self.pos())
+            # Highlight control pivot ellipse when node is selected (no rectangular halos)
+            try:
+                if getattr(self, 'control_pivot', None):
+                    if value:
+                        # Deselect any attached bundles so selection is unambiguous
+                        try:
+                            for b in list(self.bundle_refs):
+                                try:
+                                    b.setSelected(False)
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        self.control_pivot.setPen(QPen(QColor(120, 120, 120), 1.2))
+                    self.update()
+            except Exception:
+                pass
+
+        # Snap node position to the global GRID on moves so control nodes align to the grid
+        if change == QGraphicsItem.ItemPositionChange and isinstance(value, QPointF):
+            try:
+                snapped = QPointF(round(value.x() / GRID_SIZE) * GRID_SIZE, round(value.y() / GRID_SIZE) * GRID_SIZE)
+                return snapped
+            except Exception:
+                pass
 
         if change == QGraphicsItem.ItemPositionHasChanged:
             # Compute delta from previous position and update attached wires & bundles
             try:
                 new_pos = value if isinstance(value, QPointF) else self.pos()
+                # Enforce snapping for non-interactive moves (e.g., setPos calls)
+                try:
+                    snapped_pos = QPointF(round(new_pos.x() / GRID_SIZE) * GRID_SIZE, round(new_pos.y() / GRID_SIZE) * GRID_SIZE)
+                    if snapped_pos != new_pos:
+                        # Schedule a setPos after the current event loop to avoid re-entrancy and ensure
+                        # the position change goes through the normal QGraphicsItem change cycle.
+                        try:
+                            from PySide6.QtCore import QTimer
+                            QTimer.singleShot(0, lambda sp=snapped_pos: self.setPos(sp))
+                        except Exception:
+                            try:
+                                self.setPos(snapped_pos)
+                            except Exception:
+                                pass
+                        return super().itemChange(change, value)
+                except Exception:
+                    pass
                 delta = QPointF(new_pos.x() - self._prev_pos.x(), new_pos.y() - self._prev_pos.y())
                 self._prev_pos = QPointF(new_pos)
             except Exception:
@@ -1402,8 +1777,16 @@ class TwistNodeItem(QGraphicsItem):
     def _build_pins(self):
         # Recreate pin visuals based on the current rotation state.
         for pin in list(self.pins.values()):
-            if pin.scene():
-                pin.scene().removeItem(pin)
+            try:
+                if getattr(pin, 'leader', None) and pin.leader.scene():
+                    pin.leader.scene().removeItem(pin.leader)
+            except Exception:
+                pass
+            try:
+                if pin.scene():
+                    pin.scene().removeItem(pin)
+            except Exception:
+                pass
         self.pins = {}
 
         # Base (unrotated) geometry for pins
@@ -1412,10 +1795,10 @@ class TwistNodeItem(QGraphicsItem):
         shield = PinModel(id="S", label="S", side=Side.RIGHT)
 
         # Local positions in unrotated coordinates
-        # Place H/L pins orthogonally with fixed spacing equal to 3 * GRID_SIZE (60px)
-        # so the control pivot can sit on the grid line between them. Pins will then
+        # Place H/L pins orthogonally with fixed spacing equal to 2 * GRID_SIZE (40px)
+        # to position H/L around the control pivot. Pins will then
         # snap to the global GRID via _enforce_pin_grid.
-        spacing = GRID_SIZE * 3
+        spacing = GRID_SIZE * 2
         half = spacing / 2.0
         cy = self.HEIGHT / 2.0
         cx = self.WIDTH / 2.0
@@ -1521,6 +1904,20 @@ class TwistNodeItem(QGraphicsItem):
             self._enforce_pin_grid()
         except Exception:
             pass
+        # Update pivot location so it sits exactly one GRID away from the pin head line
+        try:
+            self._update_pivot_from_pins()
+            # Ensure leaders are refreshed after pins/pivot changes
+            try:
+                for pid, pin in list(self.pins.items()):
+                    try:
+                        pin.update_leader()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def _add_pin(self, pin_model: PinModel, x1, y1, x2, y2, show: bool = True):
         pin = PinItem(pin_model, self)
@@ -1529,6 +1926,11 @@ class TwistNodeItem(QGraphicsItem):
         if not show:
             pin.hide()
             pin.setAcceptHoverEvents(False)
+            try:
+                if pin.leader:
+                    pin.leader.hide()
+            except Exception:
+                pass
         self.pins[pin_model.id] = pin
 
     def register_wire(self, pin_id: str, wire_item):
@@ -1550,8 +1952,25 @@ class TwistNodeItem(QGraphicsItem):
                 self._bundle_side = Side.BOTTOM if vec.y() > 0 else Side.TOP
         # Rebuild pins so H/L appear on the non-bundle side (connectable)
         self._build_pins()
+        # Ensure leaders are refreshed after pin rebuild
+        try:
+            for pid, pin in list(self.pins.items()):
+                try:
+                    pin.update_leader()
+                except Exception:
+                    pass
+        except Exception:
+            pass
         # Show pivot/marker on top of bundle; default unhighlighted
         self._pivot_highlight = False
+        # Hide the filled control dot while a bundle is attached so pivot appears suppressed
+        if getattr(self, 'control_dot', None):
+            try:
+                self.control_dot.setBrush(Qt.NoBrush)
+            except Exception:
+                pass
+        # Keep the pivot filled dark-blue even when a bundle attaches; bundle selection will
+        # indicate an outline in response to bundle selection, but the pivot remains visible.
         if callable(self.on_changed):
             self.on_changed()
 
@@ -1578,6 +1997,20 @@ class TwistNodeItem(QGraphicsItem):
         self._build_pins()
         # Reset pivot highlight
         self._pivot_highlight = False
+        # Restore control_dot visibility when no bundles remain
+        if not self.bundle_refs and getattr(self, 'control_dot', None):
+            try:
+                self.control_dot.setBrush(QBrush(QColor(180, 180, 180)))
+            except Exception:
+                pass
+        # Restore pivot fill to blue (ELBOW_COLOR) when no bundles remain and node isn't selected
+        if not self.bundle_refs and getattr(self, 'control_pivot', None):
+            try:
+                # If node is selected, selection color logic will override
+                if not self.isSelected():
+                    self.control_pivot.setBrush(QBrush(ELBOW_COLOR))
+            except Exception:
+                pass
         if callable(self.on_changed):
             self.on_changed()
 
@@ -1653,41 +2086,371 @@ class TwistNodeItem(QGraphicsItem):
             return self.mapToScene(self._rect.center())
         return pin.get_tip_scene_pos()
 
+    def _enforce_pin_grid(self):
+        """Snap pin head positions to the global GRID_SIZE so that pin tips remain grid-locked.
+        This adjusts the pin local position and recomputes the leader line to preserve the tail anchor.
+
+        Additionally, align pin head columns/rows so that the head lies exactly one GRID
+        unit away from the node control pivot along the outward axis (LEFT/RIGHT/ TOP/BOTTOM).
+        """
+        for pid, pin in list(self.pins.items()):
+            try:
+                # Determine current pin head scene position and snap horizontally to GRID while preserving Y
+                head_scene = pin.mapToScene(0, 0)
+                snapped_x = round(head_scene.x() / GRID_SIZE) * GRID_SIZE
+                snapped_scene = QPointF(snapped_x, head_scene.y())
+
+                # If this node has a defined pivot/bundle side, enforce that the pin head
+                # lies exactly one GRID unit away from the pivot along the outward axis.
+                try:
+                    side = getattr(self, '_bundle_side', None)
+                    if not side and getattr(self, 'bundle_refs', None):
+                        b = self.bundle_refs[0]
+                        other = b.source_node if b.target_node is self else b.target_node
+                        vec = other.pos() - self.pos()
+                        if abs(vec.x()) >= abs(vec.y()):
+                            side = Side.RIGHT if vec.x() > 0 else Side.LEFT
+                        else:
+                            side = Side.BOTTOM if vec.y() > 0 else Side.TOP
+                except Exception:
+                    side = getattr(self, '_bundle_side', None)
+
+                try:
+                    if hasattr(self, '_pivot') and side is not None:
+                        pivot_scene = self.mapToScene(self._pivot)
+                        # For LEFT/RIGHT nodes, enforce H above and L below the pivot by one GRID unit.
+                        if side in (Side.LEFT, Side.RIGHT):
+                            if side == Side.LEFT:
+                                snapped_scene.setX(pivot_scene.x() + GRID_SIZE)
+                            else:
+                                snapped_scene.setX(pivot_scene.x() - GRID_SIZE)
+                            # Enforce vertical offset for H / L pins
+                            if pid == 'H':
+                                snapped_scene.setY(pivot_scene.y() - GRID_SIZE)
+                            elif pid == 'L':
+                                snapped_scene.setY(pivot_scene.y() + GRID_SIZE)
+                        else:
+                            # For TOP/BOTTOM, preserve previous behavior (align along outward axis)
+                            if side == Side.TOP:
+                                snapped_scene.setY(pivot_scene.y() + GRID_SIZE)
+                            elif side == Side.BOTTOM:
+                                snapped_scene.setY(pivot_scene.y() - GRID_SIZE)
+                except Exception:
+                    pass
+
+                # Map snapped scene point back to node-local coords
+                new_local = self.mapFromScene(snapped_scene)
+                # Determine current tail (tip) scene position and convert to local
+                tail_scene = pin.get_tip_scene_pos()
+                tail_local = self.mapFromScene(tail_scene)
+                # Update pin geometry to snapped head and preserved tail
+                pin.set_visual_geometry(new_local.x(), new_local.y(), tail_local.x(), tail_local.y())
+            except Exception:
+                pass
+
+    def _update_pivot_from_pins(self):
+        """Position the node pivot one GRID unit away from the line formed by its H/L pin heads.
+        Uses scene coordinates for robust calculation and snaps pivot position to GRID lines."""
+        # Respect explicit user pivot relocations: if pivot is locked by the user, do not auto-update
+        if getattr(self, '_pivot_locked', False):
+            return
+        try:
+            h_scene = self.get_pin_tip_scene_pos('H')
+            l_scene = self.get_pin_tip_scene_pos('L')
+            # midpoint between heads
+            mid_y = (h_scene.y() + l_scene.y()) / 2.0
+            # decide direction based on bundle side: compute from attached bundle vector if available
+            side = getattr(self, '_bundle_side', None)
+            try:
+                if not side and getattr(self, 'bundle_refs', None):
+                    b = self.bundle_refs[0]
+                    other = b.source_node if b.target_node is self else b.target_node
+                    vec = other.pos() - self.pos()
+                    if abs(vec.x()) >= abs(vec.y()):
+                        side = Side.RIGHT if vec.x() > 0 else Side.LEFT
+                    else:
+                        side = Side.BOTTOM if vec.y() > 0 else Side.TOP
+            except Exception:
+                pass
+            if not side:
+                side = Side.LEFT
+            node_rect = self.sceneBoundingRect()
+            if side == Side.LEFT:
+                # Prefer node-local offset so x sits exactly at -GRID_SIZE
+                pivot_local_x = -GRID_SIZE
+                pivot_local_y = self.HEIGHT / 2.0
+                self._pivot = QPointF(pivot_local_x, pivot_local_y)
+                # Snap pivot's scene position to GRID so the control pivot lies on grid intersections
+                try:
+                    scene_pivot = self.mapToScene(self._pivot)
+                    snapped_scene = QPointF(round(scene_pivot.x() / GRID_SIZE) * GRID_SIZE, round(scene_pivot.y() / GRID_SIZE) * GRID_SIZE)
+                    self._pivot = self.mapFromScene(snapped_scene)
+                except Exception:
+                    pass
+                try:
+                    if getattr(self, 'control_pivot', None):
+                        self.control_pivot.setPos(self._pivot)
+                    if getattr(self, 'control_dot', None):
+                        self.control_dot.setPos(self._pivot)
+                except Exception:
+                    pass
+                # Update leaders
+                for pid, pin in list(self.pins.items()):
+                    try:
+                        pin.update_leader()
+                    except Exception:
+                        pass
+                return
+            elif side == Side.RIGHT:
+                pivot_local_x = self.WIDTH + GRID_SIZE
+                pivot_local_y = self.HEIGHT / 2.0
+                self._pivot = QPointF(pivot_local_x, pivot_local_y)
+                # Snap pivot's scene position to GRID so the control pivot lies on grid intersections
+                try:
+                    scene_pivot = self.mapToScene(self._pivot)
+                    snapped_scene = QPointF(round(scene_pivot.x() / GRID_SIZE) * GRID_SIZE, round(scene_pivot.y() / GRID_SIZE) * GRID_SIZE)
+                    self._pivot = self.mapFromScene(snapped_scene)
+                except Exception:
+                    pass
+                try:
+                    if getattr(self, 'control_pivot', None):
+                        self.control_pivot.setPos(self._pivot)
+                except Exception:
+                    pass
+                for pid, pin in list(self.pins.items()):
+                    try:
+                        pin.update_leader()
+                    except Exception:
+                        pass
+                return
+            elif side == Side.TOP:
+                pivot_y_scene = node_rect.top() - GRID_SIZE
+                pivot_x_scene = (h_scene.x() + l_scene.x()) / 2.0
+                snapped = QPointF(round(pivot_x_scene / GRID_SIZE) * GRID_SIZE, round(pivot_y_scene / GRID_SIZE) * GRID_SIZE)
+                self._pivot = self.mapFromScene(snapped)
+                # Ensure pivot scene position is snapped to GRID
+                try:
+                    scene_pivot = self.mapToScene(self._pivot)
+                    snapped_scene = QPointF(round(scene_pivot.x() / GRID_SIZE) * GRID_SIZE, round(scene_pivot.y() / GRID_SIZE) * GRID_SIZE)
+                    self._pivot = self.mapFromScene(snapped_scene)
+                except Exception:
+                    pass
+                try:
+                    if getattr(self, 'control_pivot', None):
+                        self.control_pivot.setPos(self._pivot)
+                except Exception:
+                    pass
+                for pid, pin in list(self.pins.items()):
+                    try:
+                        pin.update_leader()
+                    except Exception:
+                        pass
+                return
+            else:  # BOTTOM
+                pivot_y_scene = node_rect.bottom() + GRID_SIZE
+                pivot_x_scene = (h_scene.x() + l_scene.x()) / 2.0
+                snapped = QPointF(round(pivot_x_scene / GRID_SIZE) * GRID_SIZE, round(pivot_y_scene / GRID_SIZE) * GRID_SIZE)
+                self._pivot = self.mapFromScene(snapped)
+                # Ensure pivot scene position is snapped to GRID
+                try:
+                    scene_pivot = self.mapToScene(self._pivot)
+                    snapped_scene = QPointF(round(scene_pivot.x() / GRID_SIZE) * GRID_SIZE, round(scene_pivot.y() / GRID_SIZE) * GRID_SIZE)
+                    self._pivot = self.mapFromScene(snapped_scene)
+                except Exception:
+                    pass
+                try:
+                    if getattr(self, 'control_pivot', None):
+                        self.control_pivot.setPos(self._pivot)
+                except Exception:
+                    pass
+                for pid, pin in list(self.pins.items()):
+                    try:
+                        pin.update_leader()
+                    except Exception:
+                        pass
+                return
+            # Snap: ensure pivot stays outside node by using floor/ceil accordingly
+            if side == Side.LEFT:
+                snapped_x = math.floor(pivot_x_scene / GRID_SIZE) * GRID_SIZE
+            else:
+                snapped_x = math.ceil(pivot_x_scene / GRID_SIZE) * GRID_SIZE
+            snapped_y = round(pivot_y_scene / GRID_SIZE) * GRID_SIZE
+            snapped = QPointF(snapped_x, snapped_y)
+            # DEBUG: print values so we can inspect why pivot does not match expectation
+            try:
+                print(f"DEBUG _update_pivot_from_pins: pivot_x_scene={pivot_x_scene}, mid_y={mid_y}, snapped={snapped}, bundle_side={getattr(self,'_bundle_side',None)}")
+            except Exception:
+                pass
+            self._pivot = self.mapFromScene(snapped)
+            # Update control pivot visual position and leaders for pins
+            try:
+                if getattr(self, 'control_pivot', None):
+                    try:
+                        self.control_pivot.setPos(self._pivot)
+                    except Exception:
+                        pass
+                for pid, pin in list(self.pins.items()):
+                    try:
+                        pin.update_leader()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        except Exception:
+            pass
+
     def boundingRect(self):
         return self._rect
 
+    def shape(self):
+        # Include a small area around the control pivot in the item's clickable shape so
+        # clicks on the pivot land on this node even though the visual pivot lies outside
+        # the node's normal bounding rect.
+        p = QPainterPath()
+        p.addRect(self._rect)
+        try:
+            # Add a small hit area around the pivot (radius governed by PIVOT_HIT_RADIUS)
+            pivot = getattr(self, '_pivot', None)
+            if pivot is not None:
+                r = PIVOT_HIT_RADIUS
+                p.addEllipse(pivot.x() - r, pivot.y() - r, r * 2, r * 2)
+        except Exception:
+            pass
+        return p
+
     def paint(self, painter, option, widget=None):
         # Visual style: render as two open wire ends (no device box)
-        # Draw the pivot marker (edit grip). If pivot is highlighted, use the selected color.
-        # If this node is attached to a TwistedPair bundle, suppress drawing the pivot
-        # here to avoid duplicate/conflicting visuals (we use the bundle endpoint markers).
-        pivot = getattr(self, '_pivot', None) or self._rect.center()
-        r = 5
-        # Suppress pivot when a bundle is attached
-        if getattr(self, 'bundle_refs', None):
-            # Still ensure we update selection halo, but avoid drawing the pivot ellipse
-            return
-        if getattr(self, '_pivot_highlight', False):
-            painter.setPen(Qt.NoPen)
-            painter.setBrush(QBrush(SELECTED_COLOR))
-            painter.drawEllipse(pivot, r, r)
-        else:
-            painter.setPen(QPen(QColor(120, 120, 120), 1))
-            painter.setBrush(QBrush(QColor(80, 80, 90, 200)))
-            painter.drawEllipse(pivot, r, r)
+        # The control pivot is represented by a child QGraphicsEllipseItem (self.control_pivot)
+        # Keep painting minimal here; the visual pivot item handles its appearance and transforms.
+        # If pivot highlight state changed, update the pivot's pen/brush accordingly.
+        try:
+            if getattr(self, 'control_pivot', None):
+                if getattr(self, '_pivot_highlight', False):
+                    self.control_pivot.setBrush(QBrush(SELECTED_COLOR))
+                    self.control_pivot.setPen(QPen(SELECTED_COLOR, 1.6))
+                else:
+                    self.control_pivot.setBrush(Qt.NoBrush)
+                    self.control_pivot.setPen(QPen(QColor(120, 120, 120), 1.2))
+        except Exception:
+            pass
 
     def _snap(self, v):
         return round(v / GRID_SIZE) * GRID_SIZE
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
-            self._drag_start_pos = event.scenePos()
-            self._item_start_pos = self.pos()
+            try:
+                # If the click is on/near the control pivot, we have two behaviors:
+                # - Shift+LeftButton: relocate the pivot (user-driven reposition)
+                # - LeftButton only: anchor node drag to the pivot (existing behavior)
+                pivot_scene = self.mapToScene(getattr(self, '_pivot', self._rect.center()))
+                click_scene = event.scenePos()
+                # Distance threshold in scene coordinates (small tolerance for user clicks)
+                dist_sq = (click_scene.x() - pivot_scene.x()) ** 2 + (click_scene.y() - pivot_scene.y()) ** 2
+
+                # Pivot relocation (explicit): Shift+click on pivot begins pivot-dragging
+                try:
+                    # Also allow direct dot-press (no modifier) to relocate pivot for easier UI use
+                    last_child = getattr(self, '_last_child_pressed', None)
+                    if dist_sq <= (PIVOT_HIT_RADIUS * PIVOT_HIT_RADIUS) and (
+                        (event.modifiers() & Qt.ShiftModifier) or (last_child == 'control_dot')
+                    ):
+                        self._pivot_dragging = True
+                        self._pivot_drag_start_scene = pivot_scene
+                        self._pivot_start_local = getattr(self, '_pivot', QPointF(0, 0))
+                        # Lock pivot so auto-updates won't override user relocation
+                        self._pivot_locked = True
+                        try:
+                            event.accept()
+                        except Exception:
+                            pass
+                        return
+                except Exception:
+                    pass
+
+                # Default pivot-anchored node drag behavior
+                if dist_sq <= (PIVOT_HIT_RADIUS * PIVOT_HIT_RADIUS):
+                    # Anchor drag to the pivot's scene coordinate
+                    self._drag_start_pos = pivot_scene
+                    self._item_start_pos = self.pos()
+                else:
+                    # Default: anchor to the actual click point
+                    self._drag_start_pos = click_scene
+                    self._item_start_pos = self.pos()
+            except Exception:
+                # Fallback to previous behavior if anything goes wrong
+                self._drag_start_pos = event.scenePos()
+                self._item_start_pos = self.pos()
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
+        # Pivot relocation in progress
+        try:
+            if self._pivot_dragging and (event.buttons() & Qt.LeftButton):
+                # Move pivot to mouse scene position, snapped to grid
+                new_scene = event.scenePos()
+                snapped_scene = QPointF(round(new_scene.x() / GRID_SIZE) * GRID_SIZE, round(new_scene.y() / GRID_SIZE) * GRID_SIZE)
+                try:
+                    self._pivot = self.mapFromScene(snapped_scene)
+                    if getattr(self, 'control_pivot', None):
+                        self.control_pivot.setPos(self._pivot)
+                    if getattr(self, 'control_dot', None):
+                        self.control_dot.setPos(self._pivot)
+                    # Update leaders and attached bundles
+                    for pid, pin in list(self.pins.items()):
+                        try:
+                            pin.update_leader()
+                        except Exception:
+                            pass
+                    try:
+                        for b in list(self.bundle_refs):
+                            try:
+                                b.update_geometry()
+                            except Exception:
+                                pass
+                    except Exception:
+                        pass
+                except Exception:
+                    pass
+                try:
+                    event.accept()
+                except Exception:
+                    pass
+                return
+        except Exception:
+            pass
+
+        # Default node dragging behavior anchored to pivot or click point
         if self._drag_start_pos and (event.buttons() & Qt.LeftButton):
             delta = event.scenePos() - self._drag_start_pos
+            # During interactive drags, compute snapped destination and set position accordingly
+            try:
+                snapped = QPointF(round((self._item_start_pos.x() + delta.x()) / GRID_SIZE) * GRID_SIZE,
+                                  round((self._item_start_pos.y() + delta.y()) / GRID_SIZE) * GRID_SIZE)
+                self.setPos(snapped)
+            except Exception:
+                try:
+                    self.setPos(self._item_start_pos + delta)
+                except Exception:
+                    pass
+            event.accept()
+            return
+        super().mouseMoveEvent(event)
+
+
+    def setPos(self, *args, **kwargs):
+        # Override to snap programmatic moves to GRID
+        try:
+            if len(args) == 1 and isinstance(args[0], QPointF):
+                p = args[0]
+            elif len(args) == 2:
+                p = QPointF(args[0], args[1])
+            else:
+                return super().setPos(*args, **kwargs)
+            snapped = QPointF(round(p.x() / GRID_SIZE) * GRID_SIZE, round(p.y() / GRID_SIZE) * GRID_SIZE)
+            return super().setPos(snapped)
+        except Exception:
+            return super().setPos(*args, **kwargs)
             new_pos = self._item_start_pos + delta
             new_pos.setX(self._snap(new_pos.x()))
             new_pos.setY(self._snap(new_pos.y()))
@@ -1699,24 +2462,124 @@ class TwistNodeItem(QGraphicsItem):
         event.ignore()
 
     def mouseReleaseEvent(self, event):
+        # End pivot relocation if in progress
+        try:
+            if self._pivot_dragging and event.button() == Qt.LeftButton:
+                self._pivot_dragging = False
+                self._pivot_drag_start_scene = None
+                self._pivot_start_local = None
+                try:
+                    event.accept()
+                except Exception:
+                    pass
+                # Keep pivot locked (user preference) until explicitly reset
+        except Exception:
+            pass
+
         self._drag_start_pos = None
         self._item_start_pos = None
         super().mouseReleaseEvent(event)
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSceneChange:
+            # Ensure pins align to the global grid once this node is added to a scene
             if value:
-                value.addItem(self.halo)
-            elif self.halo.scene():
-                self.halo.scene().removeItem(self.halo)
+                try:
+                    self._enforce_pin_grid()
+                except Exception:
+                    pass
+
         if change == QGraphicsItem.ItemSelectedHasChanged:
-            self.halo.setVisible(value)
-            if value:
-                self.halo.setPos(self.pos())
+            # Highlight control pivot ellipse when node is selected (no rectangular halos)
+            try:
+                if getattr(self, 'control_pivot', None):
+                    if value:
+                        # Enforce selected appearance (overrides bundle suppression)
+                        # Keep pivot at the fixed device-space size; fill with selected color
+                        try:
+                            r = CONTROL_PIVOT_DIAM / 2.0
+                            self.control_pivot.setRect(-r, -r, CONTROL_PIVOT_DIAM, CONTROL_PIVOT_DIAM)
+                        except Exception:
+                            pass
+                        self.control_pivot.setBrush(QBrush(SELECTED_COLOR))
+                        self.control_pivot.setPen(QPen(SELECTED_COLOR, 1.6))
+                        # Update and show selection ring and label (ensure they stay centered)
+                        try:
+                            if getattr(self, 'control_pivot_ring', None):
+                                ring_r = r + SELECTED_RING_PAD
+                                ring_d = ring_r * 2
+                                # center ring on the pivot
+                                self.control_pivot_ring.setRect(-ring_r, -ring_r, ring_d, ring_d)
+                                self.control_pivot_ring.setPos(self._pivot)
+                                self.control_pivot_ring.setVisible(True)
+                            if getattr(self, 'control_pivot_label', None):
+                                br = self.control_pivot_label.boundingRect()
+                                # place label just outside the ring on the right
+                                self.control_pivot_label.setPos(self._pivot + QPointF(ring_r + 6, -br.height() / 2))
+                                self.control_pivot_label.setVisible(True)
+                        except Exception:
+                            pass
+                    else:
+                        # Deselected: revert sizes and visuals
+                        try:
+                            r = CONTROL_PIVOT_DIAM / 2.0
+                            self.control_pivot.setRect(-r, -r, CONTROL_PIVOT_DIAM, CONTROL_PIVOT_DIAM)
+                        except Exception:
+                            pass
+                        # Restore default filled dark blue when not selected
+                        try:
+                            self.control_pivot.setBrush(QBrush(PIVOT_COLOR))
+                        except Exception:
+                            self.control_pivot.setBrush(Qt.NoBrush)
+                        self.control_pivot.setPen(Qt.NoPen)
+                        # Recompute ring geometry to default and hide visuals
+                        try:
+                            if getattr(self, 'control_pivot_ring', None):
+                                r = CONTROL_PIVOT_DIAM / 2.0
+                                ring_r = r + SELECTED_RING_PAD
+                                ring_d = ring_r * 2
+                                self.control_pivot_ring.setRect(-ring_r, -ring_r, ring_d, ring_d)
+                                self.control_pivot_ring.setPos(self._pivot)
+                                self.control_pivot_ring.setVisible(False)
+                            if getattr(self, 'control_pivot_label', None):
+                                br = self.control_pivot_label.boundingRect()
+                                self.control_pivot_label.setPos(self._pivot + QPointF(ring_r + 6, -br.height() / 2))
+                                self.control_pivot_label.setVisible(False)
+                        except Exception:
+                            pass
+                # Mirror selection on the always-visible control_dot so it is more noticeable,
+                # but suppress it while a bundle is attached (bundle has precedence).
+                if getattr(self, 'control_dot', None):
+                    try:
+                        if getattr(self, 'bundle_refs', None):
+                            # If bundle attached, ensure control_dot remains hidden (no brush).
+                            self.control_dot.setBrush(Qt.NoBrush)
+                        else:
+                            if value:
+                                # Slightly enlarge the dot for selected state
+                                try:
+                                    new_dot = CONTROL_DOT_DIAM + 2
+                                    dr = new_dot / 2.0
+                                    self.control_dot.setRect(-dr, -dr, new_dot, new_dot)
+                                except Exception:
+                                    pass
+                                self.control_dot.setBrush(QBrush(SELECTED_COLOR))
+                            else:
+                                try:
+                                    dr = CONTROL_DOT_DIAM / 2.0
+                                    self.control_dot.setRect(-dr, -dr, CONTROL_DOT_DIAM, CONTROL_DOT_DIAM)
+                                except Exception:
+                                    pass
+                                self.control_dot.setBrush(QBrush(QColor(180, 180, 180)))
+                    except Exception:
+                        pass
+                self.update()
+            except Exception:
+                pass
+
         if change == QGraphicsItem.ItemPositionHasChanged:
-            self.halo.setPos(self.pos())
+            # Update pivot and handle movement delta
             new_pos = value if isinstance(value, QPointF) else self.pos()
-            # Compute delta from previous position to allow bundles to adjust their route points
             prev = getattr(self, '_prev_pos', None)
             if prev is None:
                 self._prev_pos = new_pos
@@ -1727,14 +2590,18 @@ class TwistNodeItem(QGraphicsItem):
 
             if callable(self.on_changed):
                 self.on_changed()
-            for b in list(self.bundle_refs):
-                if b:
-                    # Inform bundle about node motion so it can translate route points
-                    try:
-                        b.node_moved(self, delta)
-                    except Exception:
-                        pass
-                    b.update_geometry()
+            # Notify attached bundles about movement so they can adjust
+            try:
+                for b in list(self.bundle_refs):
+                    if b:
+                        try:
+                            if callable(getattr(b, 'node_moved', None)):
+                                b.node_moved(self, delta)
+                        except Exception:
+                            pass
+                        b.update_geometry()
+            except Exception:
+                pass
         return super().itemChange(change, value)
 
 
@@ -1761,11 +2628,8 @@ class TwistedBundleItem(QGraphicsPathItem):
         self.path_a = QPainterPath()
         self.path_b = QPainterPath()
 
-        self.halo_path = QGraphicsPathItem(self)
-        self.halo_path.setPen(QPen(SELECTED_COLOR, 8))
-        self.halo_path.setOpacity(0.45)
-        self.halo_path.hide()
-        self.halo_path.setZValue(-1)
+        # No bundle-wide halo path; selection highlights will be applied to node control pivots
+        self.halo_path = None
 
         self.setFlags(QGraphicsItem.ItemIsSelectable)
         self.setZValue(-0.8)
@@ -1784,38 +2648,13 @@ class TwistedBundleItem(QGraphicsPathItem):
         self.elbow_handles: list[ElbowHandle] = []
         self.segment_handles: list[SegmentHandle] = []
 
-        # Permanent non-editable endpoint markers (pseudo-elbows). These are always present
-        # near the start/end pins and highlight when the bundle is selected.
-        self.start_marker = QGraphicsEllipseItem(-5, -5, 10, 10, self)
-        # Use a hollow ring (outline) so it doesn't compete visually with filled pin tips.
-        self.start_marker.setBrush(Qt.NoBrush)
-        self.start_marker.setPen(QPen(QColor(140, 140, 140), 1.6))
-        self.start_marker.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
-        self.start_marker.setAcceptedMouseButtons(Qt.NoButton)
-        self.start_marker.setZValue(2)
-        try:
-            self.start_marker.setData(0, "bundle_endpoint_start")
-        except Exception:
-            pass
+        # Endpoint markers removed: they were causing orphaned, unconnected ellipses.
+        # Keep attributes absent (None) so older code that checks for presence continues to work.
+        self.start_marker = None
+        self.end_marker = None
 
-        self.end_marker = QGraphicsEllipseItem(-5, -5, 10, 10, self)
-        self.end_marker.setBrush(Qt.NoBrush)
-        self.end_marker.setPen(QPen(QColor(140, 140, 140), 1.6))
-        self.end_marker.setFlag(QGraphicsItem.ItemIgnoresTransformations, True)
-        self.end_marker.setAcceptedMouseButtons(Qt.NoButton)
-        self.end_marker.setZValue(2)
-        try:
-            self.end_marker.setData(0, "bundle_endpoint_end")
-        except Exception:
-            pass
-
+        # Recompute geometry as usual
         self.recalculate_path()
-        # Position markers according to current endpoints
-        try:
-            self.start_marker.setPos(self.mapFromScene(self._start_point()))
-            self.end_marker.setPos(self.mapFromScene(self._end_point()))
-        except Exception:
-            pass
 
         # Register this bundle with the nodes so node-side events (e.g. wire recolor) can
         # notify the bundle even if creation didn't happen via the higher-level app helper.
@@ -1823,6 +2662,81 @@ class TwistedBundleItem(QGraphicsPathItem):
             self.source_node.register_bundle(self)
         if hasattr(self.target_node, 'register_bundle'):
             self.target_node.register_bundle(self)
+
+        # Finalize attachment deterministically: compute which side each node reserves for
+        # the bundle based on node positions and perform a single, deterministic update pass
+        # so pins, pivots and leaders are all in a stable consistent state.
+        try:
+            self.finalize_attachment()
+        except Exception:
+            pass
+
+    def finalize_attachment(self):
+        """Deterministically set _bundle_side on both nodes and refresh pins/pivots/leaders.
+        This avoids transient or order-dependent side computation and stabilizes leader endpoints."""
+        try:
+            a = self.source_node
+            b = self.target_node
+            if not a or not b:
+                return
+            apos = a.pos()
+            bpos = b.pos()
+            # Decide side by largest component, consistent for both nodes
+            if abs(bpos.x() - apos.x()) >= abs(bpos.y() - apos.y()):
+                if bpos.x() > apos.x():
+                    a._bundle_side = Side.RIGHT
+                    b._bundle_side = Side.LEFT
+                else:
+                    a._bundle_side = Side.LEFT
+                    b._bundle_side = Side.RIGHT
+            else:
+                if bpos.y() > apos.y():
+                    a._bundle_side = Side.BOTTOM
+                    b._bundle_side = Side.TOP
+                else:
+                    a._bundle_side = Side.TOP
+                    b._bundle_side = Side.BOTTOM
+
+            # Rebuild and refresh both nodes
+            for n in (a, b):
+                try:
+                    n._build_pins()
+                    n._enforce_pin_grid()
+                    n._update_pivot_from_pins()
+                    if getattr(n, 'control_pivot', None):
+                        try:
+                            n.control_pivot.setPos(n._pivot)
+                        except Exception:
+                            pass
+                    for pid, pin in list(n.pins.items()):
+                        try:
+                            pin.update_leader()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+            # Rebuild geometry for bundle last
+            try:
+                self.update_geometry()
+            except Exception:
+                pass
+            # Ensure leaders are refreshed one more time after geometry rebuild to avoid transient stale endpoints
+            for n in (a, b):
+                try:
+                    for pid, pin in list(n.pins.items()):
+                        try:
+                            pin.update_leader()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+            # Propagate bundle colors to connected node pins so pins/leaders visually match the bundle
+            try:
+                self._apply_colors_to_nodes()
+            except Exception:
+                pass
+        except Exception:
+            pass
 
     def contextMenuEvent(self, event):
         from PySide6.QtWidgets import QMenu
@@ -1849,16 +2763,22 @@ class TwistedBundleItem(QGraphicsPathItem):
             self.on_changed()
 
     def _start_point(self):
-        # Midpoint of H/L tips on the source node (where bundle visually connects)
-        h = self.source_node.get_pin_tip_scene_pos("H")
-        l = self.source_node.get_pin_tip_scene_pos("L")
-        return QPointF((h.x() + l.x()) / 2, (h.y() + l.y()) / 2)
+        # Control node center (pivot) is the bundle connection point (scene coords)
+        try:
+            return self.source_node.mapToScene(getattr(self.source_node, '_pivot', self.source_node._rect.center()))
+        except Exception:
+            # Fallback to H/L midpoint
+            h = self.source_node.get_pin_tip_scene_pos("H")
+            l = self.source_node.get_pin_tip_scene_pos("L")
+            return QPointF((h.x() + l.x()) / 2, (h.y() + l.y()) / 2)
 
     def _end_point(self):
-        # Midpoint of H/L tips on the target node
-        h = self.target_node.get_pin_tip_scene_pos("H")
-        l = self.target_node.get_pin_tip_scene_pos("L")
-        return QPointF((h.x() + l.x()) / 2, (h.y() + l.y()) / 2)
+        try:
+            return self.target_node.mapToScene(getattr(self.target_node, '_pivot', self.target_node._rect.center()))
+        except Exception:
+            h = self.target_node.get_pin_tip_scene_pos("H")
+            l = self.target_node.get_pin_tip_scene_pos("L")
+            return QPointF((h.x() + l.x()) / 2, (h.y() + l.y()) / 2)
 
     def _poly_points(self):
         # Build polyline including start, a short segment to the node pivot (edit grip),
@@ -1938,7 +2858,8 @@ class TwistedBundleItem(QGraphicsPathItem):
             self.path_a = base_path
             self.path_b = base_path
             self.setPath(base_path)
-            self.halo_path.setPath(base_path)
+            if getattr(self, 'halo_path', None) is not None:
+                self.halo_path.setPath(base_path)
             return
 
         step = 1.0 / max(self.samples - 1, 1)
@@ -1965,8 +2886,10 @@ class TwistedBundleItem(QGraphicsPathItem):
         env.addPath(self.path_a)
         env.addPath(self.path_b)
         self.setPath(env)
-        self.halo_path.setPath(env)
+        # Do not set or display a global halo path for bundles; selection highlights will be shown
+        # on the node control pivot ellipses instead.
         self._update_colors_from_nodes()
+
         # Rebuild elbow handles to reflect any route edits (optional during interactive drags)
         if rebuild_handles:
             self._rebuild_elbow_handles()
@@ -1977,8 +2900,54 @@ class TwistedBundleItem(QGraphicsPathItem):
         try:
             self.start_marker.setPos(self.mapFromScene(self._start_point()))
             self.end_marker.setPos(self.mapFromScene(self._end_point()))
+            # Ensure markers remain hollow outlines
+            try:
+                self.start_marker.setBrush(Qt.NoBrush)
+                self.end_marker.setBrush(Qt.NoBrush)
+            except Exception:
+                pass
         except Exception:
             pass
+
+        # Reconcile node pivots and pin leaders so bundle geometry changes are reflected
+        try:
+            for n in (self.source_node, self.target_node):
+                try:
+                    n._enforce_pin_grid()
+                    n._update_pivot_from_pins()
+                    for pid, pin in list(n.pins.items()):
+                        try:
+                            pin.update_leader()
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def shape(self):
+        # Return the shape for hit-testing, but subtract small circular holes around
+        # the bundle endpoints so clicks on node control pivots don't hit the bundle.
+        try:
+            base = QPainterPath(self.path())
+            r = PIVOT_HIT_RADIUS
+            try:
+                sp = self._start_point()
+                hole = QPainterPath()
+                hole.addEllipse(sp.x() - r, sp.y() - r, r * 2, r * 2)
+                base = base.subtracted(hole)
+            except Exception:
+                pass
+            try:
+                ep = self._end_point()
+                hole = QPainterPath()
+                hole.addEllipse(ep.x() - r, ep.y() - r, r * 2, r * 2)
+                base = base.subtracted(hole)
+            except Exception:
+                pass
+            return base
+        except Exception:
+            return QPainterPath(self.path())
 
     def _snap_point(self, pt: QPointF) -> QPointF:
         return QPointF(round(pt.x() / GRID_SIZE) * GRID_SIZE, round(pt.y() / GRID_SIZE) * GRID_SIZE)
@@ -2031,7 +3000,8 @@ class TwistedBundleItem(QGraphicsPathItem):
         env.addPath(self.path_a)
         env.addPath(self.path_b)
         self.setPath(env)
-        self.halo_path.setPath(env)
+        if getattr(self, 'halo_path', None) is not None:
+            self.halo_path.setPath(env)
         self._update_colors_from_nodes()
         # Rebuild elbow handles to reflect any route edits
         self._rebuild_elbow_handles()
@@ -2044,10 +3014,43 @@ class TwistedBundleItem(QGraphicsPathItem):
             self.color_a = c_high
         if isinstance(c_low, QColor):
             self.color_b = c_low
+        # After updating, ensure connected node pins reflect these colors
+        try:
+            self._apply_colors_to_nodes()
+        except Exception:
+            pass
+
+    def _blend_colors(self, ca: QColor, cb: QColor) -> QColor:
+        try:
+            r = (ca.red() + cb.red()) // 2
+            g = (ca.green() + cb.green()) // 2
+            b = (ca.blue() + cb.blue()) // 2
+            return QColor(r, g, b)
+        except Exception:
+            return ca
+
+    def _apply_colors_to_nodes(self):
+        # Apply bundle colors to each node's pins: H -> color_a, L -> color_b, S -> blend
+        for node, swap in ((self.source_node, False), (self.target_node, True)):
+            try:
+                for pid, pin in list(node.pins.items()):
+                    if pid == 'H':
+                        color = self.color_a
+                    elif pid == 'L':
+                        color = self.color_b
+                    else:  # 'S' shield
+                        color = self._blend_colors(self.color_a, self.color_b)
+                    try:
+                        pin.set_color(color)
+                        pin.update_leader()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
 
     def paint(self, painter, option, widget=None):
-        pen_a = QPen(self.color_a, 3)
-        pen_b = QPen(self.color_b, 3)
+        pen_a = QPen(self.color_a, WIRE_THICKNESS)
+        pen_b = QPen(self.color_b, WIRE_THICKNESS)
         pen_a.setCapStyle(Qt.RoundCap)
         pen_b.setCapStyle(Qt.RoundCap)
         painter.setRenderHint(QPainter.Antialiasing, True)
@@ -2089,6 +3092,14 @@ class TwistedBundleItem(QGraphicsPathItem):
 
     def _update_elbow_handle_positions(self):
         # Update existing handle positions (parent-local coordinates) without recreating items.
+        # Ensure segment handles exist for the current polyline even if there are no elbows
+        try:
+            pts = self._poly_points()
+            if len(self.segment_handles) != max(0, len(pts) - 1):
+                self._rebuild_elbow_handles()
+                return
+        except Exception:
+            pass
         # Keep the same handle counts; if topology changed, request a rebuild instead.
         if len(self.elbow_handles) != len(self.route):
             self._rebuild_elbow_handles()
@@ -2141,22 +3152,31 @@ class TwistedBundleItem(QGraphicsPathItem):
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemSelectedHasChanged:
-            self.halo_path.setVisible(value)
+            # Do not display a global halo path for bundles; instead highlight the node control pivots
             # Change endpoint marker outline color when selected so user sees the bundle is active
             try:
                 if getattr(self, 'start_marker', None):
-                    if value:
-                        self.start_marker.setPen(QPen(SELECTED_COLOR, 1.6))
-                    else:
-                        self.start_marker.setPen(QPen(QColor(140, 140, 140), 1.6))
+                    # Keep endpoint markers as hollow rings; only change outline color on select
+                    try:
+                        self.start_marker.setBrush(Qt.NoBrush)
+                        if value:
+                            self.start_marker.setPen(QPen(SELECTED_COLOR, 1.6))
+                        else:
+                            self.start_marker.setPen(QPen(QColor(140, 140, 140), 1.6))
+                    except Exception:
+                        pass
                 if getattr(self, 'end_marker', None):
-                    if value:
-                        self.end_marker.setPen(QPen(SELECTED_COLOR, 1.6))
-                    else:
-                        self.end_marker.setPen(QPen(QColor(140, 140, 140), 1.6))
+                    try:
+                        self.end_marker.setBrush(Qt.NoBrush)
+                        if value:
+                            self.end_marker.setPen(QPen(SELECTED_COLOR, 1.6))
+                        else:
+                            self.end_marker.setPen(QPen(QColor(140, 140, 140), 1.6))
+                    except Exception:
+                        pass
             except Exception:
                 pass
-            # Also highlight node pivots when the bundle is selected
+            # Highlight node pivots when the bundle is selected (so halo surrounds control pivot only)
             try:
                 if value:
                     self.source_node._pivot_highlight = True
@@ -2164,6 +3184,29 @@ class TwistedBundleItem(QGraphicsPathItem):
                 else:
                     self.source_node._pivot_highlight = False
                     self.target_node._pivot_highlight = False
+                # Update pivot visuals immediately. When the bundle is selected we show an outline
+                # on the node pivot (no fill) to indicate the bundle's connection without taking
+                # over the node's selected appearance (avoid filled orange on the nodes).
+                try:
+                    if getattr(self.source_node, 'control_pivot', None):
+                        if value:
+                            self.source_node.control_pivot.setBrush(Qt.NoBrush)
+                            self.source_node.control_pivot.setPen(QPen(SELECTED_COLOR, 1.6))
+                        else:
+                            self.source_node.control_pivot.setBrush(Qt.NoBrush)
+                            self.source_node.control_pivot.setPen(QPen(QColor(120, 120, 120), 1.2))
+                except Exception:
+                    pass
+                try:
+                    if getattr(self.target_node, 'control_pivot', None):
+                        if value:
+                            self.target_node.control_pivot.setBrush(Qt.NoBrush)
+                            self.target_node.control_pivot.setPen(QPen(SELECTED_COLOR, 1.6))
+                        else:
+                            self.target_node.control_pivot.setBrush(Qt.NoBrush)
+                            self.target_node.control_pivot.setPen(QPen(QColor(120, 120, 120), 1.2))
+                except Exception:
+                    pass
                 self.source_node.update()
                 self.target_node.update()
             except Exception:
@@ -2174,6 +3217,15 @@ class TwistedBundleItem(QGraphicsPathItem):
         self.recalculate_path(rebuild_handles=rebuild_handles)
         # Ensure colors are refreshed after any external changes (e.g. wire recolor)
         self._update_colors_from_nodes()
+        # If callers asked to avoid rebuilding handles but handles appear missing or out-of-date,
+        # rebuild them to avoid transient missing-handle states (helps tests and deterministic layout).
+        if not rebuild_handles:
+            try:
+                pts = self._poly_points()
+                if len(self.segment_handles) != max(0, len(pts) - 1) or len(self.elbow_handles) != len(self.route):
+                    self._rebuild_elbow_handles()
+            except Exception:
+                pass
         # No implicit handle to position; optionally dump nearby items if debug enabled
         if HANDLE_DEBUG_VERBOSE:
             try:

@@ -13,7 +13,79 @@ class HarnessScene(QGraphicsScene):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setSceneRect(-50000, -50000, 100000, 100000)
-
+    def mousePressEvent(self, event):
+        # Robust routing: if click lands on a pivot child (control_pivot/control_dot) or on
+        # a TwistNodeItem, ensure the node receives the press so selection and pivot-anchored
+        # dragging behavior is consistent from scene-level dispatch.
+        try:
+            from PySide6.QtCore import Qt
+            pos = event.scenePos()
+            # top-first list
+            for it in self.items(pos):
+                try:
+                    data0 = it.data(0)
+                except Exception:
+                    data0 = None
+                if data0 in ('control_pivot', 'control_dot'):
+                    parent = it.parentItem()
+                    if parent:
+                        try:
+                            # Mark which child was pressed so the parent can differentiate
+                            parent._last_child_pressed = data0
+                        except Exception:
+                            pass
+                        try:
+                            # Deselect any bundles attached to this node so the node selection is visually primary
+                            for b in list(parent.bundle_refs):
+                                try:
+                                    b.setSelected(False)
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        try:
+                            parent.setSelected(True)
+                        except Exception:
+                            pass
+                        try:
+                            parent.mousePressEvent(event)
+                        except Exception:
+                            pass
+                        try:
+                            event.accept()
+                        except Exception:
+                            pass
+                        try:
+                            # Clear auxiliary marker
+                            del parent._last_child_pressed
+                        except Exception:
+                            pass
+                        return
+                # If the item itself is a TwistNodeItem, route to it
+                try:
+                    if it.__class__.__name__ == 'TwistNodeItem':
+                        try:
+                            for b in list(it.bundle_refs):
+                                try:
+                                    b.setSelected(False)
+                                except Exception:
+                                    pass
+                        except Exception:
+                            pass
+                        try:
+                            it.setSelected(True)
+                        except Exception:
+                            pass
+                        try:
+                            it.mousePressEvent(event)
+                        except Exception:
+                            pass
+                        return
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        return super().mousePressEvent(event)
     def drawBackground(self, painter, rect):
         painter.fillRect(rect, BG_COLOR)
 
@@ -66,10 +138,19 @@ class HarnessView(QGraphicsView):
             self.scene().removeItem(self.ghost_item)
             self.ghost_item = None
         if self.temp_wire:
-            self.scene().removeItem(self.temp_wire)
+            try:
+                self.scene().removeItem(self.temp_wire)
+            except Exception:
+                pass
             self.temp_wire = None
             self.start_pin = None
-            
+
+        # Also clean up any stray parentless temp wires that might have been orphaned
+        try:
+            self._cleanup_orphan_temp_wires()
+        except Exception:
+            pass
+                
         self.mode = "SELECT"
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.setCursor(Qt.ArrowCursor)
@@ -104,11 +185,58 @@ class HarnessView(QGraphicsView):
                 p1 = self.start_pin.get_scene_pos()
                 self.temp_wire.setLine(QLineF(p1, pos))
 
+            # Logic 3: Proximity hover over node control pivot
+            try:
+                if self.mode == "SELECT" and self.scene():
+                    self.update_pivot_hover_at_scene_pos(pos)
+            except Exception:
+                pass
+
         except Exception as e:
             import traceback
             traceback.print_exc()
         finally:
             super().mouseMoveEvent(event)
+
+    def update_pivot_hover_at_scene_pos(self, scene_pos):
+        """Update proximity hover state for node pivots based on a scene coordinate."""
+        from talustrace.frontend.items_baseline import PIVOT_HIT_RADIUS
+        sr = PIVOT_HIT_RADIUS
+        rect = QRectF(scene_pos.x() - sr, scene_pos.y() - sr, sr * 2, sr * 2)
+        items = self.scene().items(rect)
+        found_node = None
+        for it in items:
+            # Walk up to see if this item is a TwistNodeItem
+            parent = it
+            while parent and parent.__class__.__name__ != 'TwistNodeItem':
+                parent = parent.parentItem()
+            if parent:
+                # Check distance to pivot
+                try:
+                    pivot_scene = parent.mapToScene(getattr(parent, '_pivot', parent._rect.center()))
+                    dx = scene_pos.x() - pivot_scene.x()
+                    dy = scene_pos.y() - pivot_scene.y()
+                    if (dx*dx + dy*dy) <= (sr * sr):
+                        found_node = parent
+                        break
+                except Exception:
+                    pass
+        # Clear previous hovered node(s)
+        try:
+            # Only one hover at a time; clear any nodes that are currently hovered but not the found one
+            for item in list(self.scene().items()):
+                try:
+                    if item.__class__.__name__ == 'TwistNodeItem' and getattr(item, '_pivot_hover', False) and item is not found_node:
+                        item.set_pivot_hover(False)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        if found_node:
+            try:
+                found_node.set_pivot_hover(True)
+            except Exception:
+                pass
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MiddleButton:
@@ -163,6 +291,12 @@ class HarnessView(QGraphicsView):
         super().mouseReleaseEvent(event)
 
     def start_wiring(self, pin_item):
+        # Cleanup any prior orphaned temp wires before starting a new wiring operation
+        try:
+            self._cleanup_orphan_temp_wires()
+        except Exception:
+            pass
+
         self.mode = "WIRING"
         self.setDragMode(QGraphicsView.NoDrag)
         self.start_pin = pin_item
@@ -170,6 +304,11 @@ class HarnessView(QGraphicsView):
         # Create Ghost Wire
         self.temp_wire = QGraphicsLineItem()
         self.temp_wire.setPen(QPen(Qt.red, 2, Qt.DashLine))
+        try:
+            self.temp_wire.setData(0, 'temp_wire')
+            self.temp_wire.setZValue(900)
+        except Exception:
+            pass
         self.scene().addItem(self.temp_wire)
 
     def finish_wiring(self, end_pin):
@@ -183,3 +322,40 @@ class HarnessView(QGraphicsView):
         if event.key() == Qt.Key_Escape:
             self.stop_ghost()
         super().keyPressEvent(event)
+
+    def _cleanup_orphan_temp_wires(self):
+        """Remove any parentless QGraphicsLineItem instances (likely orphaned temporary wires).
+        This is a defensive cleanup to ensure ghost wires never persist in the scene accidentally."""
+        try:
+            items = list(self.scene().items()) if self.scene() else []
+            for it in items:
+                try:
+                    if isinstance(it, QGraphicsLineItem) and it.parentItem() is None:
+                        # Conservative removal: remove only dashed/red or data-tagged temp wires OR reasonably small lines
+                        pen = it.pen() if hasattr(it, 'pen') else None
+                        is_temp_tagged = False
+                        try:
+                            is_temp_tagged = it.data(0) == 'temp_wire'
+                        except Exception:
+                            is_temp_tagged = False
+                        try:
+                            is_dash_and_red = pen is not None and (pen.style() == Qt.DashLine) and (pen.color() == Qt.red)
+                        except Exception:
+                            is_dash_and_red = False
+                        try:
+                            bbox = it.sceneBoundingRect()
+                        except Exception:
+                            bbox = QRectF()
+
+                        # Remove if tagged or dash+red or if bounding box is reasonably small
+                        if is_temp_tagged or is_dash_and_red or (bbox.width() < 500 and bbox.height() < 500 and it.parentItem() is None):
+                            try:
+                                if it.scene():
+                                    it.scene().removeItem(it)
+                                    print(f"Cleanup: removed orphan line item: bbox={bbox}")
+                            except Exception:
+                                pass
+                except Exception:
+                    pass
+        except Exception:
+            pass

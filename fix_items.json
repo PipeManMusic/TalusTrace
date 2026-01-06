@@ -4,7 +4,7 @@
     "type": "feature",
     "title": "Delete device via context menu",
     "description": "Right-click a device to delete it (with confirm), removing attached wires and marking dirty.",
-    "status": "staging",
+    "status": "closed",
     "created_at": "2026-01-03T21:00:00.000000",
     "notes": [
       {
@@ -18,7 +18,7 @@
     "type": "feature",
     "title": "Delete pin via context menu",
     "description": "Right-click a pin to delete it (with confirm), removing attached wires, re-laying pins, and marking dirty.",
-    "status": "staging",
+    "status": "closed",
     "created_at": "2026-01-03T21:00:00.000000",
     "notes": [
       {
@@ -32,7 +32,7 @@
     "type": "feature",
     "title": "Delete wire via context menu",
     "description": "Right-click a wire to delete it and mark dirty.",
-    "status": "staging",
+    "status": "closed",
     "created_at": "2026-01-03T21:00:00.000000",
     "notes": [
       {
@@ -46,7 +46,7 @@
     "type": "feature",
     "title": "Change wire color via context menu",
     "description": "Right-click a wire to pick a color (palette or dialog), update model/pen, and mark dirty.",
-    "status": "staging",
+    "status": "closed",
     "created_at": "2026-01-03T21:00:00.000000",
     "notes": [
       {
@@ -60,7 +60,7 @@
     "type": "bug",
     "title": "Save dialog should add .yaml extension",
     "description": "File save dialog does not append .yaml automatically; ensure saved files get the .yaml suffix by default.",
-    "status": "staging",
+    "status": "closed",
     "created_at": "2026-01-03T22:00:00.000000",
     "notes": [
       {
@@ -74,7 +74,7 @@
     "type": "feature",
     "title": "Wire metadata inheritance from pins",
     "description": "Allow wires to carry metadata that inherits or aggregates attributes from the connected pins (e.g., function, signal type).",
-    "status": "staging",
+    "status": "closed",
     "created_at": "2026-01-04T01:00:00.000000",
     "notes": [
       {
@@ -102,7 +102,7 @@
     "type": "bug",
     "title": "Segment handle drag oscillation",
     "description": "Dragging rectangular line-segment grips sometimes jitters/oscillates away from the cursor (same behavior as issue 15 but for segment handles).",
-    "status": "staging",
+    "status": "closed",
     "created_at": "2026-01-04T12:00:00.000000",
     "notes": [
       {
@@ -115,12 +115,11 @@
       }
     ]
   },
-
   {
     "type": "feature",
     "title": "Twisted Pair: middle & elbow grips parity",
     "description": "Make twisted pair wires expose middle grips and elbow grips identical to regular wires so users can add/move/delete elbows and create segment grips.",
-    "status": "staging",
+    "status": "in-progress",
     "id": 25,
     "created_at": "2026-01-04T23:15:52",
     "notes": [
@@ -130,7 +129,6 @@
       }
     ]
   },
-
   {
     "type": "feature",
     "title": "Twisted Pair: end behaves as pseudo-elbow",
@@ -195,7 +193,7 @@
     "notes": [
       {
         "timestamp": "2026-01-05T12:05:00.000000",
-        "content": "Planned test suite: pin grid-lock, atomic delete, endpoint marker existence/highlight, color propagation, persistence migration tests, and interactive QTest drags for segment and endpoint behaviors. Tests should use headless 'offscreen' environment for CI." 
+        "content": "Planned test suite: pin grid-lock, atomic delete, endpoint marker existence/highlight, color propagation, persistence migration tests, and interactive QTest drags for segment and endpoint behaviors. Tests should use headless 'offscreen' environment for CI."
       }
     ]
   },
@@ -213,7 +211,6 @@
       }
     ]
   },
-
   {
     "id": 33,
     "type": "bug",

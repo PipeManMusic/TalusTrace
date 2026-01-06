@@ -71,6 +71,7 @@ def test_helix_endpoints_centered_between_H_L(qapp):
 
     bundle = TwistedBundleItem(node_a, node_b, on_changed=None)
     s = bundle._start_point()
-    # start point should equal midpoint of H and L
-    assert round(s.x(), 6) == round((h.x() + l.x()) / 2, 6)
-    assert round(s.y(), 6) == round((h.y() + l.y()) / 2, 6)
+    # start point should equal the source node control pivot
+    pivot = node_a.mapToScene(getattr(node_a, '_pivot', node_a._rect.center()))
+    assert round(s.x(), 6) == round(pivot.x(), 6)
+    assert round(s.y(), 6) == round(pivot.y(), 6)

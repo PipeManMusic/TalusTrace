@@ -4,24 +4,18 @@ settings:
 devices: []
 wires: []
 twist_nodes:
-- id: 2a8d1ab4
-  x: -140.0
-  y: -60.0
-- id: af002ba3
-  x: 60.0
-  y: -60.0
-- id: 9abb97f7
-  x: -40.0
-  y: -220.0
-- id: 3b4a8adc
-  x: 160.0
-  y: -220.0
+- id: '91975744'
+  x: -20.0
+  y: 60.0
+- id: def21e11
+  x: 180.0
+  y: 60.0
 bundles:
-- id: 98e54132
-  from_node: 9abb97f7
-  to_node: 3b4a8adc
+- id: 4e36715b
+  from_node: '91975744'
+  to_node: def21e11
   elbow:
-  - 100.0
-  - -220.0
+  - 160.0
+  - 0.0
   amplitude: 5.0
   wavelength: 40.0

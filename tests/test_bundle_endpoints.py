@@ -9,32 +9,36 @@ def test_bundle_endpoints_exist_and_highlight():
     win = MainWindow(restore_policy='skip')
     b = win.add_twisted_bundle(0, 0, spacing=200)
 
-    # The endpoint markers should exist and be non-movable
-    assert getattr(b, 'start_marker', None) is not None
-    assert getattr(b, 'end_marker', None) is not None
+    # Control pivot on the source and target nodes should exist and be positioned at the bundle connection point
+    assert getattr(b.source_node, 'control_pivot', None) is not None
+    assert getattr(b.target_node, 'control_pivot', None) is not None
 
-    # Markers should be near the start/end points
+    # Control pivot should be near the start/end points
     s = b._start_point()
     e = b._end_point()
-    sm_scene = b.start_marker.mapToScene(b.start_marker.boundingRect().center())
-    em_scene = b.end_marker.mapToScene(b.end_marker.boundingRect().center())
+    sm_scene = b.source_node.control_pivot.mapToScene(b.source_node.control_pivot.boundingRect().center())
+    em_scene = b.target_node.control_pivot.mapToScene(b.target_node.control_pivot.boundingRect().center())
     # within a small tolerance (GRID_SIZE/2)
     assert abs(sm_scene.x() - s.x()) <= GRID_SIZE/2
     assert abs(sm_scene.y() - s.y()) <= GRID_SIZE/2
     assert abs(em_scene.x() - e.x()) <= GRID_SIZE/2
     assert abs(em_scene.y() - e.y()) <= GRID_SIZE/2
 
-    # Selecting the bundle should change marker outline (pen) to SELECTED_COLOR
+    # Selecting the bundle should highlight the control pivots
     b.setSelected(True)
-    # QGraphics selection dispatches itemChange synchronously; check pen colors
-    assert b.start_marker.pen().color() == SELECTED_COLOR
-    assert b.end_marker.pen().color() == SELECTED_COLOR
+    # QGraphics selection dispatches itemChange synchronously; check control pivot brush color
+    assert b.source_node.control_pivot.brush().style() != 0
+    assert b.target_node.control_pivot.brush().style() != 0
 
-    # Deselect should restore default gray pen color
+    # Deselect should restore hollow brush (outline)
     b.setSelected(False)
-    assert b.start_marker.pen().color() != SELECTED_COLOR
-    assert b.end_marker.pen().color() != SELECTED_COLOR
+    from PySide6.QtCore import Qt as _Qt
+    assert b.source_node.control_pivot.brush().style() == _Qt.NoBrush
+    assert b.target_node.control_pivot.brush().style() == _Qt.NoBrush
 
-    # Markers use hollow brush (outline) to avoid competing with pin tips
-    assert b.start_marker.brush().style() == 0 or b.start_marker.brush().style() == getattr(__import__('PySide6.QtCore', fromlist=['Qt']).Qt, 'NoBrush')
-    assert b.end_marker.brush().style() == 0 or b.end_marker.brush().style() == getattr(__import__('PySide6.QtCore', fromlist=['Qt']).Qt, 'NoBrush')
+    # Existing bundle markers (if present) should remain hollow to avoid competing with pin tips
+    from PySide6.QtCore import Qt as _Qt
+    if getattr(b, 'start_marker', None):
+        assert b.start_marker.brush().style() == _Qt.NoBrush
+    if getattr(b, 'end_marker', None):
+        assert b.end_marker.brush().style() == _Qt.NoBrush

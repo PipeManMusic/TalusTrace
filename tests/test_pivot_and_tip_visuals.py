@@ -37,3 +37,4 @@ def test_pivot_offset_and_tip_grip(qapp):
     tip = h.tip
     br = tip.boundingRect()
     assert br.width() >= 6 and br.height() >= 6
+

@@ -18,7 +18,9 @@ from PySide6.QtCore import Qt, QPointF
 from PySide6.QtCore import QTimer
 from PySide6.QtWidgets import QMessageBox
 from talustrace.frontend.canvas import HarnessScene, HarnessView
-from talustrace.frontend.items import DeviceItem, WireItem, TwistNodeItem, TwistedBundleItem
+from talustrace.frontend.items import DeviceItem, WireItem, TwistNodeItem
+from talustrace.frontend.twisted_bundle import TwistedBundleItem  # use façade module for bundle creation
+from talustrace.frontend.items_baseline import GRID_SIZE
 from talustrace.backend.models import Device, Wire, Harness
 
 class MainWindow(QMainWindow):
@@ -164,10 +166,16 @@ class MainWindow(QMainWindow):
         return item
 
     def add_twisted_bundle(self, x, y, spacing=200):
+        # Snap the proposed placement to the global GRID so pins end up grid-aligned
+        ax = round(x / GRID_SIZE) * GRID_SIZE
+        ay = round(y / GRID_SIZE) * GRID_SIZE
+        bx = round((x + spacing) / GRID_SIZE) * GRID_SIZE
+        by = ay
+
         node_a = TwistNodeItem(on_changed=self.mark_dirty)
         node_b = TwistNodeItem(on_changed=self.mark_dirty)
-        node_a.setPos(x, y)
-        node_b.setPos(x + spacing, y)
+        node_a.setPos(ax, ay)
+        node_b.setPos(bx, by)
 
         # Ensure persistent IDs exist for wire endpoints
         import uuid
@@ -177,8 +185,8 @@ class MainWindow(QMainWindow):
             node_b._persist_id = str(uuid.uuid4())[:8]
 
         bundle = TwistedBundleItem(node_a, node_b, on_changed=self.mark_dirty, on_delete=self._delete_bundle_item)
-        bundle.update_geometry()
 
+        # Add visual items to the scene first so mapToScene and similar calls work
         self.scene.addItem(node_a)
         self.scene.addItem(node_b)
         self.scene.addItem(bundle)
@@ -186,8 +194,46 @@ class MainWindow(QMainWindow):
         self.twist_nodes.extend([node_a, node_b])
         self.bundle_items.append(bundle)
 
-        node_a.register_bundle(bundle)
-        node_b.register_bundle(bundle)
+        # Register bundle on each node so they know the bundle side and rebuild pins
+
+        # Now enforce pin grid and pivot calculations so heads/tips are on-grid
+        try:
+            node_a._enforce_pin_grid()
+            node_b._enforce_pin_grid()
+            node_a._update_pivot_from_pins()
+            node_b._update_pivot_from_pins()
+            bundle.update_geometry()
+            # Re-run pivot update to ensure leaders are in sync after bundle geometry settles
+            node_a._update_pivot_from_pins()
+            node_b._update_pivot_from_pins()
+        except Exception:
+            # Don't fail placement if the helper methods are missing for some reason
+            try:
+                bundle.update_geometry()
+                node_a._update_pivot_from_pins()
+                node_b._update_pivot_from_pins()
+            except Exception:
+                pass
+
+        # Final reconciliation: perform a deterministic finalize step on the bundle
+        # which locks in the bundle side and refreshes pins/pivots/leaders synchronously.
+        try:
+            bundle.finalize_attachment()
+            from PySide6.QtCore import QCoreApplication
+            QCoreApplication.processEvents()
+            # Ensure control dots are colocated with their control pivots after all geometry updates
+            try:
+                if getattr(node_a, 'control_dot', None):
+                    node_a.control_dot.setPos(node_a._pivot)
+            except Exception:
+                pass
+            try:
+                if getattr(node_b, 'control_dot', None):
+                    node_b.control_dot.setPos(node_b._pivot)
+            except Exception:
+                pass
+        except Exception:
+            pass
 
         return bundle
 
@@ -209,7 +255,41 @@ class MainWindow(QMainWindow):
         node_b = TwistNodeItem(on_changed=None)
         node_b.setPos(spacing, 0)
         bundle = TwistedBundleItem(node_a, node_b, on_changed=None)
+        # Initial geometry to compute pivots
         bundle.update_geometry()
+
+        # Shift child positions so the group's origin (0,0) corresponds to the left control pivot
+        try:
+            node_a._update_pivot_from_pins()
+            node_b._update_pivot_from_pins()
+            pivot = getattr(node_a, '_pivot', None) or node_a._rect.center()
+            # Move node positions so that pivot sits at (0,0) within the group local space
+            node_a.setPos(-pivot)
+            nb_pos = node_b.pos() - pivot
+            node_b.setPos(nb_pos)
+            # Recompute bundle geometry after repositioning
+            bundle.update_geometry()
+            # Ensure pivots and any control dots are updated to match new local coordinates
+            try:
+                node_a._update_pivot_from_pins()
+            except Exception:
+                pass
+            try:
+                node_b._update_pivot_from_pins()
+            except Exception:
+                pass
+            try:
+                if getattr(node_a, 'control_dot', None):
+                    node_a.control_dot.setPos(node_a._pivot)
+            except Exception:
+                pass
+            try:
+                if getattr(node_b, 'control_dot', None):
+                    node_b.control_dot.setPos(node_b._pivot)
+            except Exception:
+                pass
+        except Exception:
+            pass
 
         group = QGraphicsItemGroup()
         node_a.setParentItem(group)
@@ -300,6 +380,15 @@ class MainWindow(QMainWindow):
         harness = Harness(**data)
 
         self.scene.clear()
+        # Ensure any orphaned temporary drawing artifacts are cleaned up
+        try:
+            if getattr(self, 'view', None):
+                try:
+                    self.view._cleanup_orphan_temp_wires()
+                except Exception:
+                    pass
+        except Exception:
+            pass
         self.device_items.clear()
         self.wire_items.clear()
         self.twist_nodes.clear()
@@ -365,6 +454,15 @@ class MainWindow(QMainWindow):
         if not self._confirm_discard_changes():
             return
         self.scene.clear()
+        # Ensure any orphaned temporary drawing artifacts are cleaned up
+        try:
+            if getattr(self, 'view', None):
+                try:
+                    self.view._cleanup_orphan_temp_wires()
+                except Exception:
+                    pass
+        except Exception:
+            pass
         self.device_items.clear()
         self.wire_items.clear()
         self.twist_nodes.clear()

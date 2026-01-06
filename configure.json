@@ -1,15 +1,19 @@
 {
   "context_menu_usage": {
-    "device.bulk_add": 3,
-    "pin.edit": 5,
-    "device.add_pin.left": 17,
-    "device.add_pin.right": 22,
-    "device.edit": 2,
-    "device.delete": 3,
-    "pin.delete": 3,
-    "wire.delete": 15,
-    "wire.color.BU": 3,
-    "wire.color.WH": 3,
-    "wire.twisted": 2
+    "device.bulk_add": 6,
+    "pin.edit": 7,
+    "device.add_pin.left": 22,
+    "device.add_pin.right": 27,
+    "device.edit": 3,
+    "device.delete": 11,
+    "pin.delete": 7,
+    "wire.delete": 18,
+    "wire.color.BU": 4,
+    "wire.color.WH": 6,
+    "wire.twisted": 2,
+    "wire.color.OG": 1,
+    "device.add_pin.top": 1,
+    "device.add_pin.bottom": 1,
+    "wire.color.PK": 1
   }
 }
