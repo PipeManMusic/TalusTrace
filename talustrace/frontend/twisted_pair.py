@@ -17,6 +17,7 @@ class TwistAnchorItem(QGraphicsItem):
     def __init__(self, pos, parent=None, side=None):
         super().__init__(parent)
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.radius = 10
         self.setPos(*pos)
         self.side = side  # 'a' or 'b'
@@ -128,20 +129,25 @@ class TwistedPairItem(QGraphicsObject):
 
     def update_layout(self):
         """
-        Symmetrical pin and leader layout for both anchors based on rotation.
-        Anchor is at (0,0). Pins are spaced 60px apart (±30px from center).
-        Vertical (0°/180°): Pin 0 at (0,-30), Pin 1 at (0,30).
-        Horizontal (90°/270°): Pin 0 at (-30,0), Pin 1 at (30,0).
+        Pin and leader layout for both anchors based on rotation, with X-offset for pins.
+        Anchor is at (0,0). Pins are offset from anchor as follows:
+        Vertical (0°): Pin 0 at (20,-30), Pin 1 at (20,30)
+        Horizontal (90°): Pin 0 at (30,20), Pin 1 at (-30,20)
+        (Other angles rotate these vectors accordingly.)
         Leaders extend from anchor to each pin.
         """
         def pin_offsets(rotation):
             rot = rotation % 360
-            if rot in (0, 180):
-                return [QPointF(0, -30), QPointF(0, 30)]
-            elif rot in (90, 270):
-                return [QPointF(-30, 0), QPointF(30, 0)]
+            if rot == 0:
+                return [QPointF(20, -30), QPointF(20, 30)]
+            elif rot == 90:
+                return [QPointF(30, 20), QPointF(-30, 20)]
+            elif rot == 180:
+                return [QPointF(-20, 30), QPointF(-20, -30)]
+            elif rot == 270:
+                return [QPointF(-30, -20), QPointF(30, -20)]
             else:
-                return [QPointF(0, -30), QPointF(0, 30)]
+                return [QPointF(20, -30), QPointF(20, 30)]
 
         # Layout for anchor_a
         pos_a = self.anchor_a.scenePos()
