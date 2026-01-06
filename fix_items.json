@@ -4,7 +4,7 @@
     "type": "frontend",
     "title": "Fix Twisted Pair Visuals & Layout",
     "description": "Make TwistedPairItem pin layout symmetrical, color leaders, and ensure helix follows anchors.",
-    "status": "in_progress",
+    "status": "closed",
     "created_at": "2026-01-06T12:00:00",
     "notes": []
   },
