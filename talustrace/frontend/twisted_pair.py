@@ -1,10 +1,19 @@
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem, QGraphicsPathItem
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem, QGraphicsPathItem, QGraphicsSceneMouseEvent
 from PySide6.QtCore import QRectF, Qt, QPointF
 from PySide6.QtGui import QBrush, QPen, QColor, QPainter, QPainterPath
 from talustrace.backend.geometry import calculate_double_helix
 from talustrace.backend.models import TwistedPair
 
 class TwistAnchorItem(QGraphicsItem):
+        def mousePressEvent(self, event):
+            """
+            On right-click, rotate the anchor by 90 degrees. Otherwise, allow normal drag/move behavior.
+            """
+            if event.button() == Qt.RightButton:
+                self.rotate_90()
+                event.accept()
+            else:
+                super().mousePressEvent(event)
     def __init__(self, pos, parent=None, side=None):
         super().__init__(parent)
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
