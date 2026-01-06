@@ -6,7 +6,7 @@ class TwistedPair(BaseModel):
     node_a: Tuple[float, float]
     node_b: Tuple[float, float]
     rotation_a: int = 0
-        rotation_b: int = 180
+    rotation_b: int = 180
     wire_id_1: Optional[str] = None
     wire_id_2: Optional[str] = None
 

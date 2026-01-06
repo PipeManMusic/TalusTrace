@@ -1,3 +1,12 @@
+    {
+      "id": 26,
+      "type": "frontend",
+      "title": "Final Visual Polish & Z-Ordering",
+      "description": "Ensure anchors are always on top, remove all borders, and finalize visual defaults.",
+      "status": "in_progress",
+      "created_at": "2026-01-06T12:00:00",
+      "notes": []
+    },
   {
     "id": 26,
     "type": "frontend",
