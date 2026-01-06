@@ -45,3 +45,39 @@ def test_twisted_pair_item_structure(scene):
     assert hasattr(pos, 'x') and hasattr(pos, 'y')
     # Atomic selection: selectable flag
     assert item.flags() & QGraphicsItem.ItemIsSelectable
+
+
+def test_pin_snapping_behavior(scene):
+    """
+    This test expects TwistedPairItem to have anchor_a, anchor_b, pin_a, pin_b attributes.
+    It moves anchors to off-grid positions and expects pins to snap to the nearest 20px grid.
+    This test is expected to FAIL until pin snapping logic is implemented.
+    """
+    model = TwistedPair(
+        id="tp1",
+        node_a=(0.0, 0.0),
+        node_b=(100.0, 0.0),
+        rotation_a=0,
+        rotation_b=0,
+        wire_id_1="w1",
+        wire_id_2="w2"
+    )
+    item = TwistedPairItem(model)
+    scene.addItem(item)
+    # Move anchor_a to (103, 103)
+    item.anchor_a.setPos(103, 103)
+    # Move anchor_b to (217, 217)
+    item.anchor_b.setPos(217, 217)
+    # Trigger layout update (if required)
+    if hasattr(item, 'update_layout'):
+        item.update_layout()
+    # Assert pin_a exists and is snapped to (100, 100)
+    assert hasattr(item, 'pin_a'), "TwistedPairItem should have pin_a attribute"
+    assert tuple(item.pin_a.pos().toTuple()) == (100, 100), f"pin_a should snap to (100, 100), got {item.pin_a.pos()}"
+    # Assert anchor_a is still at (103, 103)
+    assert tuple(item.anchor_a.pos().toTuple()) == (103, 103), f"anchor_a should remain at (103, 103), got {item.anchor_a.pos()}"
+    # Assert pin_b exists and is snapped to (220, 220)
+    assert hasattr(item, 'pin_b'), "TwistedPairItem should have pin_b attribute"
+    assert tuple(item.pin_b.pos().toTuple()) == (220, 220), f"pin_b should snap to (220, 220), got {item.pin_b.pos()}"
+    # Assert anchor_b is still at (217, 217)
+    assert tuple(item.anchor_b.pos().toTuple()) == (217, 217), f"anchor_b should remain at (217, 217), got {item.anchor_b.pos()}"
