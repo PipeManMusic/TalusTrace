@@ -1,3 +1,71 @@
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem, QGraphicsPathItem, QGraphicsSceneMouseEvent, QGraphicsEllipseItem, QStyle
+from PySide6.QtCore import QRectF, Qt, QPointF
+from PySide6.QtGui import QBrush, QPen, QColor, QPainter, QPainterPath
+from talustrace.backend.geometry import calculate_double_helix
+from talustrace.backend.models import TwistedPair
+
+# --- THEME COLORS ---
+THEME_GREY = QColor("#D0D0D0")
+
+# --- ELBOW HANDLE ---
+class ElbowHandle(QGraphicsItem):
+    def __init__(self, index, parent=None):
+        super().__init__(parent)
+        self.index = index
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setAcceptHoverEvents(True)
+        self.radius = 2.5
+        self.setZValue(2)
+
+    def boundingRect(self):
+        r = self.radius
+        return QRectF(-r, -r, 2*r, 2*r)
+
+    def paint(self, painter, option, widget=None):
+        if option.state & QStyle.State_Sunken:
+            brush = QBrush(Qt.red)
+        elif option.state & QStyle.State_Selected:
+            brush = QBrush(Qt.darkBlue)
+        elif option.state & QStyle.State_MouseOver:
+            brush = QBrush(QColor('orange'))
+        else:
+            brush = QBrush(THEME_GREY)
+        painter.setBrush(brush)
+        painter.setPen(Qt.NoPen)
+        painter.drawEllipse(self.boundingRect())
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemPositionHasChanged:
+            parent = self.parentItem()
+            if parent and hasattr(parent, 'model') and hasattr(parent, 'update_layout'):
+                elbows = parent.model.elbows
+                if 0 <= self.index < len(elbows):
+                    elbows[self.index] = (self.pos().x(), self.pos().y())
+                    parent.update_layout()
+        return super().itemChange(change, value)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.RightButton:
+            parent = self.parentItem()
+            if parent and hasattr(parent, 'model') and hasattr(parent, 'update_layout'):
+                if 0 <= self.index < len(parent.model.elbows):
+                    del parent.model.elbows[self.index]
+                    parent.update_layout()
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        self.update()
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem, QGraphicsPathItem, QGraphicsSceneMouseEvent, QGraphicsEllipseItem, QStyle
+from PySide6.QtCore import QRectF, Qt, QPointF
+from PySide6.QtGui import QBrush, QPen, QColor, QPainter, QPainterPath
+from talustrace.backend.geometry import calculate_double_helix
+from talustrace.backend.models import TwistedPair
+
 class ElbowHandle(QGraphicsItem):
     def __init__(self, index, parent=None):
         super().__init__(parent)
@@ -156,12 +224,13 @@ class DoubleHelixPathItem(QGraphicsItem):
         self.color2 = color2
         self.update()
 
-    def update_geometry(self, start: QPointF, end: QPointF, elbows: list[QPointF] = None):
-        from PySide6.QtCore import QPointF
+    def update_geometry(self, start: QPointF, end: QPointF, elbows=None):
+        if elbows is None:
+            elbows = []
         self.prepareGeometryChange()
         amp = 5.0
         wavelength = 20.0
-        points = [start] + (elbows or []) + [end]
+        points = [start] + elbows + [end]
         self.path1 = QPainterPath()
         self.path2 = QPainterPath()
         for i in range(len(points) - 1):
@@ -174,7 +243,6 @@ class DoubleHelixPathItem(QGraphicsItem):
                 if i == 0:
                     self.path1.moveTo(QPointF(*strand1[0]))
                 else:
-                    # Bridge to next segment for continuity
                     self.path1.lineTo(QPointF(*strand1[0]))
                 for pt in strand1[1:]:
                     self.path1.lineTo(QPointF(*pt))
@@ -291,12 +359,15 @@ class TwistedPairItem(QGraphicsObject):
         while len(self.elbow_handles) > len(elbows_data):
             handle = self.elbow_handles.pop()
             handle.setParentItem(None)
-            handle.scene() and handle.scene().removeItem(handle)
+            if handle.scene():
+                handle.scene().removeItem(handle)
         # Update handle positions and indices
         for i, handle in enumerate(self.elbow_handles):
             handle.index = i
             pos = elbows_data[i]
-            handle.setPos(QPointF(pos[0], pos[1]))
+            # Only update if not currently being dragged
+            if not (handle.isSelected() or handle.isUnderMouse()):
+                handle.setPos(QPointF(pos[0], pos[1]))
         # Update helix geometry and colors
         self.helix.set_strand_colors(color1, color2)
         elbow_points = [QPointF(e[0], e[1]) for e in elbows_data]
@@ -304,7 +375,9 @@ class TwistedPairItem(QGraphicsObject):
 
     def mouseDoubleClickEvent(self, event):
         # Add elbow at double-clicked position
-        pos = event.position.toPointF() if hasattr(event, 'position') else event.localPos()
+        # Use event.scenePosition() for PySide6, then map to local coordinates
+        scene_pos = event.scenePosition().toPointF() if hasattr(event, 'scenePosition') else event.scenePos()
+        pos = self.mapFromScene(scene_pos)
         # Polyline: [anchor_a] + elbows + [anchor_b]
         points = [self.anchor_a.pos()] + [QPointF(e[0], e[1]) for e in self.model.elbows] + [self.anchor_b.pos()]
         min_dist = float('inf')
