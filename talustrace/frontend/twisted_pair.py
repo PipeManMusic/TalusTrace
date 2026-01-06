@@ -5,15 +5,15 @@ from talustrace.backend.geometry import calculate_double_helix
 from talustrace.backend.models import TwistedPair
 
 class TwistAnchorItem(QGraphicsItem):
-        def mousePressEvent(self, event):
-            """
-            On right-click, rotate the anchor by 90 degrees. Otherwise, allow normal drag/move behavior.
-            """
-            if event.button() == Qt.RightButton:
-                self.rotate_90()
-                event.accept()
-            else:
-                super().mousePressEvent(event)
+    def mousePressEvent(self, event):
+        """
+        On right-click, rotate the anchor by 90 degrees. Otherwise, allow normal drag/move behavior.
+        """
+        if event.button() == Qt.RightButton:
+            self.rotate_90()
+            event.accept()
+        else:
+            super().mousePressEvent(event)
     def __init__(self, pos, parent=None, side=None):
         super().__init__(parent)
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
@@ -128,48 +128,41 @@ class TwistedPairItem(QGraphicsObject):
 
     def update_layout(self):
         """
-        Update the pin and leader positions for both anchors based on the current
-        anchor positions and their rotation values (from the model).
-        Pin 1's offset is determined by rotation:
-        - 0°: (0, 20)
-        - 90°: (20, 0)
-        - 180°: (0, -20)
-        - 270°: (-20, 0)
-        Pin 0 is always at (0, 0) local to the anchor.
+        Symmetrical pin and leader layout for both anchors based on rotation.
+        Anchor is at (0,0). Pins are spaced 60px apart (±30px from center).
+        Vertical (0°/180°): Pin 0 at (0,-30), Pin 1 at (0,30).
+        Horizontal (90°/270°): Pin 0 at (-30,0), Pin 1 at (30,0).
+        Leaders extend from anchor to each pin.
         """
-        def pin1_offset(rotation):
+        def pin_offsets(rotation):
             rot = rotation % 360
-            if rot == 0:
-                return QPointF(0, 20)
-            elif rot == 90:
-                return QPointF(20, 0)
-            elif rot == 180:
-                return QPointF(0, -20)
-            elif rot == 270:
-                return QPointF(-20, 0)
+            if rot in (0, 180):
+                return [QPointF(0, -30), QPointF(0, 30)]
+            elif rot in (90, 270):
+                return [QPointF(-30, 0), QPointF(30, 0)]
             else:
-                return QPointF(0, 20)
+                return [QPointF(0, -30), QPointF(0, 30)]
 
-        # Snap anchor_a to grid for pins
+        # Layout for anchor_a
         pos_a = self.anchor_a.scenePos()
         snap_a_x = round(pos_a.x() / 20) * 20
         snap_a_y = round(pos_a.y() / 20) * 20
         snap_origin_a = QPointF(snap_a_x, snap_a_y)
         rot_a = getattr(self.model, 'rotation_a', 0) % 360
-        offsets_a = [QPointF(0, 0), pin1_offset(rot_a)]
+        offsets_a = pin_offsets(rot_a)
         for i, (pin, leader) in enumerate(zip(self.anchor_a.pins, self.anchor_a.leaders)):
             snapped_scene = snap_origin_a + offsets_a[i]
             local = self.anchor_a.mapFromScene(snapped_scene)
             pin.setPos(local)
             leader.setLine(0, 0, local.x(), local.y())
 
-        # Snap anchor_b to grid for pins
+        # Layout for anchor_b
         pos_b = self.anchor_b.scenePos()
         snap_b_x = round(pos_b.x() / 20) * 20
         snap_b_y = round(pos_b.y() / 20) * 20
         snap_origin_b = QPointF(snap_b_x, snap_b_y)
         rot_b = getattr(self.model, 'rotation_b', 0) % 360
-        offsets_b = [QPointF(0, 0), pin1_offset(rot_b)]
+        offsets_b = pin_offsets(rot_b)
         for i, (pin, leader) in enumerate(zip(self.anchor_b.pins, self.anchor_b.leaders)):
             snapped_scene = snap_origin_b + offsets_b[i]
             local = self.anchor_b.mapFromScene(snapped_scene)
@@ -200,9 +193,15 @@ class TwistedPairItem(QGraphicsObject):
             self.model.wire_id_2 = wire_id
 
         # Update pin color
-        from PySide6.QtGui import QColor, QBrush
+        from PySide6.QtGui import QColor, QBrush, QPen
         new_color = QColor(color) if not isinstance(color, QColor) else color
         pin_item.setBrush(QBrush(new_color))
+
+        # Update leader color (find anchor and set leader pen)
+        if pin_item in self.anchor_a.pins:
+            self.anchor_a.leaders[idx].setPen(QPen(new_color, 1, Qt.DashLine))
+        elif pin_item in self.anchor_b.pins:
+            self.anchor_b.leaders[idx].setPen(QPen(new_color, 1, Qt.DashLine))
 
         # Update helix strand colors
         c1 = self.helix.color1
