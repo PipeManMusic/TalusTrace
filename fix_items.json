@@ -174,19 +174,17 @@
   {
     "id": 17,
     "type": "frontend",
-    "title": "Impl: SVG Device Item",
-    "description": "Implement 'SvgDeviceItem' using 'QtSvg.QGraphicsSvgItem'. Update 'PinItem' to support 'Tail' offsets.",
+    "title": "TDD: Pin Rotation",
+    "description": "Create 'tests/frontend/test_twisted_pair_rotation.py'. Test that rotate_90() on anchor updates model and layout.",
     "status": "closed",
     "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "SVG Device Item implementation completed. Pin rotation TDD created and committed. Ready for frontend implementation."}
-    ]
+    "notes": []
   },
   {
     "id": 18,
-    "type": "ui",
-    "title": "TDD: Library Dock",
-    "description": "Create 'tests/ui/test_library_dock.py'. Test that dragging an item from the list emits a signal with the Device model data.",
+    "type": "frontend",
+    "title": "Impl: Pin Rotation",
+    "description": "Implement rotate_90() and pin layout logic in TwistedPairItem/TwistAnchorItem.",
     "status": "in_progress",
     "created_at": "2026-01-06T12:00:00",
     "notes": []
