@@ -1,5 +1,5 @@
+from pydantic import BaseModel, Field
 from typing import Tuple, Optional, List, Dict, Any
-from pydantic import BaseModel
 
 class TwistedPair(BaseModel):
     id: str
@@ -11,6 +11,5 @@ class TwistedPair(BaseModel):
     wire_id_2: Optional[str] = None
 
 class Harness(BaseModel):
-    meta: Dict[str, Any] = {}
-    twisted_pairs: List[TwistedPair] = []
-    # Other fields and methods as needed
+    meta: Dict[str, Any] = Field(default_factory=dict)
+    twisted_pairs: List[TwistedPair] = Field(default_factory=list)
