@@ -21,6 +21,8 @@ class TwistAnchorItem(QGraphicsItem):
         self.radius = 5  # 10px diameter matches theme
         self.setPos(*pos)
         self.side = side  # 'a' or 'b'
+        self.setAcceptHoverEvents(True)
+        self.setZValue(10)
         # Create two pins and two leaders as children of the anchor
         self.pins = []
         self.leaders = []
@@ -31,6 +33,14 @@ class TwistAnchorItem(QGraphicsItem):
             leader = QGraphicsLineItem(self)
             leader.setPen(QPen(Qt.black, 3, Qt.SolidLine))
             self.leaders.append(leader)
+
+    def hoverEnterEvent(self, event):
+        self.update()
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        self.update()
+        super().hoverLeaveEvent(event)
 
     def rotate_90(self):
         """
@@ -54,18 +64,17 @@ class TwistAnchorItem(QGraphicsItem):
         return QRectF(-r - 2, -r - 2, 2 * (r + 2), 2 * (r + 2))
 
     def paint(self, painter, option, widget=None):
-        color = QColor("orange")
+        brush = QBrush(Qt.orange)
         try:
             from talustrace.frontend.theme_tokens import theme_tokens
-            color = QColor(theme_tokens.get("anchor_fill", "orange"))
+            brush = QBrush(QColor(theme_tokens.get("anchor_fill", "orange")))
         except Exception:
             pass
-        if self.isSelected():
-            painter.setBrush(QBrush(QColor("yellow")))
-        elif option.state & QStyle.State_MouseOver:
-            painter.setBrush(QBrush(QColor("#FFD580")))  # light yellow
-        else:
-            painter.setBrush(QBrush(color))
+        if option.state & QStyle.State_MouseOver:
+            brush = QBrush(brush.color().lighter(150))
+        if option.state & QStyle.State_Selected:
+            brush = QBrush(Qt.white)
+        painter.setBrush(brush)
         painter.setPen(QPen(QColor("black")))
         painter.drawEllipse(self.boundingRect())
 
@@ -135,6 +144,7 @@ class TwistedPairItem(QGraphicsObject):
         self.anchor_a = TwistAnchorItem(model.node_a, self, side='a')
         self.anchor_b = TwistAnchorItem(model.node_b, self, side='b')
         self.helix = DoubleHelixPathItem(self)
+        # Ensure initial layout reflects model state (e.g., rotation_b)
         self.update_layout()
 
 
