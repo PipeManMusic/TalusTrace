@@ -24,13 +24,12 @@ class TwistAnchorItem(QGraphicsItem):
         # Create two pins and two leaders as children of the anchor
         self.pins = []
         self.leaders = []
-        pin_colors = [QColor("green"), QColor("blue")]
         for i in range(2):
-            pin = QGraphicsRectItem(-4, -4, 8, 8, self)
-            pin.setBrush(QBrush(pin_colors[i]))
+            pin = QGraphicsEllipseItem(-3, -3, 6, 6, self)  # 6px diameter circle
+            pin.setBrush(QBrush(Qt.gray))
             self.pins.append(pin)
             leader = QGraphicsLineItem(self)
-            leader.setPen(QPen(QColor("#888"), 1, Qt.DashLine))
+            leader.setPen(QPen(Qt.black, 3, Qt.SolidLine))
             self.leaders.append(leader)
 
     def rotate_90(self):
@@ -60,7 +59,8 @@ class TwistAnchorItem(QGraphicsItem):
         painter.drawEllipse(self.boundingRect())
 
     def itemChange(self, change, value):
-        if change in (QGraphicsItem.ItemPositionChange, QGraphicsItem.ItemPositionHasChanged):
+        # Only trigger layout update after the position has actually changed
+        if change == QGraphicsItem.ItemPositionHasChanged:
             parent = self.parentItem()
             if parent and hasattr(parent, "update_layout"):
                 parent.update_layout()
@@ -131,8 +131,9 @@ class TwistedPairItem(QGraphicsObject):
     def update_layout(self):
         """
         Snap anchor to grid. Pins use (-20,20) and (-20,-20) offsets, rotated by anchor rotation. Pin positions are local to anchor.
+        Centralize color logic: both anchors' pins/leaders and helix strands are colored according to model wire_id_1/2.
         """
-        from PySide6.QtGui import QTransform
+        from PySide6.QtGui import QTransform, QPen, QBrush, QColor
         if not hasattr(self, "anchor_a") or not hasattr(self, "anchor_b"):
             return
 
@@ -140,40 +141,65 @@ class TwistedPairItem(QGraphicsObject):
             return QPointF(round(pt.x() / 20) * 20, round(pt.y() / 20) * 20)
 
         def rotated_offsets(rotation):
-            # Offsets: Pin 0 (Top): (-20, 20), Pin 1 (Bottom): (-20, -20)
             base = [QPointF(-20, 20), QPointF(-20, -20)]
             t = QTransform()
             t.rotate(rotation)
             return [t.map(offset) for offset in base]
 
+        def points_close(p1, p2, eps=0.01):
+            return (abs(p1.x() - p2.x()) < eps) and (abs(p1.y() - p2.y()) < eps)
+
+        # --- Color logic ---
+        def color_for_wire(wire_id, default):
+            if wire_id is None:
+                return QColor(default)
+            # Example: use blue for 1, red for 2, else fallback
+            if wire_id == 1:
+                return QColor("blue")
+            if wire_id == 2:
+                return QColor("red")
+            return QColor(default)
+
+        color1 = color_for_wire(getattr(self.model, 'wire_id_1', None), 'gray')
+        color2 = color_for_wire(getattr(self.model, 'wire_id_2', None), 'gray')
+
         # Layout for anchor_a
-        pos_a = self.anchor_a.scenePos()
-        snap_a = snap_point(pos_a)
-        self.anchor_a.setPos(snap_a)
+        pos_a_scene = self.anchor_a.scenePos()
+        snap_a_scene = snap_point(pos_a_scene)
+        if not points_close(pos_a_scene, snap_a_scene):
+            snap_a_local = self.mapFromScene(snap_a_scene)
+            self.anchor_a.setPos(snap_a_local)
         rot_a = getattr(self.model, 'rotation_a', 0) % 360
         offsets_a = rotated_offsets(rot_a)
         for i, (pin, leader) in enumerate(zip(self.anchor_a.pins, self.anchor_a.leaders)):
+            color = color1 if i == 0 else color2
+            pin.setBrush(QBrush(color))
+            leader.setPen(QPen(color, 3, Qt.SolidLine))
             pin.setPos(offsets_a[i])
             leader.setLine(0, 0, offsets_a[i].x(), offsets_a[i].y())
 
         # Layout for anchor_b
-        pos_b = self.anchor_b.scenePos()
-        snap_b = snap_point(pos_b)
-        self.anchor_b.setPos(snap_b)
+        pos_b_scene = self.anchor_b.scenePos()
+        snap_b_scene = snap_point(pos_b_scene)
+        if not points_close(pos_b_scene, snap_b_scene):
+            snap_b_local = self.mapFromScene(snap_b_scene)
+            self.anchor_b.setPos(snap_b_local)
         rot_b = getattr(self.model, 'rotation_b', 0) % 360
         offsets_b = rotated_offsets(rot_b)
         for i, (pin, leader) in enumerate(zip(self.anchor_b.pins, self.anchor_b.leaders)):
+            color = color1 if i == 0 else color2
+            pin.setBrush(QBrush(color))
+            leader.setPen(QPen(color, 3, Qt.SolidLine))
             pin.setPos(offsets_b[i])
             leader.setLine(0, 0, offsets_b[i].x(), offsets_b[i].y())
 
-        # Update helix geometry
+        # Update helix geometry and colors
+        self.helix.set_strand_colors(color1, color2)
         self.helix.update_geometry(self.anchor_a.pos(), self.anchor_b.pos())
 
     def set_signal(self, pin_item, wire_id, color):
         """
-        Assign a wire ID and color to the given pin, update the model,
-        and propagate the color to the corresponding helix strand.
-        Pin 0 sets strand 1, Pin 1 sets strand 2.
+        Assign a wire ID to the given pin, update the model, and refresh layout/colors for both anchors.
         """
         # Determine anchor and index
         if pin_item in self.anchor_a.pins:
@@ -189,25 +215,8 @@ class TwistedPairItem(QGraphicsObject):
         elif idx == 1:
             self.model.wire_id_2 = wire_id
 
-        # Update pin color
-        from PySide6.QtGui import QColor, QBrush, QPen
-        new_color = QColor(color) if not isinstance(color, QColor) else color
-        pin_item.setBrush(QBrush(new_color))
-
-        # Update leader color (find anchor and set leader pen)
-        if pin_item in self.anchor_a.pins:
-            self.anchor_a.leaders[idx].setPen(QPen(new_color, 1, Qt.DashLine))
-        elif pin_item in self.anchor_b.pins:
-            self.anchor_b.leaders[idx].setPen(QPen(new_color, 1, Qt.DashLine))
-
-        # Update helix strand colors
-        c1 = self.helix.color1
-        c2 = self.helix.color2
-        if idx == 0:
-            c1 = new_color
-        elif idx == 1:
-            c2 = new_color
-        self.helix.set_strand_colors(c1, c2)
+        # Centralized color/layout update
+        self.update_layout()
 
     def get_signal(self, pin_item):
         if pin_item in self.anchor_a.pins:
@@ -223,8 +232,8 @@ class TwistedPairItem(QGraphicsObject):
         return None
 
     def boundingRect(self):
-        # Minimal bounding rect for QGraphicsObject
-        return QRectF(0, 0, 1, 1)
+        # Use childrenBoundingRect to avoid rendering artifacts
+        return self.childrenBoundingRect()
 
     def paint(self, painter, option, widget=None):
         pass  # No-op for now
