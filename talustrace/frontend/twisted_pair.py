@@ -18,6 +18,7 @@ class TwistAnchorItem(QGraphicsItem):
         super().__init__(parent)
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.radius = 5  # 10px diameter matches theme
         self.setPos(*pos)
         self.side = side  # 'a' or 'b'
@@ -64,16 +65,18 @@ class TwistAnchorItem(QGraphicsItem):
         return QRectF(-r - 2, -r - 2, 2 * (r + 2), 2 * (r + 2))
 
     def paint(self, painter, option, widget=None):
-        brush = QBrush(Qt.orange)
+        # Base brush: orange or theme color
+        brush = QBrush(QColor('orange'))
         try:
             from talustrace.frontend.theme_tokens import theme_tokens
-            brush = QBrush(QColor(theme_tokens.get("anchor_fill", "orange")))
+            brush = QBrush(QColor(theme_tokens.get("control_node", "orange")))
         except Exception:
             pass
-        if option.state & QStyle.State_MouseOver:
-            brush = QBrush(brush.color().lighter(150))
+        # Selection priority
         if option.state & QStyle.State_Selected:
-            brush = QBrush(Qt.white)
+            brush = QBrush(QColor('cyan'))
+        elif option.state & QStyle.State_MouseOver:
+            brush = QBrush(brush.color().lighter(150))
         painter.setBrush(brush)
         painter.setPen(QPen(QColor("black")))
         painter.drawEllipse(self.boundingRect())
