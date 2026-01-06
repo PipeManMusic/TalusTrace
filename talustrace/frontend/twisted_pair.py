@@ -19,11 +19,18 @@ class TwistAnchorItem(QGraphicsItem):
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.radius = 5  # 10px diameter matches theme
-        self.setPos(*pos)
-        self.side = side  # 'a' or 'b'
         self.setAcceptHoverEvents(True)
         self.setZValue(10)
+        # Try to load grip_size_px from theme, default to 5, radius is half
+        try:
+            import json
+            with open("docs/theme_tokens.json") as f:
+                theme = json.load(f)
+            self.radius = float(theme.get("grip_size_px", 5)) / 2
+        except Exception:
+            self.radius = 2.5
+        self.setPos(*pos)
+        self.side = side  # 'a' or 'b'
         # Create two pins and two leaders as children of the anchor
         self.pins = []
         self.leaders = []
@@ -65,18 +72,15 @@ class TwistAnchorItem(QGraphicsItem):
         return QRectF(-r - 2, -r - 2, 2 * (r + 2), 2 * (r + 2))
 
     def paint(self, painter, option, widget=None):
-        # Base brush: orange or theme color
-        brush = QBrush(QColor('orange'))
-        try:
-            from talustrace.frontend.theme_tokens import theme_tokens
-            brush = QBrush(QColor(theme_tokens.get("control_node", "orange")))
-        except Exception:
-            pass
-        # Selection priority
-        if option.state & QStyle.State_Selected:
-            brush = QBrush(QColor('cyan'))
+        # Interaction palette: Drag > Selected > Hover > Default
+        if option.state & QStyle.State_Sunken:
+            brush = QBrush(Qt.red)
+        elif option.state & QStyle.State_Selected:
+            brush = QBrush(Qt.darkBlue)
         elif option.state & QStyle.State_MouseOver:
-            brush = QBrush(brush.color().lighter(150))
+            brush = QBrush(Qt.orange)
+        else:
+            brush = QBrush(Qt.gray)
         painter.setBrush(brush)
         painter.setPen(QPen(QColor("black")))
         painter.drawEllipse(self.boundingRect())

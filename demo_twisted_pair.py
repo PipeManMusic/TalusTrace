@@ -19,7 +19,6 @@ def main():
         node_a=(100.0, 100.0),
         node_b=(400.0, 100.0),
         rotation_a=0,
-        rotation_b=0,
         wire_id_1=None,
         wire_id_2=None
     )

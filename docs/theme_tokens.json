@@ -5,7 +5,7 @@
   },
   "layout": {
     "grid_step_px": 20,
-    "grip_size_px": 10,
+    "grip_size_px": 5,
     "pin_diameter_px": 6,
     "wire_width_px": 3,
     "tail_length_std_px": 8,

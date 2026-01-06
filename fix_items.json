@@ -1,3 +1,12 @@
+  {
+    "id": 26,
+    "type": "frontend",
+    "title": "Final Visual Polish & Defaults",
+    "description": "Halve control node size, enforce 180 deg symmetry, and implement requested interaction palette.",
+    "status": "in_progress",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
 [
   {
     "id": 21,
