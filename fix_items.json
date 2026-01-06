@@ -1,3 +1,12 @@
+  {
+    "id": 20,
+    "type": "backend",
+    "title": "Fix Project Context & Models",
+    "description": "Convert Harness and TwistedPair to Pydantic models, add meta and twisted_pairs fields, and ensure ProjectContext serialization works.",
+    "status": "in_progress",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
 [
   {
     "id": 1,
@@ -194,7 +203,7 @@
     "type": "polish",
     "title": "Final Polish & Spec Sync",
     "description": "Synchronize documentation/spec and code for Twisted Pair. Add docstrings, update spec, and ensure all features are documented.",
-    "status": "in_progress",
+    "status": "closed",
     "created_at": "2026-01-06T12:00:00",
     "notes": []
   },
