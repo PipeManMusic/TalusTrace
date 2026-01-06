@@ -1,3 +1,22 @@
+from pydantic import BaseModel, field_validator
+from typing import Tuple, Optional
+
+# --- Atomic Twisted Pair ---
+class TwistedPair(BaseModel):
+    id: str
+    node_a: Tuple[float, float]
+    node_b: Tuple[float, float]
+    rotation_a: int = 0
+    rotation_b: int = 0
+    wire_id_1: Optional[str] = None
+    wire_id_2: Optional[str] = None
+
+    @field_validator('node_a', 'node_b')
+    @classmethod
+    def validate_coords(cls, v):
+        if not (isinstance(v, tuple) and len(v) == 2 and all(isinstance(x, (int, float)) for x in v)):
+            raise ValueError('node_a and node_b must be (float, float) tuples')
+        return v
 from enum import Enum
 from typing import List, Optional, Tuple, Union, Dict, Any
 from pydantic import BaseModel, Field, field_validator, model_validator, ConfigDict
