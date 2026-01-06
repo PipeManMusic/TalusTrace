@@ -20,7 +20,8 @@ def main():
         node_b=(400.0, 100.0),
         rotation_a=0,
         wire_id_1=None,
-        wire_id_2=None
+        wire_id_2=None,
+        elbows=[(250.0, 300.0)]
     )
     item = TwistedPairItem(model)
     scene.addItem(item)

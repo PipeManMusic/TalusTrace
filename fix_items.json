@@ -40,7 +40,7 @@
     "type": "frontend",
     "title": "Elbows",
     "description": "Implement elbow routing for wires. Allow user to drag elbow points to create right-angle bends.",
-    "status": "closed",
+    "status": "in_progress",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
       {"timestamp": "2026-01-06T00:00:00", "content": "Paused for now. Focus shifted to grid snapping and pin offsets."}

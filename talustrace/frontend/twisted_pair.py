@@ -20,7 +20,7 @@ class TwistAnchorItem(QGraphicsItem):
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setAcceptHoverEvents(True)
-        self.setZValue(10)
+        self.setZValue(2)
         # Try to load grip_size_px from theme, default to 5, radius is half
         try:
             import json
@@ -34,14 +34,17 @@ class TwistAnchorItem(QGraphicsItem):
         # Create two pins and two leaders as children of the anchor
         self.pins = []
         self.leaders = []
+        # Theme color for default wire (grey_300)
+        theme_grey = QColor("#D0D0D0")
         for i in range(2):
             pin = QGraphicsEllipseItem(-3, -3, 6, 6, self)  # 6px diameter circle
-            pin.setBrush(QBrush(Qt.gray))
+            pin.setBrush(QBrush(theme_grey))
             pin.setPen(Qt.NoPen)
             self.pins.append(pin)
             leader = QGraphicsLineItem(self)
-            leader.setPen(QPen(Qt.black, 3, Qt.SolidLine))
-            leader.setZValue(-1)
+            leader.setPen(QPen(theme_grey, 3, Qt.SolidLine))
+            leader.setZValue(1)
+            leader.setFlag(QGraphicsItem.ItemStacksBehindParent, True)
             self.leaders.append(leader)
 
     def hoverEnterEvent(self, event):
@@ -75,6 +78,7 @@ class TwistAnchorItem(QGraphicsItem):
 
     def paint(self, painter, option, widget=None):
         # Interaction palette: Drag > Selected > Hover > Default
+        theme_grey = QColor("#D0D0D0")
         if option.state & QStyle.State_Sunken:
             brush = QBrush(Qt.red)
         elif option.state & QStyle.State_Selected:
@@ -82,7 +86,7 @@ class TwistAnchorItem(QGraphicsItem):
         elif option.state & QStyle.State_MouseOver:
             brush = QBrush(QColor('orange'))
         else:
-            brush = QBrush(Qt.gray)
+            brush = QBrush(theme_grey)
         painter.setBrush(brush)
         painter.setPen(Qt.NoPen)
         painter.drawEllipse(self.boundingRect())
@@ -112,24 +116,35 @@ class DoubleHelixPathItem(QGraphicsItem):
         self.color2 = color2
         self.update()
 
-    def update_geometry(self, start: QPointF, end: QPointF):
+    def update_geometry(self, start: QPointF, end: QPointF, elbows: list[QPointF] = None):
         from PySide6.QtCore import QPointF
         self.prepareGeometryChange()
         amp = 5.0
         wavelength = 20.0
-        s = (start.x(), start.y())
-        e = (end.x(), end.y())
-        strand1, strand2 = calculate_double_helix(s, e, amp, wavelength)
+        points = [start] + (elbows or []) + [end]
         self.path1 = QPainterPath()
         self.path2 = QPainterPath()
-        if strand1:
-            self.path1.moveTo(QPointF(*strand1[0]))
-            for pt in strand1[1:]:
-                self.path1.lineTo(QPointF(*pt))
-        if strand2:
-            self.path2.moveTo(QPointF(*strand2[0]))
-            for pt in strand2[1:]:
-                self.path2.lineTo(QPointF(*pt))
+        for i in range(len(points) - 1):
+            p_start = points[i]
+            p_end = points[i+1]
+            s = (p_start.x(), p_start.y())
+            e = (p_end.x(), p_end.y())
+            strand1, strand2 = calculate_double_helix(s, e, amp, wavelength)
+            if strand1:
+                if i == 0:
+                    self.path1.moveTo(QPointF(*strand1[0]))
+                else:
+                    # Bridge to next segment for continuity
+                    self.path1.lineTo(QPointF(*strand1[0]))
+                for pt in strand1[1:]:
+                    self.path1.lineTo(QPointF(*pt))
+            if strand2:
+                if i == 0:
+                    self.path2.moveTo(QPointF(*strand2[0]))
+                else:
+                    self.path2.lineTo(QPointF(*strand2[0]))
+                for pt in strand2[1:]:
+                    self.path2.lineTo(QPointF(*pt))
         self._rect = self.path1.boundingRect().united(self.path2.boundingRect())
 
     def boundingRect(self):
@@ -183,18 +198,19 @@ class TwistedPairItem(QGraphicsObject):
             return (abs(p1.x() - p2.x()) < eps) and (abs(p1.y() - p2.y()) < eps)
 
         # --- Color logic ---
+        theme_grey = QColor("#D0D0D0")
         def color_for_wire(wire_id, default):
             if wire_id is None:
-                return QColor(default)
+                return theme_grey
             # Example: use blue for 1, red for 2, else fallback
             if wire_id == 1:
                 return QColor("blue")
             if wire_id == 2:
                 return QColor("red")
-            return QColor(default)
+            return theme_grey
 
-        color1 = color_for_wire(getattr(self.model, 'wire_id_1', None), 'gray')
-        color2 = color_for_wire(getattr(self.model, 'wire_id_2', None), 'gray')
+        color1 = color_for_wire(getattr(self.model, 'wire_id_1', None), theme_grey)
+        color2 = color_for_wire(getattr(self.model, 'wire_id_2', None), theme_grey)
 
         # Layout for anchor_a
         pos_a_scene = self.anchor_a.scenePos()
@@ -228,7 +244,9 @@ class TwistedPairItem(QGraphicsObject):
 
         # Update helix geometry and colors
         self.helix.set_strand_colors(color1, color2)
-        self.helix.update_geometry(self.anchor_a.pos(), self.anchor_b.pos())
+        elbows_data = getattr(self.model, 'elbows', [])
+        elbow_points = [QPointF(e[0], e[1]) for e in elbows_data]
+        self.helix.update_geometry(self.anchor_a.pos(), self.anchor_b.pos(), elbow_points)
 
     def set_signal(self, pin_item, wire_id, color):
         """
