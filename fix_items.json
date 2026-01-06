@@ -1,358 +1,354 @@
 [
   {
-    "id": 17,
-    "type": "feature",
-    "title": "Delete device via context menu",
-    "description": "Right-click a device to delete it (with confirm), removing attached wires and marking dirty.",
+    "id": 1,
+    "type": "cleanup",
+    "title": "Project Sanitation",
+    "description": "Delete 'talus_trace/' (legacy package) and 'context_restore.json'. Ensure only 'talustrace/' remains. Verify 'dev.py' runs without errors.",
     "status": "closed",
-    "created_at": "2026-01-03T21:00:00.000000",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
+    "id": 2,
+    "type": "architecture",
+    "title": "TDD: Context Manager (Decoupling)",
+    "description": "Create 'tests/backend/test_project_context.py'. Test a new 'ProjectContext' class that holds the 'Harness' model and 'Dirty' state, decoupled from the GUI. This is the first step toward server-sync.",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {
-        "timestamp": "2026-01-03T21:15:00.000000",
-        "content": "Implemented delete action on device context menu with confirmation; deletion removes attached wires, updates scene lists, and marks dirty."
-      }
+      {"timestamp": "2026-01-06T00:00:00", "content": "Test file created and committed. ProjectContext TDD in place and staged for review."}
     ]
+  },
+  {
+    "id": 3,
+    "type": "backend",
+    "title": "Impl: ProjectContext",
+    "description": "Create 'talustrace/backend/context.py'. Move 'load_harness', 'save_harness', and 'dirty' logic from 'app.py' into this class. 'app.py' becomes a thin view controller.",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "ProjectContext implementation complete and committed. Awaiting review."}
+    ]
+  },
+  {
+    "id": 4,
+    "type": "backend",
+    "title": "TDD: TwistedPair Model & Migration",
+    "description": "Create 'tests/backend/test_model_twisted_pair.py'. Test the new Atomic TwistedPair model. Crucially, write a test that loads a 'Legacy Bundle' JSON and asserts it converts correctly to a 'TwistedPair'.",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "TwistedPair TDD test created and committed. Migration test pending."}
+    ]
+  },
+  {
+    "id": 5,
+    "type": "backend",
+    "title": "Impl: TwistedPair Model",
+    "description": "Update 'talustrace/backend/models.py'. Replace 'TwistedBundle' with 'TwistedPair'. Add a 'migration.py' module to handle the data conversion.",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "TwistedPair model implemented and committed. Harness integration complete."}
+    ]
+  },
+  {
+    "id": 6,
+    "type": "backend",
+    "title": "TDD: Helix Math (Pure Logic)",
+    "description": "Create 'tests/backend/test_geometry_helix.py'. Test 'calculate_double_helix(p1, p2, amp, freq)' returns a list of points. Ensure this runs without Qt (headless).",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "TDD test for calculate_double_helix created and committed. Verifies signature, output, amplitude, and pure Python logic."}
+    ]
+  },
+  {
+    "id": 7,
+    "type": "backend",
+    "title": "Impl: Helix Math",
+    "description": "Implement the math in 'talustrace/backend/geometry.py'. Use pure Python math/numpy to generate the sine/cosine waves along the vector.",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "calculate_double_helix implemented in pure Python (math only), committed, and passes all TDD tests."}
+    ]
+  },
+  {
+    "id": 8,
+    "type": "frontend",
+    "title": "TDD: TwistedPair Item (Container)",
+    "description": "Create 'tests/frontend/test_twisted_pair_item.py'. Test that instantiating 'TwistedPairItem' creates two 'TwistAnchorItems' and one 'DoubleHelixItem'. Test that selecting the wire selects the anchors (Atomic Selection).",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "TDD test for TwistedPairItem created and committed. Verifies structure, children, data sync, and selection flag."}
+    ]
+  },
+  {
+    "id": 9,
+    "type": "frontend",
+    "title": "Impl: TwistedPair Item",
+    "description": "Create 'talustrace/frontend/twisted_pair.py'. Implement the container logic. Ensure it acts as a single QGraphicsObject parent.",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "Frontend implementation of TwistedPairItem, TwistAnchorItem, and DoubleHelixPathItem committed. Satisfies TDD and QGraphicsObject/child structure."}
+    ]
+  },
+  {
+    "id": 10,
+    "type": "frontend",
+    "title": "TDD: Grid Snapping Logic",
+    "description": "Update 'tests/frontend/test_twisted_pair_item.py'. Test that when an Anchor is moved to (103, 103), its child Pins snap to (100, 100) (assuming 20px grid).",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "Failing test for pin grid snapping (test_pin_snapping_behavior) added to test_twisted_pair_item.py. Verifies pin_a/pin_b snap to nearest 20px grid when anchors are moved off-grid."}
+    ]
+  },
+  {
+    "id": 11,
+    "type": "frontend",
+    "title": "Impl: Grid Snapping & Leader Lines",
+    "description": "Implement 'update_layout' in TwistedPairItem. Draw the 'Leader Line' from the Anchor (off-grid) to the Pin (on-grid).",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "Frontend refactored: TwistedPairItem now has only anchors and helix as direct children; pins and leaders are children of anchors. Grid snapping and leader lines implemented using scene-to-local mapping. Test updated to check pin scenePos. Documentation updated to match new architecture. All tests passing."}
+    ]
+  },
+  {
+    "id": 12,
+    "type": "frontend",
+    "title": "TDD: Signal Propagation",
+    "description": "Create 'tests/frontend/test_signal_propagation.py'. Connect a 'Red' wire to Pin A. Assert Pin B updates its internal ID and the Helix turns Red.",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "TDD for TwistedPairItem dual-pin structure and signal propagation created in tests/frontend/test_signal_propagation.py. Covers pin structure, signal assignment, and propagation. Currently fails as expected (single pin per anchor)."}
+    ]
+  },
+  {
+    "id": 13,
+    "type": "frontend",
+    "title": "Impl: Signal Propagation",
+    "description": "Wire up the 'wire_connected' signals in 'TwistedPairItem'. Implement the bridge logic to sync metadata between ends.",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "Dual pins and signal propagation implemented for TwistedPairItem. Both anchors now have two pins and leaders, with correct snapping and visuals. set_signal/get_signal logic added. Tests updated and passing for new structure and logic."}
+    ]
+  },
+  {
+    "id": 14,
+    "type": "backend",
+    "title": "TDD: Library Manager (IO)",
+    "description": "Create 'tests/backend/test_library.py'. Test saving a Device to YAML and reading it back. Test handling of 'svg_content' fields.",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "TDD for TwistedPairItem helix rendering created in tests/frontend/test_helix_rendering.py. Covers path existence, update on anchor move, and strand/color property access. Currently fails until helix visuals are implemented."}
+    ]
+  },
+  {
+    "id": 15,
+    "type": "backend",
+    "title": "Impl: Library Manager",
+    "description": "Create 'talustrace/backend/library.py'. Implement 'LibraryManager' class with methods 'scan_library()', 'save_to_library()', 'load_device()'.",
+    "status": "staging",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "Helix rendering for TwistedPairItem completed: visuals, color API, and all helix rendering tests passing. set_strand_colors implemented and verified."}
+    ]
+  },
+  {
+    "id": 16,
+    "type": "frontend",
+    "title": "TDD: SVG Device Item",
+    "description": "Create 'tests/frontend/test_svg_device.py'. Test 'SvgDeviceItem' renders a mock SVG and places pins at explicit 'anchor_x/y' coordinates.",
+    "status": "in_progress",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
+    "id": 17,
+    "type": "frontend",
+    "title": "Impl: SVG Device Item",
+    "description": "Implement 'SvgDeviceItem' using 'QtSvg.QGraphicsSvgItem'. Update 'PinItem' to support 'Tail' offsets.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 18,
-    "type": "feature",
-    "title": "Delete pin via context menu",
-    "description": "Right-click a pin to delete it (with confirm), removing attached wires, re-laying pins, and marking dirty.",
-    "status": "closed",
-    "created_at": "2026-01-03T21:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-03T22:20:00.000000",
-        "content": "Implemented pin delete action with confirmation; removes attached wires, updates model/layout, and marks dirty. Added regression test."
-      }
-    ]
+    "type": "ui",
+    "title": "TDD: Library Dock",
+    "description": "Create 'tests/ui/test_library_dock.py'. Test that dragging an item from the list emits a signal with the Device model data.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 19,
-    "type": "feature",
-    "title": "Delete wire via context menu",
-    "description": "Right-click a wire to delete it and mark dirty.",
-    "status": "closed",
-    "created_at": "2026-01-03T21:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-04T00:20:00.000000",
-        "content": "Implemented wire delete action on context menu with confirmation; deletes from scene, detaches from devices, updates lists, and marks dirty. Added regression test."
-      }
-    ]
+    "type": "ui",
+    "title": "Impl: Library Dock",
+    "description": "Implement 'LibraryDock' in 'app.py'. Connect it to the 'LibraryManager'. Implement Drag-and-Drop instantiation on the canvas.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 20,
-    "type": "feature",
-    "title": "Change wire color via context menu",
-    "description": "Right-click a wire to pick a color (palette or dialog), update model/pen, and mark dirty.",
-    "status": "closed",
-    "created_at": "2026-01-03T21:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-04T00:40:00.000000",
-        "content": "Added wire color context menu with DIN 47100 palette and custom picker; updates model color, refreshes pen, and marks dirty. Added regression test."
-      }
-    ]
+    "type": "ui",
+    "title": "Impl: Device Creator Wizard",
+    "description": "Create a new Dialog 'DeviceCreatorWizard'. Steps: Import SVG -> Scale -> Click to Place Pins -> Save.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 21,
-    "type": "bug",
-    "title": "Save dialog should add .yaml extension",
-    "description": "File save dialog does not append .yaml automatically; ensure saved files get the .yaml suffix by default.",
-    "status": "closed",
-    "created_at": "2026-01-03T22:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-04T01:05:00.000000",
-        "content": "Added .yaml suffix enforcement via save-as; keeps .yml, appends .yaml when missing; added regression test and Path normalization."
-      }
-    ]
+    "type": "architecture",
+    "title": "Refactor: Command Pattern (Undo/Redo) Setup",
+    "description": "Initialize 'QUndoStack' in 'app.py'. Create the base 'QUndoCommand' structure. This is critical for industrial robustness.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 22,
-    "type": "feature",
-    "title": "Wire metadata inheritance from pins",
-    "description": "Allow wires to carry metadata that inherits or aggregates attributes from the connected pins (e.g., function, signal type).",
-    "status": "closed",
-    "created_at": "2026-01-04T01:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-04T01:20:00.000000",
-        "content": "Added pin and wire meta fields; wire creation merges pin meta (end pin overrides); regression tests cover merge behavior."
-      }
-    ]
+    "type": "architecture",
+    "title": "TDD: Add/Delete Commands",
+    "description": "Create 'tests/commands/test_cmd_add_delete.py'. Test that executing 'AddDeviceCommand' adds an item, and 'undo()' removes it cleanly.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 23,
-    "type": "feature",
-    "title": "Draw twisted pair",
-    "description": "Provide a drawing/visualization option for twisted pair wires, including coupled rendering and metadata to mark pairs.",
-    "status": "staging",
-    "created_at": "2026-01-04T01:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-04T12:20:00.000000",
-        "content": "Implemented twisted-pair rendering: Wire model supports twisted flag/pair_id; context menu toggle; dual-path overlay with alternating offset and styled tooltip row."
-      }
-    ]
+    "type": "architecture",
+    "title": "Impl: Add/Delete Commands",
+    "description": "Implement 'AddDeviceCommand', 'DeleteDeviceCommand', 'AddWireCommand', 'DeleteWireCommand'. Replace direct calls in 'app.py' with 'undo_stack.push(cmd)'.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 24,
-    "type": "bug",
-    "title": "Segment handle drag oscillation",
-    "description": "Dragging rectangular line-segment grips sometimes jitters/oscillates away from the cursor (same behavior as issue 15 but for segment handles).",
-    "status": "closed",
-    "created_at": "2026-01-04T12:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-04T23:50:00.000000",
-        "content": "Related visual artifact (orphaned white circle) traced to an implicit bundle handle; implicit handle removed and tests added to guard against stray ellipses. This may reduce occurrences of perceived oscillation in some workflows."
-      },
-      {
-        "timestamp": "2026-01-04T23:59:30.000000",
-        "content": "Temporarily marked staging per project policy: AI Agents must move completed items to 'staging' for human review before marking 'resolved'. Changes were pushed to main for a quick fix, but human review is required to transition to 'resolved'. (Commits referenced: 61a31af, f83c30a)"
-      }
-    ]
+    "type": "architecture",
+    "title": "TDD: Move Command",
+    "description": "Create 'tests/commands/test_cmd_move.py'. Test dragging an item, releasing, and undoing the move returns it to exact previous coordinates.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
-    "type": "feature",
-    "title": "Twisted Pair: middle & elbow grips parity",
-    "description": "Make twisted pair wires expose middle grips and elbow grips identical to regular wires so users can add/move/delete elbows and create segment grips.",
-    "status": "in-progress",
     "id": 25,
-    "created_at": "2026-01-04T23:15:52",
-    "notes": [
-      {
-        "timestamp": "2026-01-04T23:59:59.000000",
-        "content": "Moved to 'staging' per project policy: changes implemented and awaiting human review before marking as 'resolved'."
-      }
-    ]
+    "type": "architecture",
+    "title": "Impl: Move Command",
+    "description": "Implement 'MoveCommand'. Hook into the QGraphicsItem 'mouseReleaseEvent' to push this command only after a drag finishes.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
-    "type": "feature",
-    "title": "Twisted Pair: end behaves as pseudo-elbow",
-    "description": "Treat the end of a twisted pair as a selectable/pivotable pseudo-elbow so the wire end can be dragged and used as a pivot similar to regular wire ends.",
-    "status": "open",
     "id": 26,
-    "created_at": "2026-01-04T23:15:52",
-    "notes": [
-      {
-        "timestamp": "2026-01-05T12:00:00.000000",
-        "content": "Plan moved to staging. Implementation plan and stubs added: (1) Pin grid-lock: enforce pin tip snap to GRID in TwistNodeItem._build_pins and add tests (files: items_baseline.py, tests/test_twistnode_pins.py). (2) Atomic deletion: ensure deleting any part (anchor/pin/body) removes the TwistedPair (files: app.py eventFilter + helper _delete_bundle_item; tests: tests/test_twisted_atomic_delete.py). (3) Endpoint markers: permanent non-editable markers already implemented; verify selection highlighting and non-movability (tests present). (4) Color propagation: wire connect events should propagate color/metadata to opposite end and update helix; hook into WireItem.set_color_code and TwistedBundleItem._update_colors_from_nodes (tests: tests/test_twisted_color_propagation.py). (5) Backend TwistedPair model & persistence: add Pydantic model, save/load support and migration from legacy 'bundles' (files: backend/models.py, app.py load/save_harness; tests: tests/test_twisted_persistence_and_migration.py). (6) Add TwistedPair unit tests and interactive tests (see issue #31). (7) Defer renaming 'bundle'->'TwistedPair' to a separate rename PR to avoid churn. Each step will include unit tests, and interactive QTest use-cases where applicable."
-      },
-      {
-        "timestamp": "2026-01-05T12:30:00.000000",
-        "content": "Decision: revert to pending/open status for human review and proceed with visual-change option C (change endpoint markers to outlined rings to avoid confusion with pin tips). Implementation will be applied and tests added; will move back to 'staging' once you approve the visuals."
-      }
-    ]
+    "type": "architecture",
+    "title": "TDD: Property Change Command",
+    "description": "Test changing a wire color or device label via context menu can be undone.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
-    "type": "feature",
-    "title": "Suppress pin context menu for Twisted Pair pins",
-    "description": "Prevent right-click pin context menu on pins that belong to a Twisted Pair since their attributes inherit from connected wires and should not be edited directly.",
-    "status": "open",
     "id": 27,
-    "created_at": "2026-01-04T23:15:52",
+    "type": "architecture",
+    "title": "Impl: Property Change Command",
+    "description": "Implement 'ChangePropertyCommand'. Use generic setattr logic or specific methods to handle model updates via Undo Stack.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
     "notes": []
   },
   {
-    "type": "feature",
-    "title": "Color inheritance on connect across Twisted Pair",
-    "description": "When a wire is connected to one end of a Twisted Pair, wires on the other end should inherit color/metadata from the original connecting wire.",
-    "status": "open",
     "id": 28,
-    "created_at": "2026-01-04T23:15:52",
+    "type": "output",
+    "title": "TDD: Formboard Printer (1:1)",
+    "description": "Create 'tests/backend/test_formboard_print.py'. Setup a headless QPrinter. Test that the scene rect is mapped correctly to the page rect.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
     "notes": []
   },
   {
-    "type": "feature",
-    "title": "Propagate color changes to all connecting wires and pins",
-    "description": "Changing the color of a wire connected to either end of a Twisted Pair should update all connected wires and the device pin visual colors to maintain consistency.",
-    "status": "open",
     "id": 29,
-    "created_at": "2026-01-04T23:15:52",
-    "notes": []
-  },
-  {
-    "type": "feature",
-    "title": "Rename Bundle \u2192 TwistedPair",
-    "description": "Rename code and UI references from 'bundle' to 'twisted pair' (TwistedPair) to reflect the tool's intended use and reserve 'bundle' for larger multi-wire bundles later.",
+    "type": "output",
+    "title": "Impl: Formboard Printer",
+    "description": "Update 'printer.py'. Add 'print_formboard(scene)'. Use QPrinter to generate a PDF or print to plotter. Implement 'Tile Printing' if the harness is larger than the paper.",
     "status": "open",
-    "id": 30,
-    "created_at": "2026-01-04T23:15:52",
+    "created_at": "2026-01-06T12:00:00",
     "notes": []
   },
   {
-    "type": "feature",
-    "title": "Add TwistedPair unit tests",
-    "description": "Add unit tests for grips, pseudo-elbow behavior, pin context suppression, color inheritance, propagation, persistence, and rename coverage.",
-    "status": "staging",
-    "id": 31,
-    "created_at": "2026-01-04T23:15:52",
-    "notes": [
-      {
-        "timestamp": "2026-01-05T12:05:00.000000",
-        "content": "Planned test suite: pin grid-lock, atomic delete, endpoint marker existence/highlight, color propagation, persistence migration tests, and interactive QTest drags for segment and endpoint behaviors. Tests should use headless 'offscreen' environment for CI."
-      }
-    ]
+    "id": 30,
+    "type": "output",
+    "title": "Impl: Wire Table Export",
+    "description": "Implement 'Export -> CSV' for the wire list. Industry users need this for cutting machines.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
-    "type": "feature",
-    "title": "Persistence migration for TwistedPair model",
-    "description": "Update persistence / loading code and migration steps to reflect TwistedPair renames and ensure backwards compatibility with existing 'bundle' entries.",
-    "status": "staging",
+    "id": 31,
+    "type": "polish",
+    "title": "TDD: Integration Test (Save/Load)",
+    "description": "Create 'tests/integration/test_full_cycle.py'. Create a harness, add Twisted Pair, Save, Clear, Load. Verify full integrity.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
     "id": 32,
-    "created_at": "2026-01-04T23:15:52",
-    "notes": [
-      {
-        "timestamp": "2026-01-05T12:06:00.000000",
-        "content": "Plan: add TwistedPair model fields (node positions, rotations, wire_id_1/2), implement load-time migration from legacy 'bundles' to TwistedPair, add round-trip tests (save/load) and migration test cases. Ensure backwards compatibility and add clear migration warnings in docs."
-      }
-    ]
+    "type": "polish",
+    "title": "UI: User Feedback & Error Handling",
+    "description": "Add a proper 'Message Log' dock (Output window) instead of just printing to console. Catch exceptions in Command executions and log them visible to user.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 33,
-    "type": "bug",
-    "title": "Stray implicit bundle handle causes orphaned circle",
-    "description": "An implicit ellipse handle was present on TwistedBundle creation which could appear as a detached white circle during edits. The implicit handle was removed in favor of explicit ElbowHandle items created by the user.",
-    "status": "resolved",
-    "created_at": "2026-01-04T23:40:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-04T23:45:00.000000",
-        "content": "Removed implicit handle from TwistedBundleItem; added unit tests to assert no stray ellipse at bundle creation and updated behavior to use explicit ElbowHandle items. Full test suite passes locally (83 tests)."
-      },
-      {
-        "timestamp": "2026-01-04T23:59:00.000000",
-        "content": "Commit 61a31af pushed to main (alpha): changes merged directly to main per alpha workflow. Tests still pass on CI runner locally."
-      }
-    ]
+    "type": "polish",
+    "title": "Docs: User Guide",
+    "description": "Create 'docs/user_guide.md'. Document the 'Twist' workflow, Library Wizard, and Keyboard Shortcuts.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 34,
-    "type": "feature",
-    "title": "Wire Labels: Add model + basic rendering",
-    "description": "Introduce a WireLabel model and basic `WireLabelItem` (text with background) that can be attached to a Wire model; wire holds `labels: List[WireLabel]`.",
+    "type": "polish",
+    "title": "Docs: Developer Guide",
+    "description": "Create 'docs/dev_guide.md'. Document the 'Full-File Overwrite' workflow and how to run the new TDD suite.",
     "status": "open",
-    "created_at": "2026-01-06T12:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T12:00:00.000000",
-        "content": "Plan: add Pydantic `WireLabel` model (text, t_pos normalized 0..1, alignment, style), implement `WireLabelItem` drawing and persistence. Phase 1 work item. Tests: create/draw/serialize labels."
-      }
-    ]
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 35,
-    "type": "feature",
-    "title": "Wire Labels: Orthogonal sliding/snapping logic",
-    "description": "Implement polyline-projection logic to map a normalized t (0..1) to a point along multi-segment wire paths and allow labels to slide and snap to the nearest point on the polyline while dragging.",
+    "type": "release",
+    "title": "Packaging: PyInstaller",
+    "description": "Create 'release.spec'. Configure PyInstaller to bundle the app into a single executable for Linux/Windows.",
     "status": "open",
-    "created_at": "2026-01-06T12:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T12:00:00.000000",
-        "content": "Plan: add `WireItem.get_path_points()` and `calculate_snap_to_polyline` helper; tests to assert correct projection, t computation, and rounding on vertex edges. Phase 2 work item."
-      }
-    ]
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   },
   {
     "id": 36,
-    "type": "feature",
-    "title": "Wire Labels: UI integration (add/edit/delete)",
-    "description": "Add context-menu 'Add Label' on wire segments, support label selection, inline edit (double-click to rename), and delete-only removal.",
+    "type": "release",
+    "title": "Release: v1.0.0 Candidate",
+    "description": "Run full regression suite. Tag git commit. Generate binary. This marks the transition from 'Prototype' to 'Product'.",
     "status": "open",
-    "created_at": "2026-01-06T12:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T12:00:00.000000",
-        "content": "Plan: add context menu action, default t=0.5 placement, double-click to edit via in-place editor, delete to remove label. Add unit tests for UI flows (headless-friendly where possible)."
-      }
-    ]
-  },
-  {
-    "id": 37,
-    "type": "feature",
-    "title": "Wire Labels: Persistence and migration",
-    "description": "Persist labels in harness save format; add migration tests to ensure older saves without labels load cleanly and new saves include labels.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T12:00:00.000000",
-        "content": "Plan: extend Wire Pydantic model to include labels: List[WireLabel]; add load/save round-trip tests and a migration test for legacy files."
-      }
-    ]
-  },
-  {
-    "id": 38,
-    "type": "test",
-    "title": "Wire Labels: Unit tests for geometry and behavior",
-    "description": "Add tests for label projection, dragging/snap behavior, context-menu add/delete flows, and persistence round-trips.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T12:00:00.000000",
-        "content": "Tests will include: calculate_snap_to_polyline cases, add label at segment/vertex, drag label to edge snapping, and save/load round-trip."
-      }
-    ]
-  },
-  {
-    "id": 39,
-    "type": "feature",
-    "title": "Wire Labels: Styling and accessibility",
-    "description": "Allow label styling (background color, font size) and keyboard accessibility (rename via F2, delete via Delete key), including default dark/light contrast.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T12:00:00.000000",
-        "content": "Phase 3: styling options and keyboard handling; ensure a11y contrast and tests for keyboard flows."
-      }
-    ]
-  },
-  {
-    "id": 40,
-    "type": "bug",
-    "title": "Recent documents list not populating",
-    "description": "The 'Recent Documents' menu/section remains empty after opening or saving files; expected recent files to appear for quick access.",
-    "status": "open",
-    "created_at": "2026-01-06T12:30:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T12:30:00.000000",
-        "content": "Repro: open and save several files, then inspect the Recent menu — it remains empty. Initial hypothesis: recent file writes to config are failing or the UI is not reading the stored list. Plan: add a unit/integration test to exercise recent-list persistence and display; inspect save/load and config read paths (app-level recent list code)."
-      }
-    ]
-  },
-  {
-    "id": 41,
-    "type": "bug",
-    "title": "Pin head positioned at device edge instead of pin tail",
-    "description": "On some devices the pin head graphic is rendered at the device edge (head) instead of the expected pin tail location, causing leader lines and connections to misalign.",
-    "status": "open",
-    "created_at": "2026-01-06T12:30:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T12:30:00.000000",
-        "content": "Repro: add a device with pins and inspect pin head/tail coordinates and leader endpoints. Plan: add unit tests verifying pin geometry (head vs tail) and leader endpoint computations; inspect `PinItem.set_visual_geometry`, `get_tip_scene_pos`, and mapping between local/device coordinates and wire endpoints."
-      }
-    ]
-  },
-  {
-    "id": 42,
-    "type": "bug",
-    "title": "Pins sometimes rotated instead of orthogonal",
-    "description": "Pins on devices are occasionally rendered rotated (non-orthogonal to the device side) instead of aligned orthogonally, particularly after device rotation or pin rebuild.",
-    "status": "open",
-    "created_at": "2026-01-06T12:30:00.000000",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T12:30:00.000000",
-        "content": "Repro: rotate a device and rebuild pins or change pin layout; observe pin orientation anomalies. Plan: add tests that assert pin orientation after device rotation and after `_build_pins`; review rotation handling and transform application in `DeviceItem` and `PinItem`."
-      }
-    ]
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
   }
 ]

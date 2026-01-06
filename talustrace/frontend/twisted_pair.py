@@ -140,12 +140,26 @@ class TwistedPairItem(QGraphicsObject):
             idx = self.anchor_b.pins.index(pin_item)
         else:
             raise ValueError("Pin not found in anchors")
+
+        # Update model
         if idx == 0:
             self.model.wire_id_1 = wire_id
         elif idx == 1:
             self.model.wire_id_2 = wire_id
-        # Optionally set color on pin
-        pin_item.setBrush(QBrush(QColor(color)))
+
+        # Update pin color
+        from PySide6.QtGui import QColor, QBrush
+        new_color = QColor(color) if not isinstance(color, QColor) else color
+        pin_item.setBrush(QBrush(new_color))
+
+        # Update helix strand colors
+        c1 = self.helix.color1
+        c2 = self.helix.color2
+        if idx == 0:
+            c1 = new_color
+        elif idx == 1:
+            c2 = new_color
+        self.helix.set_strand_colors(c1, c2)
 
     def get_signal(self, pin_item):
         if pin_item in self.anchor_a.pins:

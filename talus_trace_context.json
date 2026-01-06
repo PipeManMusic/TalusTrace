@@ -1,8 +1,8 @@
 {
   "project_metadata": {
     "name": "Talus Trace",
-    "version": "0.2.1",
-    "status": "Functional Prototype (Wiring & Serialization Implemented)"
+    "version": "0.3.0",
+    "status": "Refactor Phase: Implementing Atomic Twisted Pair & Component Library"
   },
   "design_spec": {
     "coordinate_system": {
@@ -12,9 +12,9 @@
     },
     "ui_ux_rules": {
       "selection": "Halo-based (child item). Do not modify parent geometry on select.",
-      "wiring": "Point-to-point. Pins are interactive sub-items. Wires are dynamic and follow parents.",
-      "interaction_modes": ["SELECT", "PLACE_DEVICE", "WIRING"],
-      "bundle_handle_policy": "Elbows are explicit only; no implicit main handle on TwistedPair bundles.",
+      "wiring": "Point-to-point. Pins are interactive sub-items. Wires are dynamic.",
+      "twisted_pair": "Atomic Entity. Deleting one end deletes the whole. No implicit handle; Explicit elbows only.",
+      "interaction_modes": ["SELECT", "PLACE_DEVICE", "WIRING", "LIBRARY_DRAG"],
       "colors": {
         "background": "#1E1E1E",
         "grid": "#3C3C3C",
@@ -24,18 +24,18 @@
       }
     },
     "data_integrity": {
-      "serialization": "JSON-based Harness model (Implemented).",
-      "uuid": "8-character truncated UUIDs for device/wire tracking."
+      "serialization": "JSON-based Harness model.",
+      "uuid": "8-character truncated UUIDs."
     }
   },
   "architecture_map": {
-    "frontend": "app.py (Entry), canvas.py (View), items.py (Components)",
-    "backend": "models.py (Schema), router.py (Pathing), sizer.py (Geometry), labels.py (Naming), printer.py (Hardware)",
-    "tooling": "dev.py (Smart Indent Patcher), manage_issues.py (Issue Tracker)"
+    "frontend": "app.py (Entry), canvas.py (View), items.py (Basics), twisted_pair.py (New Atomic Impl)",
+    "backend": "models.py (Pydantic Schemas), router.py (Pathing), library.py (New Component Mgr)",
+    "docs": "docs/specs/ (Source of Truth)"
   },
   "development_workflow": {
-    "issue_tracking": "Run 'python3 manage_issues.py'. AI Agents must move completed items to 'staging' for human review, never directly to 'resolved'.",
-    "environment_context": "This project runs as a desktop application (PySide6) inside a VS Code environment on Linux. Unlike a Web UI, this has direct access to local hardware (printers) and file systems, but requires X11 forwarding or a local display for the GUI."
+    "issue_tracking": "python3 manage_issues.py (Move items to 'staging' for review).",
+    "environment_context": "Desktop PySide6 App (Linux/VSCode). Direct hardware access."
   },
-  "restore_command": "cat talus_trace_context.json" 
+  "restore_command": "cat talus_trace_context.json"
 }
