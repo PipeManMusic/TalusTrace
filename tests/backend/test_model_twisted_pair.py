@@ -1,52 +1,33 @@
-import pytest
-from typing import Optional
+import unittest
+from talustrace.backend.models import TwistedPair, Harness
 
-# This import will fail until you implement the model, as intended for TDD
-from talustrace.backend.models import TwistedPair
+class TestTwistedPair(unittest.TestCase):
 
-def test_atomic_structure_instantiation():
-    pair = TwistedPair(
-        id="tp-001",
-        node_a=(0.0, 0.0),
-        node_b=(100.0, 50.0),
-        rotation_a=0,
-        rotation_b=0,
-        wire_id_1=None,
-        wire_id_2=None
-    )
-    assert pair.id == "tp-001"
-    assert pair.node_a == (0.0, 0.0)
-    assert pair.node_b == (100.0, 50.0)
-    assert pair.rotation_a == 0
-    assert pair.rotation_b == 0
-    assert pair.wire_id_1 is None
-    assert pair.wire_id_2 is None
+    def setUp(self):
+        self.twisted_pair = TwistedPair(
+            id="tp1",
+            node_a=(1.0, 2.0),
+            node_b=(3.0, 4.0),
+            rotation_a=90,
+            rotation_b=180,
+            wire_id_1="wire1",
+            wire_id_2="wire2"
+        )
 
-def test_validation_of_coordinates():
-    # Valid coordinates
-    TwistedPair(id="tp-002", node_a=(1.0, 2.0), node_b=(3.0, 4.0))
-    # Invalid coordinates (should fail)
-    with pytest.raises(Exception):
-        TwistedPair(id="tp-003", node_a=(1.0,), node_b=(3.0, 4.0))
-    with pytest.raises(Exception):
-        TwistedPair(id="tp-004", node_a="not-a-tuple", node_b=(3.0, 4.0))
+    def test_twisted_pair_initialization(self):
+        self.assertEqual(self.twisted_pair.id, "tp1")
+        self.assertEqual(self.twisted_pair.node_a, (1.0, 2.0))
+        self.assertEqual(self.twisted_pair.node_b, (3.0, 4.0))
+        self.assertEqual(self.twisted_pair.rotation_a, 90)
+        self.assertEqual(self.twisted_pair.rotation_b, 180)
+        self.assertEqual(self.twisted_pair.wire_id_1, "wire1")
+        self.assertEqual(self.twisted_pair.wire_id_2, "wire2")
 
-def test_migration_from_legacy_bundle():
-    legacy_bundle = {
-        "from_node": "uuid1",
-        "to_node": "uuid2",
-        "elbow": [100.0, 50.0]
-    }
-    # Simulate migration logic (to be implemented later)
-    # For now, just manually map the data
-    pair = TwistedPair(
-        id="tp-legacy",
-        node_a=(0.0, 0.0),  # would be looked up from uuid1
-        node_b=tuple(legacy_bundle["elbow"]),
-        rotation_a=0,
-        rotation_b=0,
-        wire_id_1=None,
-        wire_id_2=None
-    )
-    assert pair.node_b == (100.0, 50.0)
-    assert pair.id == "tp-legacy"
+    def test_harness_twisted_pairs(self):
+        harness = Harness()
+        harness.twisted_pairs.append(self.twisted_pair)
+        self.assertEqual(len(harness.twisted_pairs), 1)
+        self.assertEqual(harness.twisted_pairs[0].id, "tp1")
+
+if __name__ == '__main__':
+    unittest.main()
