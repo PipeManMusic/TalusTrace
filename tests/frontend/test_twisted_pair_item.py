@@ -71,14 +71,18 @@ def test_pin_snapping_behavior(scene):
     # Trigger layout update (if required)
     if hasattr(item, 'update_layout'):
         item.update_layout()
-    # Assert pin_a exists and is snapped to (100, 100) in scene coordinates
-    assert hasattr(item, 'pin_a'), "TwistedPairItem should have pin_a attribute"
+    # Assert anchor_a has 2 pins
+    assert hasattr(item.anchor_a, 'pins'), "anchor_a should have a 'pins' attribute (list)"
+    assert len(item.anchor_a.pins) == 2, f"anchor_a.pins should have length 2, got {len(item.anchor_a.pins)}"
+    # Assert pin 0 is snapped to (100, 100) in scene coordinates
     from PySide6.QtCore import QPointF
-    assert item.pin_a.scenePos() == QPointF(100, 100), f"pin_a should snap to (100, 100), got {item.pin_a.scenePos()}"
+    assert item.anchor_a.pins[0].scenePos() == QPointF(100, 100), f"pin 0 should snap to (100, 100), got {item.anchor_a.pins[0].scenePos()}"
     # Assert anchor_a is still at (103, 103)
     assert tuple(item.anchor_a.pos().toTuple()) == (103, 103), f"anchor_a should remain at (103, 103), got {item.anchor_a.pos()}"
-    # Assert pin_b exists and is snapped to (220, 220) in scene coordinates
-    assert hasattr(item, 'pin_b'), "TwistedPairItem should have pin_b attribute"
-    assert item.pin_b.scenePos() == QPointF(220, 220), f"pin_b should snap to (220, 220), got {item.pin_b.scenePos()}"
+    # Assert anchor_b has 2 pins
+    assert hasattr(item.anchor_b, 'pins'), "anchor_b should have a 'pins' attribute (list)"
+    assert len(item.anchor_b.pins) == 2, f"anchor_b.pins should have length 2, got {len(item.anchor_b.pins)}"
+    # Assert pin 0 is snapped to (220, 220) in scene coordinates
+    assert item.anchor_b.pins[0].scenePos() == QPointF(220, 220), f"pin 0 should snap to (220, 220), got {item.anchor_b.pins[0].scenePos()}"
     # Assert anchor_b is still at (217, 217)
     assert tuple(item.anchor_b.pos().toTuple()) == (217, 217), f"anchor_b should remain at (217, 217), got {item.anchor_b.pos()}"
