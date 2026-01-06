@@ -21,14 +21,14 @@ def main():
         rotation_a=0,
         wire_id_1=None,
         wire_id_2=None,
-        elbows=[(250.0, 300.0)]
+        elbows=[]
     )
     item = TwistedPairItem(model)
     scene.addItem(item)
 
     # Add instructions
     instructions = QGraphicsTextItem(
-        "Drag anchors to move. Right-click anchor to Rotate (Simulated via code for now if mouse event isn't bound)."
+        "Double-click wire to add elbow. Drag to move. Right-click elbow to delete. Drag anchors to move. Right-click anchor to Rotate."
     )
     instructions.setPos(20, 20)
     scene.addItem(instructions)

@@ -1,3 +1,43 @@
+class ElbowHandle(QGraphicsItem):
+    def __init__(self, index, parent=None):
+        super().__init__(parent)
+        self.index = index
+        self.setFlag(QGraphicsItem.ItemIsMovable, True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setZValue(3)
+        self.radius = 4
+        self.setCursor(Qt.OpenHandCursor)
+
+    def boundingRect(self):
+        r = self.radius
+        return QRectF(-r, -r, 2*r, 2*r)
+
+    def paint(self, painter, option, widget=None):
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setBrush(QBrush(QColor('cyan')))
+        painter.setPen(QPen(Qt.black, 1))
+        painter.drawEllipse(self.boundingRect())
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.ItemPositionHasChanged:
+            parent = self.parentItem()
+            if parent and hasattr(parent, 'model') and hasattr(parent, 'update_layout'):
+                elbows = parent.model.elbows
+                if 0 <= self.index < len(elbows):
+                    elbows[self.index] = (self.pos().x(), self.pos().y())
+                    parent.update_layout()
+        return super().itemChange(change, value)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.RightButton:
+            parent = self.parentItem()
+            if parent and hasattr(parent, 'model') and hasattr(parent, 'update_layout'):
+                if 0 <= self.index < len(parent.model.elbows):
+                    del parent.model.elbows[self.index]
+                    parent.update_layout()
+            event.accept()
+        else:
+            super().mousePressEvent(event)
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem, QGraphicsPathItem, QGraphicsSceneMouseEvent, QGraphicsEllipseItem, QStyle
 from PySide6.QtCore import QRectF, Qt, QPointF
 from PySide6.QtGui import QBrush, QPen, QColor, QPainter, QPainterPath
@@ -171,7 +211,7 @@ class TwistedPairItem(QGraphicsObject):
         self.anchor_a = TwistAnchorItem(model.node_a, self, side='a')
         self.anchor_b = TwistAnchorItem(model.node_b, self, side='b')
         self.helix = DoubleHelixPathItem(self)
-        # Ensure initial layout reflects model state (e.g., rotation_b)
+        self.elbow_handles = []
         self.update_layout()
 
 
@@ -242,11 +282,51 @@ class TwistedPairItem(QGraphicsObject):
             pin.setPos(offsets_b[i])
             leader.setLine(0, 0, offsets_b[i].x(), offsets_b[i].y())
 
+        # --- Elbow handle syncing ---
+        elbows_data = getattr(self.model, 'elbows', [])
+        # Add or remove handles to match elbows
+        while len(self.elbow_handles) < len(elbows_data):
+            handle = ElbowHandle(len(self.elbow_handles), self)
+            self.elbow_handles.append(handle)
+        while len(self.elbow_handles) > len(elbows_data):
+            handle = self.elbow_handles.pop()
+            handle.setParentItem(None)
+            handle.scene() and handle.scene().removeItem(handle)
+        # Update handle positions and indices
+        for i, handle in enumerate(self.elbow_handles):
+            handle.index = i
+            pos = elbows_data[i]
+            handle.setPos(QPointF(pos[0], pos[1]))
         # Update helix geometry and colors
         self.helix.set_strand_colors(color1, color2)
-        elbows_data = getattr(self.model, 'elbows', [])
         elbow_points = [QPointF(e[0], e[1]) for e in elbows_data]
         self.helix.update_geometry(self.anchor_a.pos(), self.anchor_b.pos(), elbow_points)
+
+    def mouseDoubleClickEvent(self, event):
+        # Add elbow at double-clicked position
+        pos = event.position.toPointF() if hasattr(event, 'position') else event.localPos()
+        # Polyline: [anchor_a] + elbows + [anchor_b]
+        points = [self.anchor_a.pos()] + [QPointF(e[0], e[1]) for e in self.model.elbows] + [self.anchor_b.pos()]
+        min_dist = float('inf')
+        insert_idx = 0
+        for i in range(len(points) - 1):
+            # Closest point on segment
+            a, b = points[i], points[i+1]
+            ab = b - a
+            ab_len2 = ab.x()**2 + ab.y()**2
+            if ab_len2 == 0:
+                t = 0
+            else:
+                t = max(0, min(1, ((pos - a).x()*ab.x() + (pos - a).y()*ab.y()) / ab_len2))
+            proj = a + ab * t
+            dist = (proj - pos).manhattanLength()  # Use manhattan for simplicity
+            if dist < min_dist:
+                min_dist = dist
+                insert_idx = i
+        # Insert elbow
+        self.model.elbows.insert(insert_idx, (pos.x(), pos.y()))
+        self.update_layout()
+        event.accept()
 
     def set_signal(self, pin_item, wire_id, color):
         """
