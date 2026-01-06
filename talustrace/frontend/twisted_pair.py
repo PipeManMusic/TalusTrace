@@ -24,6 +24,11 @@ class TwistAnchorItem(QGraphicsItem):
             self.leaders.append(leader)
 
     def rotate_90(self):
+        """
+        Increment this anchor's rotation by 90 degrees (modulo 360),
+        update the corresponding model field (rotation_a or rotation_b),
+        and trigger a layout refresh on the parent TwistedPairItem.
+        """
         parent = self.parentItem()
         if not parent or not hasattr(parent, "model"):
             return
@@ -113,7 +118,16 @@ class TwistedPairItem(QGraphicsObject):
 
 
     def update_layout(self):
-        # Helper for pin layout based on rotation value from model
+        """
+        Update the pin and leader positions for both anchors based on the current
+        anchor positions and their rotation values (from the model).
+        Pin 1's offset is determined by rotation:
+        - 0°: (0, 20)
+        - 90°: (20, 0)
+        - 180°: (0, -20)
+        - 270°: (-20, 0)
+        Pin 0 is always at (0, 0) local to the anchor.
+        """
         def pin1_offset(rotation):
             rot = rotation % 360
             if rot == 0:
@@ -157,6 +171,11 @@ class TwistedPairItem(QGraphicsObject):
         self.helix.update_geometry(self.anchor_a.pos(), self.anchor_b.pos())
 
     def set_signal(self, pin_item, wire_id, color):
+        """
+        Assign a wire ID and color to the given pin, update the model,
+        and propagate the color to the corresponding helix strand.
+        Pin 0 sets strand 1, Pin 1 sets strand 2.
+        """
         # Determine anchor and index
         if pin_item in self.anchor_a.pins:
             idx = self.anchor_a.pins.index(pin_item)

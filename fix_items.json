@@ -185,16 +185,16 @@
     "type": "frontend",
     "title": "Impl: Pin Rotation",
     "description": "Implement rotate_90() and pin layout logic in TwistedPairItem/TwistAnchorItem.",
-    "status": "in_progress",
+    "status": "closed",
     "created_at": "2026-01-06T12:00:00",
     "notes": []
   },
   {
     "id": 19,
-    "type": "ui",
-    "title": "Impl: Library Dock",
-    "description": "Implement 'LibraryDock' in 'app.py'. Connect it to the 'LibraryManager'. Implement Drag-and-Drop instantiation on the canvas.",
-    "status": "open",
+    "type": "polish",
+    "title": "Final Polish & Spec Sync",
+    "description": "Synchronize documentation/spec and code for Twisted Pair. Add docstrings, update spec, and ensure all features are documented.",
+    "status": "in_progress",
     "created_at": "2026-01-06T12:00:00",
     "notes": []
   },
