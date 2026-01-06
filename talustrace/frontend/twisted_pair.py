@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem, QGraphicsPathItem, QGraphicsSceneMouseEvent, QGraphicsEllipseItem
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem, QGraphicsPathItem, QGraphicsSceneMouseEvent, QGraphicsEllipseItem, QStyle
 from PySide6.QtCore import QRectF, Qt, QPointF
 from PySide6.QtGui import QBrush, QPen, QColor, QPainter, QPainterPath
 from talustrace.backend.geometry import calculate_double_helix
@@ -51,10 +51,9 @@ class TwistAnchorItem(QGraphicsItem):
 
     def boundingRect(self):
         r = self.radius
-        return QRectF(-r, -r, 2*r, 2*r)
+        return QRectF(-r - 2, -r - 2, 2 * (r + 2), 2 * (r + 2))
 
     def paint(self, painter, option, widget=None):
-        # Use theme_tokens if available, else fallback to orange
         color = QColor("orange")
         try:
             from talustrace.frontend.theme_tokens import theme_tokens
@@ -63,7 +62,7 @@ class TwistAnchorItem(QGraphicsItem):
             pass
         if self.isSelected():
             painter.setBrush(QBrush(QColor("yellow")))
-        elif option.state & option.State_MouseOver:
+        elif option.state & QStyle.State_MouseOver:
             painter.setBrush(QBrush(QColor("#FFD580")))  # light yellow
         else:
             painter.setBrush(QBrush(color))
@@ -113,7 +112,7 @@ class DoubleHelixPathItem(QGraphicsItem):
         self._rect = self.path1.boundingRect().united(self.path2.boundingRect())
 
     def boundingRect(self):
-        return self._rect
+        return self._rect.adjusted(-2, -2, 2, 2)
 
     def paint(self, painter, option, widget=None):
         painter.setRenderHint(QPainter.Antialiasing)
