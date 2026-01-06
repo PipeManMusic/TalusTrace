@@ -11,3 +11,7 @@ class BaseCommand(QUndoCommand):
 
 ## 2. Bundle Diameter Algorithm
 $D = 1.15 * \sqrt{\sum d^2}$
+
+## Workflow: Issue Tracking
+
+Do not manually edit `fix_items.json`. Always use the `manage_issues.py` script to add, update, or close items to prevent JSON syntax errors and ensure ID consistency.

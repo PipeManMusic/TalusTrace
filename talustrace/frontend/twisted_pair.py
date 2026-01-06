@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem, QGraphicsPathItem, QGraphicsSceneMouseEvent
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem, QGraphicsPathItem, QGraphicsSceneMouseEvent, QGraphicsEllipseItem
 from PySide6.QtCore import QRectF, Qt, QPointF
 from PySide6.QtGui import QBrush, QPen, QColor, QPainter, QPainterPath
 from talustrace.backend.geometry import calculate_double_helix
@@ -18,7 +18,7 @@ class TwistAnchorItem(QGraphicsItem):
         super().__init__(parent)
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
-        self.radius = 10
+        self.radius = 5  # 10px diameter matches theme
         self.setPos(*pos)
         self.side = side  # 'a' or 'b'
         # Create two pins and two leaders as children of the anchor
@@ -54,7 +54,19 @@ class TwistAnchorItem(QGraphicsItem):
         return QRectF(-r, -r, 2*r, 2*r)
 
     def paint(self, painter, option, widget=None):
-        painter.setBrush(QBrush(QColor("orange")))
+        # Use theme_tokens if available, else fallback to orange
+        color = QColor("orange")
+        try:
+            from talustrace.frontend.theme_tokens import theme_tokens
+            color = QColor(theme_tokens.get("anchor_fill", "orange"))
+        except Exception:
+            pass
+        if self.isSelected():
+            painter.setBrush(QBrush(QColor("yellow")))
+        elif option.state & option.State_MouseOver:
+            painter.setBrush(QBrush(QColor("#FFD580")))  # light yellow
+        else:
+            painter.setBrush(QBrush(color))
         painter.setPen(QPen(QColor("black")))
         painter.drawEllipse(self.boundingRect())
 
@@ -105,9 +117,9 @@ class DoubleHelixPathItem(QGraphicsItem):
 
     def paint(self, painter, option, widget=None):
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.setPen(QPen(self.color1, 2))
+        painter.setPen(QPen(self.color1, 3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.drawPath(self.path1)
-        painter.setPen(QPen(self.color2, 2))
+        painter.setPen(QPen(self.color2, 3, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
         painter.drawPath(self.path2)
 
     def path(self):
