@@ -5,7 +5,7 @@ from talustrace.backend.geometry import calculate_double_helix
 from talustrace.backend.models import TwistedPair
 
 class TwistAnchorItem(QGraphicsItem):
-    def __init__(self, pos, parent=None):
+    def __init__(self, pos, parent=None, rotation_ref=None):
         super().__init__(parent)
         self.setFlag(QGraphicsItem.ItemIsMovable, True)
         self.radius = 10
@@ -21,6 +21,26 @@ class TwistAnchorItem(QGraphicsItem):
             leader = QGraphicsLineItem(self)
             leader.setPen(QPen(QColor("#888"), 1, Qt.DashLine))
             self.leaders.append(leader)
+        # Reference to model rotation field (as a tuple: (model, attr_name))
+        self._rotation_ref = rotation_ref
+
+    def get_rotation(self):
+        if self._rotation_ref:
+            model, attr = self._rotation_ref
+            return getattr(model, attr, 0) % 360
+        return 0
+
+    def set_rotation(self, value):
+        if self._rotation_ref:
+            model, attr = self._rotation_ref
+            setattr(model, attr, value % 360)
+
+    def rotate_90(self):
+        current = self.get_rotation()
+        self.set_rotation((current + 90) % 360)
+        parent = self.parentItem()
+        if parent and hasattr(parent, "update_layout"):
+            parent.update_layout()
 
     def boundingRect(self):
         r = self.radius
@@ -93,24 +113,36 @@ class TwistedPairItem(QGraphicsObject):
         super().__init__(parent)
         self.model = model
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.anchor_a = TwistAnchorItem(model.node_a, self)
-        self.anchor_b = TwistAnchorItem(model.node_b, self)
+        # Pass reference to model and rotation field name
+        self.anchor_a = TwistAnchorItem(model.node_a, self, rotation_ref=(self.model, "rotation_a"))
+        self.anchor_b = TwistAnchorItem(model.node_b, self, rotation_ref=(self.model, "rotation_b"))
         self.helix = DoubleHelixPathItem(self)
         self.update_layout()
 
 
     def update_layout(self):
+        # Helper for pin layout based on rotation
+        def pin_offsets(rotation):
+            rot = rotation % 360
+            if rot in (0, 180):
+                # Vertical: pins at (0,0) and (0,20) or (0,-20)
+                return [QPointF(0, 0), QPointF(0, 20 if rot == 0 else -20)]
+            elif rot in (90, 270):
+                # Horizontal: pins at (0,0) and (20,0) or (-20,0)
+                return [QPointF(0, 0), QPointF(20 if rot == 90 else -20, 0)]
+            else:
+                # Fallback: vertical
+                return [QPointF(0, 0), QPointF(0, 20)]
+
         # Snap anchor_a to grid for pins
         pos_a = self.anchor_a.scenePos()
         snap_a_x = round(pos_a.x() / 20) * 20
         snap_a_y = round(pos_a.y() / 20) * 20
         snap_origin_a = QPointF(snap_a_x, snap_a_y)
-        # Pin 0 at snap_origin, Pin 1 at snap_origin + (0, 20)
+        rot_a = self.anchor_a.get_rotation()
+        offsets_a = pin_offsets(rot_a)
         for i, (pin, leader) in enumerate(zip(self.anchor_a.pins, self.anchor_a.leaders)):
-            if i == 0:
-                snapped_scene = snap_origin_a
-            else:
-                snapped_scene = snap_origin_a + QPointF(0, 20)
+            snapped_scene = snap_origin_a + offsets_a[i]
             local = self.anchor_a.mapFromScene(snapped_scene)
             pin.setPos(local)
             leader.setLine(0, 0, local.x(), local.y())
@@ -120,11 +152,10 @@ class TwistedPairItem(QGraphicsObject):
         snap_b_x = round(pos_b.x() / 20) * 20
         snap_b_y = round(pos_b.y() / 20) * 20
         snap_origin_b = QPointF(snap_b_x, snap_b_y)
+        rot_b = self.anchor_b.get_rotation()
+        offsets_b = pin_offsets(rot_b)
         for i, (pin, leader) in enumerate(zip(self.anchor_b.pins, self.anchor_b.leaders)):
-            if i == 0:
-                snapped_scene = snap_origin_b
-            else:
-                snapped_scene = snap_origin_b + QPointF(0, 20)
+            snapped_scene = snap_origin_b + offsets_b[i]
             local = self.anchor_b.mapFromScene(snapped_scene)
             pin.setPos(local)
             leader.setLine(0, 0, local.x(), local.y())

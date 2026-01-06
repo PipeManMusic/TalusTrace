@@ -167,7 +167,7 @@
     "type": "frontend",
     "title": "TDD: SVG Device Item",
     "description": "Create 'tests/frontend/test_svg_device.py'. Test 'SvgDeviceItem' renders a mock SVG and places pins at explicit 'anchor_x/y' coordinates.",
-    "status": "in_progress",
+    "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": []
   },
@@ -176,16 +176,18 @@
     "type": "frontend",
     "title": "Impl: SVG Device Item",
     "description": "Implement 'SvgDeviceItem' using 'QtSvg.QGraphicsSvgItem'. Update 'PinItem' to support 'Tail' offsets.",
-    "status": "open",
+    "status": "closed",
     "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "SVG Device Item implementation completed. Pin rotation TDD created and committed. Ready for frontend implementation."}
+    ]
   },
   {
     "id": 18,
     "type": "ui",
     "title": "TDD: Library Dock",
     "description": "Create 'tests/ui/test_library_dock.py'. Test that dragging an item from the list emits a signal with the Device model data.",
-    "status": "open",
+    "status": "in_progress",
     "created_at": "2026-01-06T12:00:00",
     "notes": []
   },
