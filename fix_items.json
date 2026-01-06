@@ -1,12 +1,13 @@
-    {
-      "id": 21,
-      "type": "frontend",
-      "title": "Fix Twisted Pair Visuals & Layout",
-      "description": "Make TwistedPairItem pin layout symmetrical, color leaders, and ensure helix follows anchors.",
-      "status": "in_progress",
-      "created_at": "2026-01-06T12:00:00",
-      "notes": []
-    },
+[
+  {
+    "id": 21,
+    "type": "frontend",
+    "title": "Fix Twisted Pair Visuals & Layout",
+    "description": "Make TwistedPairItem pin layout symmetrical, color leaders, and ensure helix follows anchors.",
+    "status": "in_progress",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
   {
     "id": 20,
     "type": "backend",
@@ -16,7 +17,26 @@
     "created_at": "2026-01-06T12:00:00",
     "notes": []
   },
-[
+  {
+    "id": 22,
+    "type": "frontend",
+    "title": "Elbows",
+    "description": "Implement elbow routing for wires. Allow user to drag elbow points to create right-angle bends.",
+    "status": "closed",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {"timestamp": "2026-01-06T00:00:00", "content": "Paused for now. Focus shifted to grid snapping and pin offsets."}
+    ]
+  },
+  {
+    "id": 23,
+    "type": "frontend",
+    "title": "Fix: Pin Offsets & Zoom",
+    "description": "Enforce grid snapping for both control node and pins. Pins use (-20,20) and (-20,-20) offsets, rotated by anchor rotation. Demo view zoom set to 3.0.",
+    "status": "in_progress",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
   {
     "id": 1,
     "type": "cleanup",

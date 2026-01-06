@@ -127,53 +127,44 @@ class TwistedPairItem(QGraphicsObject):
         self.update_layout()
 
 
+
     def update_layout(self):
         """
-        Pin and leader layout for both anchors based on rotation, with X-offset for pins.
-        Anchor is at (0,0). Pins are offset from anchor as follows:
-        Vertical (0°): Pin 0 at (20,-30), Pin 1 at (20,30)
-        Horizontal (90°): Pin 0 at (30,20), Pin 1 at (-30,20)
-        (Other angles rotate these vectors accordingly.)
-        Leaders extend from anchor to each pin.
+        Snap anchor to grid. Pins use (-20,20) and (-20,-20) offsets, rotated by anchor rotation. Pin positions are local to anchor.
         """
-        def pin_offsets(rotation):
-            rot = rotation % 360
-            if rot == 0:
-                return [QPointF(20, -30), QPointF(20, 30)]
-            elif rot == 90:
-                return [QPointF(30, 20), QPointF(-30, 20)]
-            elif rot == 180:
-                return [QPointF(-20, 30), QPointF(-20, -30)]
-            elif rot == 270:
-                return [QPointF(-30, -20), QPointF(30, -20)]
-            else:
-                return [QPointF(20, -30), QPointF(20, 30)]
+        from PySide6.QtGui import QTransform
+        if not hasattr(self, "anchor_a") or not hasattr(self, "anchor_b"):
+            return
+
+        def snap_point(pt):
+            return QPointF(round(pt.x() / 20) * 20, round(pt.y() / 20) * 20)
+
+        def rotated_offsets(rotation):
+            # Offsets: Pin 0 (Top): (-20, 20), Pin 1 (Bottom): (-20, -20)
+            base = [QPointF(-20, 20), QPointF(-20, -20)]
+            t = QTransform()
+            t.rotate(rotation)
+            return [t.map(offset) for offset in base]
 
         # Layout for anchor_a
         pos_a = self.anchor_a.scenePos()
-        snap_a_x = round(pos_a.x() / 20) * 20
-        snap_a_y = round(pos_a.y() / 20) * 20
-        snap_origin_a = QPointF(snap_a_x, snap_a_y)
+        snap_a = snap_point(pos_a)
+        self.anchor_a.setPos(snap_a)
         rot_a = getattr(self.model, 'rotation_a', 0) % 360
-        offsets_a = pin_offsets(rot_a)
+        offsets_a = rotated_offsets(rot_a)
         for i, (pin, leader) in enumerate(zip(self.anchor_a.pins, self.anchor_a.leaders)):
-            snapped_scene = snap_origin_a + offsets_a[i]
-            local = self.anchor_a.mapFromScene(snapped_scene)
-            pin.setPos(local)
-            leader.setLine(0, 0, local.x(), local.y())
+            pin.setPos(offsets_a[i])
+            leader.setLine(0, 0, offsets_a[i].x(), offsets_a[i].y())
 
         # Layout for anchor_b
         pos_b = self.anchor_b.scenePos()
-        snap_b_x = round(pos_b.x() / 20) * 20
-        snap_b_y = round(pos_b.y() / 20) * 20
-        snap_origin_b = QPointF(snap_b_x, snap_b_y)
+        snap_b = snap_point(pos_b)
+        self.anchor_b.setPos(snap_b)
         rot_b = getattr(self.model, 'rotation_b', 0) % 360
-        offsets_b = pin_offsets(rot_b)
+        offsets_b = rotated_offsets(rot_b)
         for i, (pin, leader) in enumerate(zip(self.anchor_b.pins, self.anchor_b.leaders)):
-            snapped_scene = snap_origin_b + offsets_b[i]
-            local = self.anchor_b.mapFromScene(snapped_scene)
-            pin.setPos(local)
-            leader.setLine(0, 0, local.x(), local.y())
+            pin.setPos(offsets_b[i])
+            leader.setLine(0, 0, offsets_b[i].x(), offsets_b[i].y())
 
         # Update helix geometry
         self.helix.update_geometry(self.anchor_a.pos(), self.anchor_b.pos())
