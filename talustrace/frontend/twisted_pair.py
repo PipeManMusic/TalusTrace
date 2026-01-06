@@ -1,6 +1,7 @@
-from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsLineItem, QGraphicsRectItem, QGraphicsPathItem
 from PySide6.QtCore import QRectF, Qt, QPointF
-from PySide6.QtGui import QBrush, QPen, QColor, QPainter
+from PySide6.QtGui import QBrush, QPen, QColor, QPainter, QPainterPath
+from talustrace.backend.geometry import calculate_double_helix
 from talustrace.backend.models import TwistedPair
 
 class TwistAnchorItem(QGraphicsItem):
@@ -40,10 +41,52 @@ class TwistAnchorItem(QGraphicsItem):
 class DoubleHelixPathItem(QGraphicsItem):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.path1 = QPainterPath()
+        self.path2 = QPainterPath()
+        self.color1 = QColor(Qt.red)
+        self.color2 = QColor(Qt.blue)
+        self._rect = QRectF(0, 0, 1, 1)
+
+    def set_strand_colors(self, color1: QColor, color2: QColor):
+        self.color1 = color1
+        self.color2 = color2
+        self.update()
+
+    def update_geometry(self, start: QPointF, end: QPointF):
+        from PySide6.QtCore import QPointF
+        self.prepareGeometryChange()
+        amp = 5.0
+        wavelength = 20.0
+        s = (start.x(), start.y())
+        e = (end.x(), end.y())
+        strand1, strand2 = calculate_double_helix(s, e, amp, wavelength)
+        self.path1 = QPainterPath()
+        self.path2 = QPainterPath()
+        if strand1:
+            self.path1.moveTo(QPointF(*strand1[0]))
+            for pt in strand1[1:]:
+                self.path1.lineTo(QPointF(*pt))
+        if strand2:
+            self.path2.moveTo(QPointF(*strand2[0]))
+            for pt in strand2[1:]:
+                self.path2.lineTo(QPointF(*pt))
+        self._rect = self.path1.boundingRect().united(self.path2.boundingRect())
+
     def boundingRect(self):
-        return QRectF(0, 0, 1, 1)  # Placeholder
+        return self._rect
+
     def paint(self, painter, option, widget=None):
-        pass  # No-op for now
+        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setPen(QPen(self.color1, 2))
+        painter.drawPath(self.path1)
+        painter.setPen(QPen(self.color2, 2))
+        painter.drawPath(self.path2)
+
+    def path(self):
+        # For testing: return the union of both paths
+        combined = QPainterPath(self.path1)
+        combined.addPath(self.path2)
+        return combined
 
 class TwistedPairItem(QGraphicsObject):
     def __init__(self, model: TwistedPair, parent=None):
@@ -54,6 +97,7 @@ class TwistedPairItem(QGraphicsObject):
         self.anchor_b = TwistAnchorItem(model.node_b, self)
         self.helix = DoubleHelixPathItem(self)
         self.update_layout()
+
 
     def update_layout(self):
         # Snap anchor_a to grid for pins
@@ -84,6 +128,9 @@ class TwistedPairItem(QGraphicsObject):
             local = self.anchor_b.mapFromScene(snapped_scene)
             pin.setPos(local)
             leader.setLine(0, 0, local.x(), local.y())
+
+        # Update helix geometry
+        self.helix.update_geometry(self.anchor_a.pos(), self.anchor_b.pos())
 
     def set_signal(self, pin_item, wire_id, color):
         # Determine anchor and index
