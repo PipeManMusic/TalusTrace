@@ -37,9 +37,11 @@ class TwistAnchorItem(QGraphicsItem):
         for i in range(2):
             pin = QGraphicsEllipseItem(-3, -3, 6, 6, self)  # 6px diameter circle
             pin.setBrush(QBrush(Qt.gray))
+            pin.setPen(Qt.NoPen)
             self.pins.append(pin)
             leader = QGraphicsLineItem(self)
             leader.setPen(QPen(Qt.black, 3, Qt.SolidLine))
+            leader.setZValue(-1)
             self.leaders.append(leader)
 
     def hoverEnterEvent(self, event):
@@ -78,12 +80,15 @@ class TwistAnchorItem(QGraphicsItem):
         elif option.state & QStyle.State_Selected:
             brush = QBrush(Qt.darkBlue)
         elif option.state & QStyle.State_MouseOver:
-            brush = QBrush(Qt.orange)
+            brush = QBrush(QColor('orange'))
         else:
             brush = QBrush(Qt.gray)
         painter.setBrush(brush)
-        painter.setPen(QPen(QColor("black")))
+        painter.setPen(Qt.NoPen)
         painter.drawEllipse(self.boundingRect())
+    def mouseReleaseEvent(self, event):
+        super().mouseReleaseEvent(event)
+        self.update()
 
     def itemChange(self, change, value):
         # Only trigger layout update after the position has actually changed
