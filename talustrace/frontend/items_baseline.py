@@ -22,7 +22,7 @@ from PySide6.QtWidgets import (
     QComboBox,
     QColorDialog,
 )
-from PySide6.QtGui import QPen, QBrush, QColor, QFont, QAction, QPainterPath, QPainterPathStroker, QPainter
+from PySide6.QtGui import QPen, QBrush, QColor, QFont, QFontMetricsF, QAction, QPainterPath, QPainterPathStroker, QPainter
 from PySide6.QtCore import Qt, QRectF, QLineF, QPointF, QTimer
 from talustrace.backend.models import Side, Pin as PinModel
 from talustrace.backend.sizer import AutoSizer
@@ -1111,12 +1111,236 @@ class SegmentHandle(QGraphicsRectItem):
         super().mouseReleaseEvent(event)
 
 
+class WireLabelItem(QGraphicsItem):
+    """Small label rendered near a point on the wire path.  Labels are draggable along the wire
+    and update their underlying model.t_pos as they move.
+    """
+    def __init__(self, label_model, parent_wire_item):
+        super().__init__(parent_wire_item)
+        self.model = label_model
+        self.wire_item = parent_wire_item
+        self._font = QFont()
+        self._font.setPointSize(10)
+        self._padding = 4
+        # Allow hover and left-button interaction; selection handled by parent if desired
+        self.setAcceptHoverEvents(True)
+        self.setAcceptedMouseButtons(Qt.LeftButton)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+        self.setZValue(2)
+        try:
+            self.setData(0, 'wire_label')
+        except Exception:
+            pass
+        # Drag state
+        self._dragging = False
+
+    def boundingRect(self):
+        fm = QFontMetricsF(self._font)
+        # Qt5 used width(); Qt6 QFontMetricsF provides horizontalAdvance()
+        try:
+            text_w = fm.horizontalAdvance(self.model.text)
+        except Exception:
+            try:
+                text_w = fm.width(self.model.text)
+            except Exception:
+                text_w = fm.boundingRect(self.model.text).width()
+        w = text_w + (self._padding * 2)
+        h = fm.height() + (self._padding * 2)
+        return QRectF(-w/2, -h/2, w, h)
+
+    def paint(self, painter, option, widget=None):
+        br = self.boundingRect()
+        # background
+        painter.setBrush(QBrush(QColor(40, 40, 40, 230)))
+        painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(br, 4, 4)
+        # text
+        painter.setPen(QPen(TEXT_COLOR))
+        painter.setFont(self._font)
+        painter.drawText(br, Qt.AlignCenter, self.model.text)
+
+    # --- Interaction: drag along the wire ---
+    def hoverEnterEvent(self, event):
+        try:
+            self.setCursor(Qt.OpenHandCursor)
+        except Exception:
+            pass
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        try:
+            self.unsetCursor()
+        except Exception:
+            pass
+        super().hoverLeaveEvent(event)
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            try:
+                self._dragging = True
+                self.grabMouse()
+                self.setCursor(Qt.ClosedHandCursor)
+            except Exception:
+                pass
+            event.accept()
+        else:
+            super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        if not getattr(self, '_dragging', False):
+            event.ignore()
+            return
+        try:
+            # Prefer parent's helper if present
+            parent = self.wire_item
+            if hasattr(parent, 'calculate_snap_to_polyline'):
+                t, proj, seg = parent.calculate_snap_to_polyline(event.scenePos())
+            else:
+                # Fallback: compute projection using parent's polyline
+                pts = parent._poly_points()
+                if not pts:
+                    t, proj, seg = 0.0, event.scenePos(), -1
+                else:
+                    # replicate projection logic from WireItem.calculate_snap_to_polyline
+                    seg_lengths = []
+                    total = 0.0
+                    for i in range(len(pts) - 1):
+                        seg_len = QLineF(pts[i], pts[i + 1]).length()
+                        seg_lengths.append(seg_len)
+                        total += seg_len
+                    if total == 0:
+                        t, proj, seg = 0.0, pts[0], -1
+                    else:
+                        best = None
+                        acc = 0.0
+                        for i in range(len(pts) - 1):
+                            a, b = pts[i], pts[i + 1]
+                            abx = b.x() - a.x()
+                            aby = b.y() - a.y()
+                            ab2 = abx * abx + aby * aby
+                            if ab2 == 0:
+                                proj = a
+                                local_t = 0.0
+                            else:
+                                apx = event.scenePos().x() - a.x()
+                                apy = event.scenePos().y() - a.y()
+                                local_t = (apx * abx + apy * aby) / ab2
+                                local_t = max(0.0, min(1.0, local_t))
+                                proj = QPointF(a.x() + abx * local_t, a.y() + aby * local_t)
+                            dx = event.scenePos().x() - proj.x()
+                            dy = event.scenePos().y() - proj.y()
+                            dist2 = dx * dx + dy * dy
+                            if best is None or dist2 < best[0]:
+                                seg_len = seg_lengths[i]
+                                tval = (acc + (local_t * seg_len)) / total
+                                best = (dist2, tval, proj, i)
+                            acc += seg_lengths[i]
+                        if best is None:
+                            t, proj, seg = 0.0, pts[0], -1
+                        else:
+                            t, proj, seg = best[1], best[2], best[3]
+            # Update model and visual position
+            t = max(0.0, min(1.0, float(t)))
+            self.model.t_pos = t
+            self.setPos(self.wire_item.mapFromScene(proj))
+            try:
+                self.wire_item._notify_changed()
+            except Exception:
+                pass
+            event.accept()
+        except Exception:
+            event.ignore()
+
+    def mouseReleaseEvent(self, event):
+        if getattr(self, '_dragging', False):
+            self._dragging = False
+            try:
+                self.ungrabMouse()
+                self.unsetCursor()
+            except Exception:
+                pass
+            # Finalize at release location
+            try:
+                parent = self.wire_item
+                if hasattr(parent, 'calculate_snap_to_polyline'):
+                    t, proj, seg = parent.calculate_snap_to_polyline(event.scenePos())
+                else:
+                    # re-run fallback projection (same as above)
+                    pts = parent._poly_points() if hasattr(parent, '_poly_points') else []
+                    if not pts:
+                        t, proj, seg = 0.0, event.scenePos(), -1
+                    else:
+                        seg_lengths = []
+                        total = 0.0
+                        for i in range(len(pts) - 1):
+                            seg_len = QLineF(pts[i], pts[i + 1]).length()
+                            seg_lengths.append(seg_len)
+                            total += seg_len
+                        best = None
+                        acc = 0.0
+                        for i in range(len(pts) - 1):
+                            a, b = pts[i], pts[i + 1]
+                            abx = b.x() - a.x()
+                            aby = b.y() - a.y()
+                            ab2 = abx * abx + aby * aby
+                            if ab2 == 0:
+                                proj = a
+                                local_t = 0.0
+                            else:
+                                apx = event.scenePos().x() - a.x()
+                                apy = event.scenePos().y() - a.y()
+                                local_t = (apx * abx + apy * aby) / ab2
+                                local_t = max(0.0, min(1.0, local_t))
+                                proj = QPointF(a.x() + abx * local_t, a.y() + aby * local_t)
+                            dx = event.scenePos().x() - proj.x()
+                            dy = event.scenePos().y() - proj.y()
+                            dist2 = dx * dx + dy * dy
+                            if best is None or dist2 < best[0]:
+                                seg_len = seg_lengths[i]
+                                tval = (acc + (local_t * seg_len)) / total
+                                best = (dist2, tval, proj, i)
+                            acc += seg_lengths[i]
+                        if best is None:
+                            t, proj, seg = 0.0, pts[0], -1
+                        else:
+                            t, proj, seg = best[1], best[2], best[3]
+                t = max(0.0, min(1.0, float(t)))
+                self.model.t_pos = t
+                self.setPos(self.wire_item.mapFromScene(proj))
+                try:
+                    self.wire_item._notify_changed()
+                except Exception:
+                    pass
+            except Exception:
+                pass
+            event.accept()
+        else:
+            super().mouseReleaseEvent(event)
+
+
 class WireItem(QGraphicsPathItem):
     def __init__(self, wire_model, source_item=None, target_item=None, on_changed=None, on_delete=None):
         super().__init__()
         self.model = wire_model
         self.source_dev = source_item
         self.target_dev = target_item
+        self.src_pin_id = self.model.from_conn.split('.')[1]
+        self.tgt_pin_id = self.model.to_conn.split('.')[1]
+        self.on_changed = on_changed
+        self.on_delete = on_delete
+
+        self.setFlags(QGraphicsItem.ItemIsSelectable)
+        self.setZValue(-1)
+
+        self.halo_path = QGraphicsPathItem(self)
+        self.halo_path.setPen(QPen(SELECTED_COLOR, 6))
+        self.halo_path.setOpacity(0.5)
+        self.halo_path.hide()
+        self.halo_path.setZValue(-1)
+
+        self.segment_handles = []
+        self.elbow_handles = []
+        self.label_items = []
         self.src_pin_id = self.model.from_conn.split('.')[1]
         self.tgt_pin_id = self.model.to_conn.split('.')[1]
         self.on_changed = on_changed
@@ -1150,6 +1374,41 @@ class WireItem(QGraphicsPathItem):
         self.update_visuals()
         self.update_geometry()
         self.refresh_metadata()
+        # Initialize label items from model
+        try:
+            for lbl in getattr(self.model, 'labels', []):
+                try:
+                    self.add_label_model(lbl)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def add_label_model(self, label_model):
+        """Attach a WireLabel model and create its visual representation.
+        Also persist the model into the wire model's labels list so it survives saves.
+        """
+        try:
+            if not hasattr(self, 'label_items'):
+                self.label_items = []
+            # Ensure model persistence
+            if not hasattr(self.model, 'labels'):
+                self.model.labels = []
+            if label_model not in self.model.labels:
+                self.model.labels.append(label_model)
+            itm = WireLabelItem(label_model, self)
+            self.label_items.append(itm)
+            # position now using build nodes
+            try:
+                pts = self._build_nodes()
+                seg_lengths, total_len = self._segment_lengths(pts)
+                pt, dir_vec = self._point_at(pts, seg_lengths, total_len, label_model.t_pos)
+                itm.setPos(self.mapFromScene(pt))
+            except Exception:
+                pass
+            return itm
+        except Exception:
+            pass
 
     def contextMenuEvent(self, event):
         menu = QMenu()
@@ -1310,6 +1569,23 @@ class WireItem(QGraphicsPathItem):
         nodes.append(tgt_pin.get_tip_scene_pos())
         return nodes
 
+    def _segment_insert_index(self, pt: QPointF, nodes):
+        """Return index where an elbow should be inserted for point pt projected onto nodes polyline."""
+        best_idx = 0
+        best_dist = float('inf')
+        for i in range(len(nodes) - 1):
+            a = nodes[i]
+            b = nodes[i+1]
+            ab = b - a
+            denom = ab.x() * ab.x() + ab.y() * ab.y()
+            t = 0.0 if denom == 0 else ((pt - a).x() * ab.x() + (pt - a).y() * ab.y()) / denom
+            t = max(0.0, min(1.0, t))
+            proj = QPointF(a.x() + ab.x() * t, a.y() + ab.y() * t)
+            dist = QLineF(pt, proj).length()
+            if dist < best_dist:
+                best_dist = dist
+                best_idx = i
+        return best_idx
     def update_geometry(self, rebuild_handles: bool = True):
         nodes = self._build_nodes()
         if len(nodes) < 2:
@@ -1321,6 +1597,24 @@ class WireItem(QGraphicsPathItem):
         self.setPath(path)
         if getattr(self, 'halo_path', None) is not None:
             self.halo_path.setPath(path)
+
+        # Update label positions based on the current polyline geometry
+        try:
+            # Compute segment lengths and total length
+            seg_lengths = []
+            total_len = 0.0
+            for i in range(len(nodes) - 1):
+                seg_len = QLineF(nodes[i], nodes[i + 1]).length()
+                seg_lengths.append(seg_len)
+                total_len += seg_len
+            # update labels if any
+            try:
+                self._update_labels_positions(nodes, seg_lengths, total_len)
+            except Exception:
+                pass
+        except Exception:
+            pass
+
         if rebuild_handles:
             self._rebuild_handles(nodes)
         else:
@@ -1357,6 +1651,32 @@ class WireItem(QGraphicsPathItem):
                 handle.setPos(mid)
             self.segment_handles.append(handle)
 
+    def _update_labels_positions(self, pts, seg_lengths, total_len):
+        # Ensure label_items exist and stay aligned to self.model.labels
+        try:
+            if not hasattr(self, 'label_items'):
+                self.label_items = []
+            while len(self.label_items) > len(getattr(self.model, 'labels', [])):
+                it = self.label_items.pop()
+                try:
+                    if it.scene():
+                        it.scene().removeItem(it)
+                except Exception:
+                    pass
+            for idx, lbl in enumerate(getattr(self.model, 'labels', [])):
+                if idx >= len(self.label_items):
+                    itm = WireLabelItem(lbl, self)
+                    self.label_items.append(itm)
+                else:
+                    itm = self.label_items[idx]
+                    itm.model = lbl
+                try:
+                    pt, dir_vec = self._point_at(pts, seg_lengths, total_len, lbl.t_pos)
+                    itm.setPos(self.mapFromScene(pt))
+                except Exception:
+                    pass
+        except Exception:
+            pass
     def _update_handle_positions(self, nodes):
         # Update existing handles after a drag without recreating/removing the one under the cursor.
         for idx, handle in enumerate(self.elbow_handles):
@@ -1411,22 +1731,89 @@ class WireItem(QGraphicsPathItem):
             except Exception:
                 handle.setPos(mid)
 
-    def _segment_insert_index(self, pt: QPointF, nodes):
-        best_idx = 0
-        best_dist = float('inf')
+    def _segment_lengths(self, pts):
+        lengths = []
+        total = 0.0
+        for i in range(len(pts) - 1):
+            seg_len = QLineF(pts[i], pts[i + 1]).length()
+            lengths.append(seg_len)
+            total += seg_len
+        return lengths, total
+
+    def _point_at(self, pts, seg_lengths, total_len, t):
+        if total_len == 0:
+            return pts[0], QPointF(0, -1)
+        target_dist = t * total_len
+        acc = 0.0
+        for i, seg_len in enumerate(seg_lengths):
+            if seg_len == 0:
+                continue
+            if acc + seg_len >= target_dist:
+                local_t = (target_dist - acc) / seg_len
+                a, b = pts[i], pts[i + 1]
+                x = a.x() + (b.x() - a.x()) * local_t
+                y = a.y() + (b.y() - a.y()) * local_t
+                dir_vec = QPointF(b.x() - a.x(), b.y() - a.y())
+                return QPointF(x, y), dir_vec
+            acc += seg_len
+        return pts[-1], QPointF(0, -1)
+
+    def calculate_snap_to_polyline(self, scene_point: QPointF):
+        """Project a scene point onto this wire's polyline and return (t, proj_point, seg_idx).
+
+        - t: normalized position along total path (0..1)
+        - proj_point: QPointF in scene coordinates (projected point on polyline)
+        - seg_idx: index of segment containing projection (0..n-2) or -1 if degenerate
+        """
+        nodes = self._build_nodes()
+        if len(nodes) == 0:
+            return 0.0, scene_point, -1
+        if len(nodes) == 1:
+            return 0.0, nodes[0], -1
+
+        # Precompute segment lengths and total
+        seg_lengths = []
+        total = 0.0
+        for i in range(len(nodes) - 1):
+            seg_len = QLineF(nodes[i], nodes[i + 1]).length()
+            seg_lengths.append(seg_len)
+            total += seg_len
+
+        if total == 0:
+            return 0.0, nodes[0], -1
+
+        best = None
+        acc = 0.0
         for i in range(len(nodes) - 1):
             a = nodes[i]
-            b = nodes[i+1]
-            ab = b - a
-            denom = ab.x() * ab.x() + ab.y() * ab.y()
-            t = 0.0 if denom == 0 else ((pt - a).x() * ab.x() + (pt - a).y() * ab.y()) / denom
-            t = max(0.0, min(1.0, t))
-            proj = QPointF(a.x() + ab.x() * t, a.y() + ab.y() * t)
-            dist = QLineF(pt, proj).length()
-            if dist < best_dist:
-                best_dist = dist
-                best_idx = i
-        return best_idx
+            b = nodes[i + 1]
+            abx = b.x() - a.x()
+            aby = b.y() - a.y()
+            ab2 = abx * abx + aby * aby
+            if ab2 == 0:
+                proj = a
+                local_t = 0.0
+            else:
+                apx = scene_point.x() - a.x()
+                apy = scene_point.y() - a.y()
+                local_t = (apx * abx + apy * aby) / ab2
+                if local_t < 0:
+                    local_t = 0.0
+                elif local_t > 1:
+                    local_t = 1.0
+                proj = QPointF(a.x() + abx * local_t, a.y() + aby * local_t)
+            dx = scene_point.x() - proj.x()
+            dy = scene_point.y() - proj.y()
+            dist2 = dx * dx + dy * dy
+            if best is None or dist2 < best[0]:
+                seg_len = seg_lengths[i]
+                t = (acc + (local_t * seg_len)) / total
+                best = (dist2, t, proj, i)
+            acc += seg_lengths[i]
+
+        if best is None:
+            return 0.0, nodes[0], -1
+        return best[1], best[2], best[3]
 
     def _segment_normal(self, a: QPointF, b: QPointF) -> QPointF:
         dx = b.x() - a.x()
@@ -2853,6 +3240,11 @@ class TwistedBundleItem(QGraphicsPathItem):
     def recalculate_path(self, rebuild_handles: bool = True):
         pts = self._poly_points()
         seg_lengths, total_len = self._segment_lengths(pts)
+        # Update any attached labels positions since path changed
+        try:
+            self._update_labels_positions(pts, seg_lengths, total_len)
+        except Exception:
+            pass
         if total_len == 0:
             base_path = QPainterPath(pts[0])
             self.path_a = base_path
@@ -2920,6 +3312,37 @@ class TwistedBundleItem(QGraphicsPathItem):
                             pin.update_leader()
                         except Exception:
                             pass
+                except Exception:
+                    pass
+        except Exception:
+            pass
+
+    def _update_labels_positions(self, pts, seg_lengths, total_len):
+        # Ensure corresponding label_items exist and position them along the path
+        print(f"ENTER _update_labels_positions pts={pts} seg_lengths={seg_lengths} total_len={total_len}")
+        try:
+            # Lazy-create label_items list to align with model.labels
+            if not hasattr(self, 'label_items'):
+                self.label_items = []
+            # Remove any excess items if model shrank
+            while len(self.label_items) > len(getattr(self.model, 'labels', [])):
+                it = self.label_items.pop()
+                try:
+                    if it.scene():
+                        it.scene().removeItem(it)
+                except Exception:
+                    pass
+            # Iterate and create/update
+            for idx, lbl in enumerate(getattr(self.model, 'labels', [])):
+                if idx >= len(self.label_items):
+                    itm = WireLabelItem(lbl, self)
+                    self.label_items.append(itm)
+                else:
+                    itm = self.label_items[idx]
+                    itm.model = lbl
+                try:
+                    pt, dir_vec = self._point_at(pts, seg_lengths, total_len, lbl.t_pos)
+                    itm.setPos(self.mapFromScene(pt))
                 except Exception:
                     pass
         except Exception:

@@ -58,6 +58,24 @@ class Device(BaseModel):
             ]
         return v
 
+class WireLabel(BaseModel):
+    text: str = Field(..., description="Label text")
+    t_pos: float = Field(0.5, description="Normalized position along the wire (0.0 - 1.0)")
+    align: Optional[str] = None
+    style: Dict[str, Any] = Field(default_factory=dict)
+
+    @model_validator(mode='after')
+    def clamp_t(self):
+        try:
+            if self.t_pos < 0.0:
+                self.t_pos = 0.0
+            if self.t_pos > 1.0:
+                self.t_pos = 1.0
+        except Exception:
+            pass
+        return self
+
+
 class Wire(BaseModel):
     # ALLOWS using 'from_conn' instead of the alias 'from'
     model_config = ConfigDict(populate_by_name=True)
@@ -77,6 +95,7 @@ class Wire(BaseModel):
     signal: Optional[str] = None  # The "Signal Name" for Label Generation
     meta: Dict[str, Any] = Field(default_factory=dict)
     route: List[Tuple[float, float]] = Field(default_factory=list) # User-defined elbows
+    labels: List[WireLabel] = Field(default_factory=list)  # Floating label list
 
     @model_validator(mode='after')
     def validate_endpoints(self):

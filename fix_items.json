@@ -228,5 +228,131 @@
         "content": "Commit 61a31af pushed to main (alpha): changes merged directly to main per alpha workflow. Tests still pass on CI runner locally."
       }
     ]
+  },
+  {
+    "id": 34,
+    "type": "feature",
+    "title": "Wire Labels: Add model + basic rendering",
+    "description": "Introduce a WireLabel model and basic `WireLabelItem` (text with background) that can be attached to a Wire model; wire holds `labels: List[WireLabel]`.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-06T12:00:00.000000",
+        "content": "Plan: add Pydantic `WireLabel` model (text, t_pos normalized 0..1, alignment, style), implement `WireLabelItem` drawing and persistence. Phase 1 work item. Tests: create/draw/serialize labels."
+      }
+    ]
+  },
+  {
+    "id": 35,
+    "type": "feature",
+    "title": "Wire Labels: Orthogonal sliding/snapping logic",
+    "description": "Implement polyline-projection logic to map a normalized t (0..1) to a point along multi-segment wire paths and allow labels to slide and snap to the nearest point on the polyline while dragging.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-06T12:00:00.000000",
+        "content": "Plan: add `WireItem.get_path_points()` and `calculate_snap_to_polyline` helper; tests to assert correct projection, t computation, and rounding on vertex edges. Phase 2 work item."
+      }
+    ]
+  },
+  {
+    "id": 36,
+    "type": "feature",
+    "title": "Wire Labels: UI integration (add/edit/delete)",
+    "description": "Add context-menu 'Add Label' on wire segments, support label selection, inline edit (double-click to rename), and delete-only removal.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-06T12:00:00.000000",
+        "content": "Plan: add context menu action, default t=0.5 placement, double-click to edit via in-place editor, delete to remove label. Add unit tests for UI flows (headless-friendly where possible)."
+      }
+    ]
+  },
+  {
+    "id": 37,
+    "type": "feature",
+    "title": "Wire Labels: Persistence and migration",
+    "description": "Persist labels in harness save format; add migration tests to ensure older saves without labels load cleanly and new saves include labels.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-06T12:00:00.000000",
+        "content": "Plan: extend Wire Pydantic model to include labels: List[WireLabel]; add load/save round-trip tests and a migration test for legacy files."
+      }
+    ]
+  },
+  {
+    "id": 38,
+    "type": "test",
+    "title": "Wire Labels: Unit tests for geometry and behavior",
+    "description": "Add tests for label projection, dragging/snap behavior, context-menu add/delete flows, and persistence round-trips.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-06T12:00:00.000000",
+        "content": "Tests will include: calculate_snap_to_polyline cases, add label at segment/vertex, drag label to edge snapping, and save/load round-trip."
+      }
+    ]
+  },
+  {
+    "id": 39,
+    "type": "feature",
+    "title": "Wire Labels: Styling and accessibility",
+    "description": "Allow label styling (background color, font size) and keyboard accessibility (rename via F2, delete via Delete key), including default dark/light contrast.",
+    "status": "open",
+    "created_at": "2026-01-06T12:00:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-06T12:00:00.000000",
+        "content": "Phase 3: styling options and keyboard handling; ensure a11y contrast and tests for keyboard flows."
+      }
+    ]
+  },
+  {
+    "id": 40,
+    "type": "bug",
+    "title": "Recent documents list not populating",
+    "description": "The 'Recent Documents' menu/section remains empty after opening or saving files; expected recent files to appear for quick access.",
+    "status": "open",
+    "created_at": "2026-01-06T12:30:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-06T12:30:00.000000",
+        "content": "Repro: open and save several files, then inspect the Recent menu — it remains empty. Initial hypothesis: recent file writes to config are failing or the UI is not reading the stored list. Plan: add a unit/integration test to exercise recent-list persistence and display; inspect save/load and config read paths (app-level recent list code)."
+      }
+    ]
+  },
+  {
+    "id": 41,
+    "type": "bug",
+    "title": "Pin head positioned at device edge instead of pin tail",
+    "description": "On some devices the pin head graphic is rendered at the device edge (head) instead of the expected pin tail location, causing leader lines and connections to misalign.",
+    "status": "open",
+    "created_at": "2026-01-06T12:30:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-06T12:30:00.000000",
+        "content": "Repro: add a device with pins and inspect pin head/tail coordinates and leader endpoints. Plan: add unit tests verifying pin geometry (head vs tail) and leader endpoint computations; inspect `PinItem.set_visual_geometry`, `get_tip_scene_pos`, and mapping between local/device coordinates and wire endpoints."
+      }
+    ]
+  },
+  {
+    "id": 42,
+    "type": "bug",
+    "title": "Pins sometimes rotated instead of orthogonal",
+    "description": "Pins on devices are occasionally rendered rotated (non-orthogonal to the device side) instead of aligned orthogonally, particularly after device rotation or pin rebuild.",
+    "status": "open",
+    "created_at": "2026-01-06T12:30:00.000000",
+    "notes": [
+      {
+        "timestamp": "2026-01-06T12:30:00.000000",
+        "content": "Repro: rotate a device and rebuild pins or change pin layout; observe pin orientation anomalies. Plan: add tests that assert pin orientation after device rotation and after `_build_pins`; review rotation handling and transform application in `DeviceItem` and `PinItem`."
+      }
+    ]
   }
 ]

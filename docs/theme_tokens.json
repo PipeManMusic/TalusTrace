@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "version": "2.0",
+    "description": "Talus Trace Global Design Dictionary"
+  },
+  "layout": {
+    "grid_step_px": 20,
+    "grip_size_px": 10,
+    "pin_diameter_px": 6,
+    "wire_width_px": 3,
+    "tail_length_std_px": 8,
+    "bundle_base_width_px": 6,
+    "physical_scale": {
+      "pixels_per_unit": 20,
+      "unit_name": "inch",
+      "real_world_value": 1.0
+    }
+  },
+  "colors": {
+    "palette": {
+      "orange_500": "#FFA500",
+      "red_500": "#FF0000",
+      "blue_500": "#0000FF",
+      "grey_900": "#101010",
+      "grey_800": "#202020",
+      "grey_500": "#505050",
+      "grey_300": "#D0D0D0",
+      "black": "#000000",
+      "white": "#FFFFFF"
+    },
+    "semantic": {
+      "select_halo": "orange_500",
+      "active_drag": "red_500",
+      "idle_grip": "blue_500",
+      "wire_default": "grey_300",
+      "pin_unconnected": "grey_500",
+      "bundle_fill": "grey_800",
+      "bundle_stroke": "grey_900",
+      "contrast_border": "black",
+      "ghost_opacity": 0.5,
+      "ghost_valid_tint": "blue_500",
+      "ghost_invalid_tint": "red_500"
+    }
+  },
+  "canvas": {
+    "background_color": "grey_900",
+    "grid_major_step": 100,
+    "grid_minor_opacity": 0.3,
+    "lod_threshold_scale": 0.5
+  },
+  "z_index": {
+    "label": 10,
+    "grip": 5,
+    "device": 0,
+    "wire": -1,
+    "bundle": -2
+  }
+}
