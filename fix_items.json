@@ -107,7 +107,7 @@
     "id": "PH2-1.1",
     "phase": 2,
     "task": "Core: Orthogonal Grid Snapping Logic",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Implement helper in Core to round any mm input to the nearest 20px-equivalent grid coordinate.",
     "spec_reference": "talus_trace_functional_logic.md"
   },
@@ -115,7 +115,7 @@
     "id": "PH2-1.2",
     "phase": 2,
     "task": "Infra: MOVE_NODE Command Implementation",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Transaction to update a specific point in a wire's path_nodes. Must support Undo/Redo.",
     "spec_reference": "talus_trace_implementation_guide.md"
   },
@@ -123,7 +123,7 @@
     "id": "PH2-2.1",
     "phase": 2,
     "task": "Core: Spatial Hashing for Wire Segments",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Implement a hash map of wire segments to find overlapping paths on the grid.",
     "spec_reference": "talus_trace_wire_bundle_spec.md"
   },
@@ -131,7 +131,7 @@
     "id": "PH2-2.2",
     "phase": 2,
     "task": "Core: Automatic Bundle Grouping Logic",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Logic to group wires sharing a spatial hash into a logical Bundle Segment.",
     "spec_reference": "talus_trace_wire_bundle_spec.md"
   },
@@ -139,7 +139,7 @@
     "id": "PH2-3.1",
     "phase": 2,
     "task": "UI: Implement Wire Label Drag Constraints",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Use itemChange to keep labels snapped to the parent wire's orthogonal path.",
     "spec_reference": "talus_trace_wire_labels_spec.md"
   },
@@ -147,7 +147,7 @@
     "id": "PH2-3.2",
     "phase": 2,
     "task": "Core: Calculate Label MM Position from T-Pos",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Interpolate along a multi-segment wire to find precise mm coordinates for a label at t=0.5.",
     "spec_reference": "talus_trace_wire_labels_spec.md"
   },
