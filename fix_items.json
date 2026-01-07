@@ -6,14 +6,14 @@
     "status": "DONE",
     "notes": "Create core/, infra/, api/, and ui/ folders. Add a CI-level test or script to ensure core/ never imports from any other layer.",
     "spec_reference": "talus_trace_codebase_architecture.md"
-  },
   {
-    "id": "PH1-1.2",
-    "phase": 1,
-    "task": "Core: Implement Pin Pydantic Model",
+    "id": "PH3-2.2",
+    "phase": 3,
+    "task": "UI: Twisted Pair LOD Switcher",
     "status": "DONE",
-    "notes": "Define Pin with head_mm and tail_mm float tuples. Include validation to ensure coordinates are always within project bounds.",
-    "spec_reference": "talus_trace_arch_core_spec.md"
+    "notes": "Implement logic to swap between Helix (High Detail) and Hatch (Low Detail) based on the lod_threshold_scale in theme_tokens.json.",
+    "spec_reference": "talus_trace_spec_twisted_pair.md"
+  },
   },
   {
     "id": "PH1-1.3",
@@ -155,56 +155,32 @@
     "id": "PH3-1.1",
     "phase": 3,
     "task": "Infra: Background Worker Thread Pool",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Initialize thread pool for non-blocking engineering math tasks.",
     "spec_reference": "talus_trace_implementation_guide.md"
   },
   {
     "id": "PH3-1.2",
     "phase": 3,
-    "task": "Core: Implement Packing Factor Calculation",
-    "status": "DONE",
-    "notes": "Implement D = 1.15 * sqrt(sum d^2) for bundle sizing.",
-    "spec_reference": "talus_trace_functional_logic.md"
-  },
-  {
-    "id": "PH3-2.1",
-    "phase": 3,
-    "task": "UI: Procedural Helix Path Generation",
-    "status": "DONE",
-    "notes": "Generate offset sine-wave points along a Bezier path for Twisted Pair rendering.",
-    "spec_reference": "talus_trace_spec_twisted_pair.md"
-  },
-  {
-    "id": "PH3-1.1",
-    "phase": 3,
-    "task": "Infra: Worker Thread Pool & Event Loop Integration",
-    "status": "OPEN",
-    "notes": "Initialize the concurrent.futures ThreadPoolExecutor. Implement the logic to pass tasks from the API and receive 'CalculationComplete' signals back to the UI thread.",
-    "spec_reference": "talus_trace_implementation_guide.md"
-  },
-  {
-    "id": "PH3-1.2",
-    "phase": 3,
     "task": "Core: Implement Industrial Packing Factor Calculation",
-    "status": "OPEN",
-    "notes": "Implement the D = 1.15 * sqrt(sum d^2) formula in the Core. Create unit tests verifying bundle sizing for 1, 5, and 20-wire configurations.",
+    "status": "DONE",
+    "notes": "Implement the D = 1.15 * sqrt(sum d^2) formula for bundle sizing.",
     "spec_reference": "talus_trace_functional_logic.md"
   },
   {
     "id": "PH3-2.1",
     "phase": 3,
     "task": "UI: Procedural Helix Sine Wave Logic",
-    "status": "OPEN",
-    "notes": "Implement the math for offsetting points along a Bezier path normal. Generate the raw coordinate points for two intertwining helix paths.",
+    "status": "DONE",
+    "notes": "Implement the math for offsetting points along a Bezier path normal. Generate the raw coordinate points for helix paths.",
     "spec_reference": "talus_trace_spec_twisted_pair.md"
   },
   {
     "id": "PH3-2.2",
     "phase": 3,
     "task": "UI: Twisted Pair LOD Switcher",
-    "status": "DONE",
-    "notes": "Implement logic to swap between Helix (High Detail) and Hatch (Low Detail) based on the lod_threshold_scale in theme_tokens.json.",
+    "status": "OPEN",
+    "notes": "Implement logic to swap between Helix (High Detail) and Hatch (Low Detail) based on zoom scale.",
     "spec_reference": "talus_trace_spec_twisted_pair.md"
   },
   {
@@ -212,7 +188,7 @@
     "phase": 3,
     "task": "Infra: Design Audit Logic & Violation Pydantic Model",
     "status": "OPEN",
-    "notes": "Define the structure for a 'Violation' (severity, target_id, message). Implement the logic that generates these when a wire is UNDEFINED.",
+    "notes": "Define Violation structure. Implement logic that generates warnings for UNDEFINED states.",
     "spec_reference": "talus_trace_data_schema.md"
   },
   {
@@ -220,7 +196,7 @@
     "phase": 3,
     "task": "UI: Persistent Audit Punch-List Panel",
     "status": "OPEN",
-    "notes": "Create the UI list view that reflects the Audit YAML. Implement 'Click to Zoom' logic that centers the canvas on the violation target.",
+    "notes": "Create UI list view that reflects Audit YAML. Implement 'Click to Zoom' on violation targets.",
     "spec_reference": "talus_trace_intent.md"
   },
   {

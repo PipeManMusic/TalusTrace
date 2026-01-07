@@ -4,10 +4,11 @@
 from PySide6.QtWidgets import QGraphicsRectItem
 
 class TwistedPairItem(QGraphicsRectItem):
-    def __init__(self, path_nodes=None, transformer=None, parent=None):
+    def __init__(self, path_nodes=None, transformer=None, theme=None, parent=None):
         super().__init__(parent)
         self.path_nodes = path_nodes or []
         self.transformer = transformer
+        self.theme = theme
         # For demo, set a bounding rect based on path
         if self.path_nodes and self.transformer:
             x0, y0 = self.path_nodes[0]
@@ -16,13 +17,21 @@ class TwistedPairItem(QGraphicsRectItem):
             h = abs(self.transformer.mm_to_px(y1 - y0)) + 10
             self.setRect(0, 0, w if w > 0 else 10, h if h > 0 else 10)
 
-    def determine_lod(self, zoom_scale):
+    def determine_lod(self, view_scale=None, zoom_scale=None):
         """
         Returns 'HELIX' for high detail, 'HATCH' for low detail based on zoom scale.
-        Default threshold: 1.0
+        Threshold can be set via theme.get_dimension('lod_threshold_scale') or defaults to 1.0
+        Accepts either view_scale or zoom_scale for compatibility.
         """
+        scale = view_scale if view_scale is not None else zoom_scale
         lod_threshold_scale = 1.0
-        if zoom_scale >= lod_threshold_scale:
+        if self.theme and hasattr(self.theme, 'get_dimension'):
+            val = self.theme.get_dimension('lod_threshold_scale')
+            if val is not None:
+                lod_threshold_scale = val
+        if scale is None:
+            scale = 1.0
+        if scale >= lod_threshold_scale:
             return "HELIX"
         else:
             return "HATCH"
