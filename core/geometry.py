@@ -10,3 +10,11 @@ def calculate_bundle_diameter(wire_diameters: List[float]) -> float:
     if not wire_diameters:
         return 0.0
     return 1.15 * math.sqrt(sum(d ** 2 for d in wire_diameters))
+
+
+def snap_to_grid_mm(value_mm: float, grid_step_mm: float) -> float:
+    """
+    Rounds a mm value to the nearest grid step (orthogonal snapping).
+    Example: grid_step_mm=2.0 snaps to nearest multiple of 2.0mm.
+    """
+    return round(value_mm / grid_step_mm) * grid_step_mm

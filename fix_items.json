@@ -75,7 +75,7 @@
     "id": "PH1-4.1",
     "phase": 1,
     "task": "UI: Theme Token Loader Utility",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "notes": "Load theme_tokens.json and provide helper methods to resolve semantic color keys (e.g., wire_default).",
     "spec_reference": "theme_tokens.json"
   },
