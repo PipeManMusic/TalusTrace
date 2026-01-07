@@ -14,6 +14,12 @@ class Wire(BaseModel):
     id: str = Field(..., description="Unique identifier for the wire")
     source_pin_id: str = Field(..., description="Pin ID at the start of the wire")
     target_pin_id: str = Field(..., description="Pin ID at the end of the wire")
-    path_nodes: List[Tuple[float, float]] = Field(default_factory=list, description="List of (x, y) mm tuples representing the wire path")
-    status: str = Field("UNDEFINED", description="Industrial status (default 'UNDEFINED', e.g., 'CALCULATED')")
+    path_nodes: List[Tuple[float, float]] = Field(
+        default_factory=list, 
+        description="List of (x, y) mm tuples representing the wire path"
+    )
+    status: str = Field(
+        "UNDEFINED", 
+        description="Industrial status (default 'UNDEFINED', e.g., 'CALCULATED')"
+    )
     revision: int = Field(0, description="Revision number for optimistic locking.")

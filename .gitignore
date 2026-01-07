@@ -6,3 +6,4 @@ venv/
 *.code-workspace
 *.bak
 *.tmp
+manage_issues.py

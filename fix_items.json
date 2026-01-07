@@ -35,7 +35,7 @@
     "id": "PH1-2.1",
     "phase": 1,
     "task": "Infra: Define BaseCommand Interface",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "notes": "Create Abstract Base Class with redo(), undo(), and base_revision requirement for every transaction.",
     "spec_reference": "talus_trace_implementation_guide.md"
   },
@@ -43,7 +43,7 @@
     "id": "PH1-2.2",
     "phase": 1,
     "task": "Infra: Implement CommandManager Execution Logic",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Implement logic to check command.base_revision against entity.revision. Fail if state is stale.",
     "spec_reference": "talus_trace_arch_infra_spec.md"
   },
@@ -51,7 +51,7 @@
     "id": "PH1-2.3",
     "phase": 1,
     "task": "Infra: ProjectState YAML Serialization Round-Trip",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "notes": "Implement .to_yaml() and .from_yaml() for ProjectState. Test that mm precision is bit-perfect after reload.",
     "spec_reference": "talus_trace_data_schema.md"
   },

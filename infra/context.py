@@ -2,7 +2,6 @@ import yaml
 from pathlib import Path
 from core.models import Harness
 
-
 class ProjectContext:
     def __init__(self):
         self.harness = Harness()

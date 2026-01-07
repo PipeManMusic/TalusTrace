@@ -1,6 +1,6 @@
 import pytest
 import math
-from talustrace.backend.geometry import calculate_bundle_diameter
+from core.geometry import calculate_bundle_diameter
 
 def test_bundle_diameter_standard_calc():
     """
