@@ -1,482 +1,274 @@
 [
   {
-    "id": 1,
-    "type": "cleanup",
-    "title": "Project Sanitation",
-    "description": "Delete 'talus_trace/' (legacy package) and 'context_restore.json'. Ensure only 'talustrace/' remains. Verify 'dev.py' runs without errors.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH1-1.1",
+    "phase": 1,
+    "task": "Directory Scaffolding & Strict Import Enforcement",
+    "status": "DONE",
+    "notes": "Create core/, infra/, api/, and ui/ folders. Add a CI-level test or script to ensure core/ never imports from any other layer.",
+    "spec_reference": "talus_trace_codebase_architecture.md"
   },
   {
-    "id": 2,
-    "type": "architecture",
-    "title": "TDD: Context Manager (Decoupling)",
-    "description": "Create 'tests/backend/test_project_context.py'. Test a new 'ProjectContext' class that holds the 'Harness' model and 'Dirty' state, decoupled from the GUI. This is the first step toward server-sync.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "Test file created and committed. ProjectContext TDD in place and staged for review."
-      }
-    ]
+    "id": "PH1-1.2",
+    "phase": 1,
+    "task": "Core: Implement Pin Pydantic Model",
+    "status": "DONE",
+    "notes": "Define Pin with head_mm and tail_mm float tuples. Include validation to ensure coordinates are always within project bounds.",
+    "spec_reference": "talus_trace_arch_core_spec.md"
   },
   {
-    "id": 3,
-    "type": "backend",
-    "title": "Impl: ProjectContext",
-    "description": "Create 'talustrace/backend/context.py'. Move 'load_harness', 'save_harness', and 'dirty' logic from 'app.py' into this class. 'app.py' becomes a thin view controller.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "ProjectContext implementation complete and committed. Awaiting review."
-      }
-    ]
+    "id": "PH1-1.3",
+    "phase": 1,
+    "task": "Core: Implement Device Pydantic Model",
+    "status": "DONE",
+    "notes": "Implement Device model with is_generic and is_ghost flags. Ensure the revision field is initialized to 0.",
+    "spec_reference": "talus_trace_data_schema.md"
   },
   {
-    "id": 4,
-    "type": "backend",
-    "title": "TDD: TwistedPair Model & Migration",
-    "description": "Create 'tests/backend/test_model_twisted_pair.py'. Test the new Atomic TwistedPair model. Crucially, write a test that loads a 'Legacy Bundle' JSON and asserts it converts correctly to a 'TwistedPair'.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "TwistedPair TDD test created and committed. Migration test pending."
-      }
-    ]
+    "id": "PH1-1.4",
+    "phase": 1,
+    "task": "Core: Implement Wire Pydantic Model",
+    "status": "DONE",
+    "notes": "Define Wire with path_nodes as a List of mm tuples. Set default status to UNDEFINED.",
+    "spec_reference": "talus_trace_arch_core_spec.md"
   },
   {
-    "id": 5,
-    "type": "backend",
-    "title": "Impl: TwistedPair Model",
-    "description": "Update 'talustrace/backend/models.py'. Replace 'TwistedBundle' with 'TwistedPair'. Add a 'migration.py' module to handle the data conversion.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "TwistedPair model implemented and committed. Harness integration complete."
-      }
-    ]
+    "id": "PH1-2.1",
+    "phase": 1,
+    "task": "Infra: Define BaseCommand Interface",
+    "status": "IN_PROGRESS",
+    "notes": "Create Abstract Base Class with redo(), undo(), and base_revision requirement for every transaction.",
+    "spec_reference": "talus_trace_implementation_guide.md"
   },
   {
-    "id": 6,
-    "type": "backend",
-    "title": "TDD: Helix Math (Pure Logic)",
-    "description": "Create 'tests/backend/test_geometry_helix.py'. Test 'calculate_double_helix(p1, p2, amp, freq)' returns a list of points. Ensure this runs without Qt (headless).",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "TDD test for calculate_double_helix created and committed. Verifies signature, output, amplitude, and pure Python logic."
-      }
-    ]
+    "id": "PH1-2.2",
+    "phase": 1,
+    "task": "Infra: Implement CommandManager Execution Logic",
+    "status": "OPEN",
+    "notes": "Implement logic to check command.base_revision against entity.revision. Fail if state is stale.",
+    "spec_reference": "talus_trace_arch_infra_spec.md"
   },
   {
-    "id": 7,
-    "type": "backend",
-    "title": "Impl: Helix Math",
-    "description": "Implement the math in 'talustrace/backend/geometry.py'. Use pure Python math/numpy to generate the sine/cosine waves along the vector.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "calculate_double_helix implemented in pure Python (math only), committed, and passes all TDD tests."
-      }
-    ]
+    "id": "PH1-2.3",
+    "phase": 1,
+    "task": "Infra: ProjectState YAML Serialization Round-Trip",
+    "status": "OPEN",
+    "notes": "Implement .to_yaml() and .from_yaml() for ProjectState. Test that mm precision is bit-perfect after reload.",
+    "spec_reference": "talus_trace_data_schema.md"
   },
   {
-    "id": 8,
-    "type": "frontend",
-    "title": "TDD: TwistedPair Item (Container)",
-    "description": "Create 'tests/frontend/test_twisted_pair_item.py'. Test that instantiating 'TwistedPairItem' creates two 'TwistAnchorItems' and one 'DoubleHelixItem'. Test that selecting the wire selects the anchors (Atomic Selection).",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "TDD test for TwistedPairItem created and committed. Verifies structure, children, data sync, and selection flag."
-      }
-    ]
+    "id": "PH1-3.1",
+    "phase": 1,
+    "task": "API: Implement Singleton Accessor",
+    "status": "OPEN",
+    "notes": "Create the TalusAPI gateway. Ensure only one instance can exist to maintain the Stream of Truth.",
+    "spec_reference": "talus_trace_intent.md"
   },
   {
-    "id": 9,
-    "type": "frontend",
-    "title": "Impl: TwistedPair Item",
-    "description": "Create 'talustrace/frontend/twisted_pair.py'. Implement the container logic. Ensure it acts as a single QGraphicsObject parent.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "Frontend implementation of TwistedPairItem, TwistAnchorItem, and DoubleHelixPathItem committed. Satisfies TDD and QGraphicsObject/child structure."
-      }
-    ]
+    "id": "PH1-3.2",
+    "phase": 1,
+    "task": "API: Implement State Update Observer",
+    "status": "OPEN",
+    "notes": "Create a callback/signal system to notify the UI only after a successful command commitment.",
+    "spec_reference": "talus_trace_implementation_guide.md"
   },
   {
-    "id": 10,
-    "type": "frontend",
-    "title": "TDD: Grid Snapping Logic",
-    "description": "Update 'tests/frontend/test_twisted_pair_item.py'. Test that when an Anchor is moved to (103, 103), its child Pins snap to (100, 100) (assuming 20px grid).",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "Failing test for pin grid snapping (test_pin_snapping_behavior) added to test_twisted_pair_item.py. Verifies pin_a/pin_b snap to nearest 20px grid when anchors are moved off-grid."
-      }
-    ]
+    "id": "PH1-4.1",
+    "phase": 1,
+    "task": "UI: Theme Token Loader Utility",
+    "status": "OPEN",
+    "notes": "Load theme_tokens.json and provide helper methods to resolve semantic color keys (e.g., wire_default).",
+    "spec_reference": "theme_tokens.json"
   },
   {
-    "id": 11,
-    "type": "frontend",
-    "title": "Impl: Grid Snapping & Leader Lines",
-    "description": "Implement 'update_layout' in TwistedPairItem. Draw the 'Leader Line' from the Anchor (off-grid) to the Pin (on-grid).",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "Frontend refactored: TwistedPairItem now has only anchors and helix as direct children; pins and leaders are children of anchors. Grid snapping and leader lines implemented using scene-to-local mapping. Test updated to check pin scenePos. Documentation updated to match new architecture. All tests passing."
-      }
-    ]
+    "id": "PH1-4.2",
+    "phase": 1,
+    "task": "UI: Coordinate Transformation Math",
+    "status": "OPEN",
+    "notes": "Implement the logic to scale mm to pixels based on theme_tokens.json physical_scale.",
+    "spec_reference": "talus_trace_canvas_spec.md (proposed)"
   },
   {
-    "id": 12,
-    "type": "frontend",
-    "title": "TDD: Signal Propagation",
-    "description": "Create 'tests/frontend/test_signal_propagation.py'. Connect a 'Red' wire to Pin A. Assert Pin B updates its internal ID and the Helix turns Red.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "TDD for TwistedPairItem dual-pin structure and signal propagation created in tests/frontend/test_signal_propagation.py. Covers pin structure, signal assignment, and propagation. Currently fails as expected (single pin per anchor)."
-      }
-    ]
+    "id": "PH1-4.3",
+    "phase": 1,
+    "task": "UI: Canvas Background Grid Rendering",
+    "status": "OPEN",
+    "notes": "Implement drawBackground in QGraphicsView using 20px minor and 100px major grid lines.",
+    "spec_reference": "theme_tokens.json"
   },
   {
-    "id": 13,
-    "type": "frontend",
-    "title": "Impl: Signal Propagation",
-    "description": "Wire up the 'wire_connected' signals in 'TwistedPairItem'. Implement the bridge logic to sync metadata between ends.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "Dual pins and signal propagation implemented for TwistedPairItem. Both anchors now have two pins and leaders, with correct snapping and visuals. set_signal/get_signal logic added. Tests updated and passing for new structure and logic."
-      }
-    ]
+    "id": "PH1-4.4",
+    "phase": 1,
+    "task": "UI: Implement Generic DeviceItem Visuals",
+    "status": "OPEN",
+    "notes": "Render a basic rect based on Core mm. Include logic for red dashed outline if is_ghost is True.",
+    "spec_reference": "talus_trace_arch_ui_spec.md"
   },
   {
-    "id": 14,
-    "type": "backend",
-    "title": "TDD: Library Manager (IO)",
-    "description": "Create 'tests/backend/test_library.py'. Test saving a Device to YAML and reading it back. Test handling of 'svg_content' fields.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "TDD for TwistedPairItem helix rendering created in tests/frontend/test_helix_rendering.py. Covers path existence, update on anchor move, and strand/color property access. Currently fails until helix visuals are implemented."
-      }
-    ]
+    "id": "PH2-1.1",
+    "phase": 2,
+    "task": "Core: Orthogonal Grid Snapping Logic",
+    "status": "OPEN",
+    "notes": "Implement helper in Core to round any mm input to the nearest 20px-equivalent grid coordinate.",
+    "spec_reference": "talus_trace_functional_logic.md"
   },
   {
-    "id": 15,
-    "type": "backend",
-    "title": "Impl: Library Manager",
-    "description": "Create 'talustrace/backend/library.py'. Implement 'LibraryManager' class with methods 'scan_library()', 'save_to_library()', 'load_device()'.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "Helix rendering for TwistedPairItem completed: visuals, color API, and all helix rendering tests passing. set_strand_colors implemented and verified."
-      }
-    ]
+    "id": "PH2-1.2",
+    "phase": 2,
+    "task": "Infra: MOVE_NODE Command Implementation",
+    "status": "OPEN",
+    "notes": "Transaction to update a specific point in a wire's path_nodes. Must support Undo/Redo.",
+    "spec_reference": "talus_trace_implementation_guide.md"
   },
   {
-    "id": 16,
-    "type": "frontend",
-    "title": "TDD: SVG Device Item",
-    "description": "Create 'tests/frontend/test_svg_device.py'. Test 'SvgDeviceItem' renders a mock SVG and places pins at explicit 'anchor_x/y' coordinates.",
-    "status": "staging",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH2-2.1",
+    "phase": 2,
+    "task": "Core: Spatial Hashing for Wire Segments",
+    "status": "OPEN",
+    "notes": "Implement a hash map of wire segments to find overlapping paths on the grid.",
+    "spec_reference": "talus_trace_wire_bundle_spec.md"
   },
   {
-    "id": 17,
-    "type": "frontend",
-    "title": "TDD: Pin Rotation",
-    "description": "Create 'tests/frontend/test_twisted_pair_rotation.py'. Test that rotate_90() on anchor updates model and layout.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH2-2.2",
+    "phase": 2,
+    "task": "Core: Automatic Bundle Grouping Logic",
+    "status": "OPEN",
+    "notes": "Logic to group wires sharing a spatial hash into a logical Bundle Segment.",
+    "spec_reference": "talus_trace_wire_bundle_spec.md"
   },
   {
-    "id": 18,
-    "type": "frontend",
-    "title": "Impl: Pin Rotation",
-    "description": "Implement rotate_90() and pin layout logic in TwistedPairItem/TwistAnchorItem.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH2-3.1",
+    "phase": 2,
+    "task": "UI: Implement Wire Label Drag Constraints",
+    "status": "OPEN",
+    "notes": "Use itemChange to keep labels snapped to the parent wire's orthogonal path.",
+    "spec_reference": "talus_trace_wire_labels_spec.md"
   },
   {
-    "id": 19,
-    "type": "polish",
-    "title": "Final Polish & Spec Sync",
-    "description": "Synchronize documentation/spec and code for Twisted Pair. Add docstrings, update spec, and ensure all features are documented.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH2-3.2",
+    "phase": 2,
+    "task": "Core: Calculate Label MM Position from T-Pos",
+    "status": "OPEN",
+    "notes": "Interpolate along a multi-segment wire to find precise mm coordinates for a label at t=0.5.",
+    "spec_reference": "talus_trace_wire_labels_spec.md"
   },
   {
-    "id": 20,
-    "type": "backend",
-    "title": "Fix Project Context & Models",
-    "description": "Convert Harness and TwistedPair to Pydantic models, add meta and twisted_pairs fields, and ensure ProjectContext serialization works.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH3-1.1",
+    "phase": 3,
+    "task": "Infra: Background Worker Thread Pool",
+    "status": "OPEN",
+    "notes": "Initialize thread pool for non-blocking engineering math tasks.",
+    "spec_reference": "talus_trace_implementation_guide.md"
   },
   {
-    "id": 21,
-    "type": "frontend",
-    "title": "Fix Twisted Pair Visuals & Layout",
-    "description": "Make TwistedPairItem pin layout symmetrical, color leaders, and ensure helix follows anchors.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH3-1.2",
+    "phase": 3,
+    "task": "Core: Implement Packing Factor Calculation",
+    "status": "OPEN",
+    "notes": "Implement D = 1.15 * sqrt(sum d^2) for bundle sizing.",
+    "spec_reference": "talus_trace_functional_logic.md"
   },
   {
-    "id": 22,
-    "type": "frontend",
-    "title": "Elbows",
-    "description": "Implement elbow routing for wires. Allow user to drag elbow points to create right-angle bends.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {
-        "timestamp": "2026-01-06T00:00:00",
-        "content": "Paused for now. Focus shifted to grid snapping and pin offsets."
-      }
-    ]
+    "id": "PH3-2.1",
+    "phase": 3,
+    "task": "UI: Procedural Helix Path Generation",
+    "status": "OPEN",
+    "notes": "Generate offset sine-wave points along a Bezier path for Twisted Pair rendering.",
+    "spec_reference": "talus_trace_spec_twisted_pair.md"
   },
   {
-    "id": 23,
-    "type": "frontend",
-    "title": "Fix: Pin Offsets & Zoom",
-    "description": "Enforce grid snapping for both control node and pins. Pins use (-20,20) and (-20,-20) offsets, rotated by anchor rotation. Demo view zoom set to 3.0.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH3-1.1",
+    "phase": 3,
+    "task": "Infra: Worker Thread Pool & Event Loop Integration",
+    "status": "OPEN",
+    "notes": "Initialize the concurrent.futures ThreadPoolExecutor. Implement the logic to pass tasks from the API and receive 'CalculationComplete' signals back to the UI thread.",
+    "spec_reference": "talus_trace_implementation_guide.md"
   },
   {
-    "id": 24,
-    "type": "frontend",
-    "title": "Impl: Elbow Data & Rendering",
-    "description": "Add 'elbows' list to TwistedPair model and update DoubleHelixPathItem to render multi-segment paths.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH3-1.2",
+    "phase": 3,
+    "task": "Core: Implement Industrial Packing Factor Calculation",
+    "status": "OPEN",
+    "notes": "Implement the D = 1.15 * sqrt(sum d^2) formula in the Core. Create unit tests verifying bundle sizing for 1, 5, and 20-wire configurations.",
+    "spec_reference": "talus_trace_functional_logic.md"
   },
   {
-    "id": 25,
-    "type": "frontend",
-    "title": "Fix: Color Sync, Artifacts & Visual Fidelity",
-    "description": "Sync pin colors on both ends, fix rendering artifacts, and enforce global theme (3px solid lines, 10px control nodes).",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH3-2.1",
+    "phase": 3,
+    "task": "UI: Procedural Helix Sine Wave Logic",
+    "status": "OPEN",
+    "notes": "Implement the math for offsetting points along a Bezier path normal. Generate the raw coordinate points for two intertwining helix paths.",
+    "spec_reference": "talus_trace_spec_twisted_pair.md"
   },
   {
-    "id": 26,
-    "type": "frontend",
-    "title": "Final Visual Polish & Z-Ordering",
-    "description": "Enforce anchors on top, remove borders, and finalize visual defaults.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH3-2.2",
+    "phase": 3,
+    "task": "UI: Twisted Pair LOD Switcher",
+    "status": "OPEN",
+    "notes": "Implement logic to swap between Helix (High Detail) and Hatch (Low Detail) based on the lod_threshold_scale in theme_tokens.json.",
+    "spec_reference": "talus_trace_spec_twisted_pair.md"
   },
   {
-    "id": 27,
-    "type": "frontend",
-    "title": "Fix Z-Ordering & Defaults",
-    "description": "Force leaders behind anchors and match default wire color.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH3-3.1",
+    "phase": 3,
+    "task": "Infra: Design Audit Logic & Violation Pydantic Model",
+    "status": "OPEN",
+    "notes": "Define the structure for a 'Violation' (severity, target_id, message). Implement the logic that generates these when a wire is UNDEFINED.",
+    "spec_reference": "talus_trace_data_schema.md"
   },
   {
-    "id": 28,
-    "type": "ui",
-    "title": "Impl: Device Creator Wizard",
-    "description": "Create a new Dialog 'DeviceCreatorWizard'. Steps: Import SVG -> Scale -> Click to Place Pins -> Save.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH3-3.2",
+    "phase": 3,
+    "task": "UI: Persistent Audit Punch-List Panel",
+    "status": "OPEN",
+    "notes": "Create the UI list view that reflects the Audit YAML. Implement 'Click to Zoom' logic that centers the canvas on the violation target.",
+    "spec_reference": "talus_trace_intent.md"
   },
   {
-    "id": 29,
-    "type": "architecture",
-    "title": "Refactor: Command Pattern (Undo/Redo) Setup",
-    "description": "Initialize 'QUndoStack' in 'app.py'. Create the base 'QUndoCommand' structure. This is critical for industrial robustness.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH4-1.1",
+    "phase": 4,
+    "task": "Infra: Isolated YAML Specification Loader",
+    "status": "OPEN",
+    "notes": "Create a secure loader for Engineering Standards (SAE/ISO). Ensure each entity can only reference one standard at a time for O(1) performance.",
+    "spec_reference": "talus_trace_data_schema.md"
   },
   {
-    "id": 30,
-    "type": "architecture",
-    "title": "TDD: Add/Delete Commands",
-    "description": "Create 'tests/commands/test_cmd_add_delete.py'. Test that executing 'AddDeviceCommand' adds an item, and 'undo()' removes it cleanly.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH4-1.2",
+    "phase": 4,
+    "task": "Core: Ampacity vs. Gauge Validation Logic",
+    "status": "OPEN",
+    "notes": "Implement the Core check that compares assigned wire gauge against the engineering standard's limits. Trigger an Audit Violation on failure.",
+    "spec_reference": "talus_trace_arch_core_spec.md"
   },
   {
-    "id": 31,
-    "type": "architecture",
-    "title": "Impl: Add/Delete Commands",
-    "description": "Implement 'AddDeviceCommand', 'DeleteDeviceCommand', 'AddWireCommand', 'DeleteWireCommand'. Replace direct calls in 'app.py' with 'undo_stack.push(cmd)'.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH4-2.1",
+    "phase": 4,
+    "task": "UI: Canvas 'Formboard Mode' Toggle",
+    "status": "OPEN",
+    "notes": "Implement the visual swap that hides logical labels and scales wires to their real-world outside diameter (OD).",
+    "spec_reference": "talus_trace_intent.md"
   },
   {
-    "id": 32,
-    "type": "architecture",
-    "title": "TDD: Move Command",
-    "description": "Create 'tests/commands/test_cmd_move.py'. Test dragging an item, releasing, and undoing the move returns it to exact previous coordinates.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH4-2.2",
+    "phase": 4,
+    "task": "UI: Tiled PDF Printing Engine",
+    "status": "OPEN",
+    "notes": "Implement logic to split a 1:1 Formboard view across multiple A4/Letter sheets with alignment markers for physical assembly.",
+    "spec_reference": "talus_trace_intent.md"
   },
   {
-    "id": 33,
-    "type": "architecture",
-    "title": "Impl: Move Command",
-    "description": "Implement 'MoveCommand'. Hook into the QGraphicsItem 'mouseReleaseEvent' to push this command only after a drag finishes.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
+    "id": "PH5-1.1",
+    "phase": 5,
+    "task": "Infra: Distributed Compute Network Gateway",
+    "status": "OPEN",
+    "notes": "Optional/Advanced: Implement the serializable interface to offload Calculation Transactions to a remote server instead of a local thread.",
+    "spec_reference": "talus_trace_implementation_guide.md"
   },
   {
-    "id": 34,
-    "type": "architecture",
-    "title": "TDD: Property Change Command",
-    "description": "Test changing a wire color or device label via context menu can be undone.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 35,
-    "type": "architecture",
-    "title": "Impl: Property Change Command",
-    "description": "Implement 'ChangePropertyCommand'. Use generic setattr logic or specific methods to handle model updates via Undo Stack.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 36,
-    "type": "output",
-    "title": "TDD: Formboard Printer (1:1)",
-    "description": "Create 'tests/backend/test_formboard_print.py'. Setup a headless QPrinter. Test that the scene rect is mapped correctly to the page rect.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 37,
-    "type": "output",
-    "title": "Impl: Formboard Printer",
-    "description": "Update 'printer.py'. Add 'print_formboard(scene)'. Use QPrinter to generate a PDF or print to plotter. Implement 'Tile Printing' if the harness is larger than the paper.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 38,
-    "type": "output",
-    "title": "Impl: Wire Table Export",
-    "description": "Implement 'Export -> CSV' for the wire list. Industry users need this for cutting machines.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 39,
-    "type": "polish",
-    "title": "TDD: Integration Test (Save/Load)",
-    "description": "Create 'tests/integration/test_full_cycle.py'. Create a harness, add Twisted Pair, Save, Clear, Load. Verify full integrity.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 40,
-    "type": "polish",
-    "title": "UI: User Feedback & Error Handling",
-    "description": "Add a proper 'Message Log' dock (Output window) instead of just printing to console. Catch exceptions in Command executions and log them visible to user.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 41,
-    "type": "polish",
-    "title": "Docs: User Guide",
-    "description": "Create 'docs/user_guide.md'. Document the 'Twist' workflow, Library Wizard, and Keyboard Shortcuts.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 42,
-    "type": "polish",
-    "title": "Docs: Developer Guide",
-    "description": "Create 'docs/dev_guide.md'. Document the 'Full-File Overwrite' workflow and how to run the new TDD suite.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 43,
-    "type": "release",
-    "title": "Packaging: PyInstaller",
-    "description": "Create 'release.spec'. Configure PyInstaller to bundle the app into a single executable for Linux/Windows.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 44,
-    "type": "release",
-    "title": "Release: v1.0.0 Candidate",
-    "description": "Run full regression suite. Tag git commit. Generate binary. This marks the transition from 'Prototype' to 'Product'.",
-    "status": "open",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 45,
-    "type": "feature",
-    "title": "Fix: Elbow Snapping",
-    "description": "Enforce 20px grid snapping for ElbowHandle using ItemPositionChange.",
-    "status": "closed",
-    "created_at": "2026-01-06T16:39:00.070922",
-    "notes": []
+    "id": "PH5-1.2",
+    "phase": 5,
+    "task": "Final Architectural Stress Test",
+    "status": "OPEN",
+    "notes": "Validation session: Load a 1000-wire project and verify 60FPS UI performance and bit-perfect YAML round-trips.",
+    "spec_reference": "talus_trace_intent.md"
   }
 ]
