@@ -1,12 +1,12 @@
 [
   {
-    "id": "PH1-1.1",
-    "phase": 1,
-    "task": "Directory Scaffolding & Strict Import Enforcement",
+    "id": "PH3-3.1",
+    "phase": 3,
+    "task": "Infra: Design Audit Logic & Violation Pydantic Model",
     "status": "DONE",
-    "notes": "Create core/, infra/, api/, and ui/ folders. Add a CI-level test or script to ensure core/ never imports from any other layer.",
-    "spec_reference": "talus_trace_codebase_architecture.md"
-  {
+    "notes": "Define the structure for a 'Violation' (severity, target_id, message). Implement the logic that generates these when a wire is UNDEFINED.",
+    "spec_reference": "talus_trace_data_schema.md"
+  },
     "id": "PH3-2.2",
     "phase": 3,
     "task": "UI: Twisted Pair LOD Switcher",
