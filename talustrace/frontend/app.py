@@ -22,6 +22,8 @@ from talustrace.frontend.items import DeviceItem, WireItem, TwistNodeItem
 from talustrace.frontend.twisted_bundle import TwistedBundleItem  # use façade module for bundle creation
 from talustrace.frontend.items_baseline import GRID_SIZE
 from talustrace.backend.models import Device, Wire, Harness
+# IMPORT THE WIZARD
+from talustrace.frontend.device_wizard import DeviceCreatorWizard
 
 class MainWindow(QMainWindow):
     def __init__(self, autosave_dir: Path | None = None, restore_policy: str = "prompt"):
@@ -527,6 +529,17 @@ class MainWindow(QMainWindow):
         act_exit = QAction("Exit", self)
         act_exit.triggered.connect(self.close)
         file_menu.addAction(act_exit)
+        
+        # Tools Menu
+        tools_menu = menubar.addMenu("Tools")
+        
+        act_wiz = QAction("Device Creator Wizard", self)
+        act_wiz.triggered.connect(self.launch_wizard)
+        tools_menu.addAction(act_wiz)
+
+    def launch_wizard(self):
+        wiz = DeviceCreatorWizard(self)
+        wiz.exec()
 
     def _rebuild_recent_menu(self):
         if not self.recent_menu:

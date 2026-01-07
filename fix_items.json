@@ -1,60 +1,4 @@
-    {
-      "id": 26,
-      "type": "frontend",
-      "title": "Final Visual Polish & Z-Ordering",
-      "description": "Ensure anchors are always on top, remove all borders, and finalize visual defaults.",
-      "status": "in_progress",
-      "created_at": "2026-01-06T12:00:00",
-      "notes": []
-    },
-  {
-    "id": 26,
-    "type": "frontend",
-    "title": "Final Visual Polish & Defaults",
-    "description": "Halve control node size, enforce 180 deg symmetry, and implement requested interaction palette.",
-    "status": "in_progress",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
 [
-  {
-    "id": 21,
-    "type": "frontend",
-    "title": "Fix Twisted Pair Visuals & Layout",
-    "description": "Make TwistedPairItem pin layout symmetrical, color leaders, and ensure helix follows anchors.",
-    "status": "closed",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 20,
-    "type": "backend",
-    "title": "Fix Project Context & Models",
-    "description": "Convert Harness and TwistedPair to Pydantic models, add meta and twisted_pairs fields, and ensure ProjectContext serialization works.",
-    "status": "in_progress",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
-  {
-    "id": 22,
-    "type": "frontend",
-    "title": "Elbows",
-    "description": "Implement elbow routing for wires. Allow user to drag elbow points to create right-angle bends.",
-    "status": "in_progress",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "Paused for now. Focus shifted to grid snapping and pin offsets."}
-    ]
-  },
-  {
-    "id": 23,
-    "type": "frontend",
-    "title": "Fix: Pin Offsets & Zoom",
-    "description": "Enforce grid snapping for both control node and pins. Pins use (-20,20) and (-20,-20) offsets, rotated by anchor rotation. Demo view zoom set to 3.0.",
-    "status": "in_progress",
-    "created_at": "2026-01-06T12:00:00",
-    "notes": []
-  },
   {
     "id": 1,
     "type": "cleanup",
@@ -72,7 +16,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "Test file created and committed. ProjectContext TDD in place and staged for review."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "Test file created and committed. ProjectContext TDD in place and staged for review."
+      }
     ]
   },
   {
@@ -83,7 +30,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "ProjectContext implementation complete and committed. Awaiting review."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "ProjectContext implementation complete and committed. Awaiting review."
+      }
     ]
   },
   {
@@ -94,9 +44,11 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "TwistedPair TDD test created and committed. Migration test pending."}
-      { "id": 24, "title": "TDD: Move Command", "description": "Create 'tests/commands/test_cmd_move.py'. Test dragging an item, releasing, and undoing the move returns it to exact previous coordinates.", "status": "closed", "created_at": "2026-01-06T12:00:00", "notes": [] },
-    { "id": 25, "title": "Fix: Color Sync, Artifacts & Visual Fidelity", "status": "in_progress" }
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "TwistedPair TDD test created and committed. Migration test pending."
+      }
+    ]
   },
   {
     "id": 5,
@@ -106,7 +58,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "TwistedPair model implemented and committed. Harness integration complete."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "TwistedPair model implemented and committed. Harness integration complete."
+      }
     ]
   },
   {
@@ -117,7 +72,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "TDD test for calculate_double_helix created and committed. Verifies signature, output, amplitude, and pure Python logic."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "TDD test for calculate_double_helix created and committed. Verifies signature, output, amplitude, and pure Python logic."
+      }
     ]
   },
   {
@@ -128,7 +86,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "calculate_double_helix implemented in pure Python (math only), committed, and passes all TDD tests."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "calculate_double_helix implemented in pure Python (math only), committed, and passes all TDD tests."
+      }
     ]
   },
   {
@@ -139,7 +100,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "TDD test for TwistedPairItem created and committed. Verifies structure, children, data sync, and selection flag."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "TDD test for TwistedPairItem created and committed. Verifies structure, children, data sync, and selection flag."
+      }
     ]
   },
   {
@@ -150,7 +114,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "Frontend implementation of TwistedPairItem, TwistAnchorItem, and DoubleHelixPathItem committed. Satisfies TDD and QGraphicsObject/child structure."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "Frontend implementation of TwistedPairItem, TwistAnchorItem, and DoubleHelixPathItem committed. Satisfies TDD and QGraphicsObject/child structure."
+      }
     ]
   },
   {
@@ -161,7 +128,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "Failing test for pin grid snapping (test_pin_snapping_behavior) added to test_twisted_pair_item.py. Verifies pin_a/pin_b snap to nearest 20px grid when anchors are moved off-grid."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "Failing test for pin grid snapping (test_pin_snapping_behavior) added to test_twisted_pair_item.py. Verifies pin_a/pin_b snap to nearest 20px grid when anchors are moved off-grid."
+      }
     ]
   },
   {
@@ -172,7 +142,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "Frontend refactored: TwistedPairItem now has only anchors and helix as direct children; pins and leaders are children of anchors. Grid snapping and leader lines implemented using scene-to-local mapping. Test updated to check pin scenePos. Documentation updated to match new architecture. All tests passing."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "Frontend refactored: TwistedPairItem now has only anchors and helix as direct children; pins and leaders are children of anchors. Grid snapping and leader lines implemented using scene-to-local mapping. Test updated to check pin scenePos. Documentation updated to match new architecture. All tests passing."
+      }
     ]
   },
   {
@@ -183,7 +156,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "TDD for TwistedPairItem dual-pin structure and signal propagation created in tests/frontend/test_signal_propagation.py. Covers pin structure, signal assignment, and propagation. Currently fails as expected (single pin per anchor)."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "TDD for TwistedPairItem dual-pin structure and signal propagation created in tests/frontend/test_signal_propagation.py. Covers pin structure, signal assignment, and propagation. Currently fails as expected (single pin per anchor)."
+      }
     ]
   },
   {
@@ -194,7 +170,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "Dual pins and signal propagation implemented for TwistedPairItem. Both anchors now have two pins and leaders, with correct snapping and visuals. set_signal/get_signal logic added. Tests updated and passing for new structure and logic."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "Dual pins and signal propagation implemented for TwistedPairItem. Both anchors now have two pins and leaders, with correct snapping and visuals. set_signal/get_signal logic added. Tests updated and passing for new structure and logic."
+      }
     ]
   },
   {
@@ -205,7 +184,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "TDD for TwistedPairItem helix rendering created in tests/frontend/test_helix_rendering.py. Covers path existence, update on anchor move, and strand/color property access. Currently fails until helix visuals are implemented."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "TDD for TwistedPairItem helix rendering created in tests/frontend/test_helix_rendering.py. Covers path existence, update on anchor move, and strand/color property access. Currently fails until helix visuals are implemented."
+      }
     ]
   },
   {
@@ -216,7 +198,10 @@
     "status": "staging",
     "created_at": "2026-01-06T12:00:00",
     "notes": [
-      {"timestamp": "2026-01-06T00:00:00", "content": "Helix rendering for TwistedPairItem completed: visuals, color API, and all helix rendering tests passing. set_strand_colors implemented and verified."}
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "Helix rendering for TwistedPairItem completed: visuals, color API, and all helix rendering tests passing. set_strand_colors implemented and verified."
+      }
     ]
   },
   {
@@ -257,6 +242,83 @@
   },
   {
     "id": 20,
+    "type": "backend",
+    "title": "Fix Project Context & Models",
+    "description": "Convert Harness and TwistedPair to Pydantic models, add meta and twisted_pairs fields, and ensure ProjectContext serialization works.",
+    "status": "closed",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
+    "id": 21,
+    "type": "frontend",
+    "title": "Fix Twisted Pair Visuals & Layout",
+    "description": "Make TwistedPairItem pin layout symmetrical, color leaders, and ensure helix follows anchors.",
+    "status": "closed",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
+    "id": 22,
+    "type": "frontend",
+    "title": "Elbows",
+    "description": "Implement elbow routing for wires. Allow user to drag elbow points to create right-angle bends.",
+    "status": "closed",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": [
+      {
+        "timestamp": "2026-01-06T00:00:00",
+        "content": "Paused for now. Focus shifted to grid snapping and pin offsets."
+      }
+    ]
+  },
+  {
+    "id": 23,
+    "type": "frontend",
+    "title": "Fix: Pin Offsets & Zoom",
+    "description": "Enforce grid snapping for both control node and pins. Pins use (-20,20) and (-20,-20) offsets, rotated by anchor rotation. Demo view zoom set to 3.0.",
+    "status": "closed",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
+    "id": 24,
+    "type": "frontend",
+    "title": "Impl: Elbow Data & Rendering",
+    "description": "Add 'elbows' list to TwistedPair model and update DoubleHelixPathItem to render multi-segment paths.",
+    "status": "closed",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
+    "id": 25,
+    "type": "frontend",
+    "title": "Fix: Color Sync, Artifacts & Visual Fidelity",
+    "description": "Sync pin colors on both ends, fix rendering artifacts, and enforce global theme (3px solid lines, 10px control nodes).",
+    "status": "closed",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
+    "id": 26,
+    "type": "frontend",
+    "title": "Final Visual Polish & Z-Ordering",
+    "description": "Enforce anchors on top, remove borders, and finalize visual defaults.",
+    "status": "closed",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
+    "id": 27,
+    "type": "frontend",
+    "title": "Fix Z-Ordering & Defaults",
+    "description": "Force leaders behind anchors and match default wire color.",
+    "status": "closed",
+    "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
+    "id": 28,
     "type": "ui",
     "title": "Impl: Device Creator Wizard",
     "description": "Create a new Dialog 'DeviceCreatorWizard'. Steps: Import SVG -> Scale -> Click to Place Pins -> Save.",
@@ -265,7 +327,7 @@
     "notes": []
   },
   {
-    "id": 21,
+    "id": 29,
     "type": "architecture",
     "title": "Refactor: Command Pattern (Undo/Redo) Setup",
     "description": "Initialize 'QUndoStack' in 'app.py'. Create the base 'QUndoCommand' structure. This is critical for industrial robustness.",
@@ -274,7 +336,7 @@
     "notes": []
   },
   {
-    "id": 22,
+    "id": 30,
     "type": "architecture",
     "title": "TDD: Add/Delete Commands",
     "description": "Create 'tests/commands/test_cmd_add_delete.py'. Test that executing 'AddDeviceCommand' adds an item, and 'undo()' removes it cleanly.",
@@ -283,7 +345,7 @@
     "notes": []
   },
   {
-    "id": 23,
+    "id": 31,
     "type": "architecture",
     "title": "Impl: Add/Delete Commands",
     "description": "Implement 'AddDeviceCommand', 'DeleteDeviceCommand', 'AddWireCommand', 'DeleteWireCommand'. Replace direct calls in 'app.py' with 'undo_stack.push(cmd)'.",
@@ -292,7 +354,7 @@
     "notes": []
   },
   {
-    "id": 24,
+    "id": 32,
     "type": "architecture",
     "title": "TDD: Move Command",
     "description": "Create 'tests/commands/test_cmd_move.py'. Test dragging an item, releasing, and undoing the move returns it to exact previous coordinates.",
@@ -301,7 +363,7 @@
     "notes": []
   },
   {
-    "id": 25,
+    "id": 33,
     "type": "architecture",
     "title": "Impl: Move Command",
     "description": "Implement 'MoveCommand'. Hook into the QGraphicsItem 'mouseReleaseEvent' to push this command only after a drag finishes.",
@@ -310,7 +372,7 @@
     "notes": []
   },
   {
-    "id": 26,
+    "id": 34,
     "type": "architecture",
     "title": "TDD: Property Change Command",
     "description": "Test changing a wire color or device label via context menu can be undone.",
@@ -319,7 +381,7 @@
     "notes": []
   },
   {
-    "id": 27,
+    "id": 35,
     "type": "architecture",
     "title": "Impl: Property Change Command",
     "description": "Implement 'ChangePropertyCommand'. Use generic setattr logic or specific methods to handle model updates via Undo Stack.",
@@ -328,7 +390,7 @@
     "notes": []
   },
   {
-    "id": 28,
+    "id": 36,
     "type": "output",
     "title": "TDD: Formboard Printer (1:1)",
     "description": "Create 'tests/backend/test_formboard_print.py'. Setup a headless QPrinter. Test that the scene rect is mapped correctly to the page rect.",
@@ -337,7 +399,7 @@
     "notes": []
   },
   {
-    "id": 29,
+    "id": 37,
     "type": "output",
     "title": "Impl: Formboard Printer",
     "description": "Update 'printer.py'. Add 'print_formboard(scene)'. Use QPrinter to generate a PDF or print to plotter. Implement 'Tile Printing' if the harness is larger than the paper.",
@@ -346,7 +408,7 @@
     "notes": []
   },
   {
-    "id": 30,
+    "id": 38,
     "type": "output",
     "title": "Impl: Wire Table Export",
     "description": "Implement 'Export -> CSV' for the wire list. Industry users need this for cutting machines.",
@@ -355,7 +417,7 @@
     "notes": []
   },
   {
-    "id": 31,
+    "id": 39,
     "type": "polish",
     "title": "TDD: Integration Test (Save/Load)",
     "description": "Create 'tests/integration/test_full_cycle.py'. Create a harness, add Twisted Pair, Save, Clear, Load. Verify full integrity.",
@@ -364,7 +426,7 @@
     "notes": []
   },
   {
-    "id": 32,
+    "id": 40,
     "type": "polish",
     "title": "UI: User Feedback & Error Handling",
     "description": "Add a proper 'Message Log' dock (Output window) instead of just printing to console. Catch exceptions in Command executions and log them visible to user.",
@@ -373,7 +435,7 @@
     "notes": []
   },
   {
-    "id": 33,
+    "id": 41,
     "type": "polish",
     "title": "Docs: User Guide",
     "description": "Create 'docs/user_guide.md'. Document the 'Twist' workflow, Library Wizard, and Keyboard Shortcuts.",
@@ -382,7 +444,7 @@
     "notes": []
   },
   {
-    "id": 34,
+    "id": 42,
     "type": "polish",
     "title": "Docs: Developer Guide",
     "description": "Create 'docs/dev_guide.md'. Document the 'Full-File Overwrite' workflow and how to run the new TDD suite.",
@@ -391,7 +453,7 @@
     "notes": []
   },
   {
-    "id": 35,
+    "id": 43,
     "type": "release",
     "title": "Packaging: PyInstaller",
     "description": "Create 'release.spec'. Configure PyInstaller to bundle the app into a single executable for Linux/Windows.",
@@ -400,12 +462,21 @@
     "notes": []
   },
   {
-    "id": 36,
+    "id": 44,
     "type": "release",
     "title": "Release: v1.0.0 Candidate",
     "description": "Run full regression suite. Tag git commit. Generate binary. This marks the transition from 'Prototype' to 'Product'.",
     "status": "open",
     "created_at": "2026-01-06T12:00:00",
+    "notes": []
+  },
+  {
+    "id": 45,
+    "type": "feature",
+    "title": "Fix: Elbow Snapping",
+    "description": "Enforce 20px grid snapping for ElbowHandle using ItemPositionChange.",
+    "status": "closed",
+    "created_at": "2026-01-06T16:39:00.070922",
     "notes": []
   }
 ]
