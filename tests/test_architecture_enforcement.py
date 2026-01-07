@@ -56,5 +56,5 @@ def test_infra_serialization_location():
     project_root = Path(__file__).parent.parent
     # Based on the correction, models and context should be in /core
     assert (project_root / "core/models.py").exists(), "Models must be in /core"
-    assert (project_root / "core/context.py").exists() or (project_root / "talustrace/backend/context.py").exists(), \
+    assert (project_root / "core/context.py").exists() or (project_root / "infra/context.py").exists(), \
         "ProjectContext (Serialization) must be in a headless directory"
