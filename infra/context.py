@@ -7,6 +7,9 @@ class ProjectContext:
         self.harness = Harness()
         self.dirty = False
         self.current_file = None
+        # Add command_manager for infra command execution
+        from infra.commands import CommandManager
+        self.command_manager = CommandManager()
 
     def save_as(self, file_path: Path):
         with open(file_path, 'w') as f:

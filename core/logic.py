@@ -77,3 +77,19 @@ def calculate_label_mm_position(nodes, t):
         acc += seg_len
     # If t==1.0, return last node
     return nodes[-1]
+
+def check_bundle_constraints(wire_diameters: list[float]) -> dict | None:
+    """
+    Core engineering rule for bundle stiffness.
+    Aligned with PH3-1.2 and PH3-3.1.
+    """
+    diameter = calculate_packing_diameter(wire_diameters)
+    # Industrial Rule: Bundles > 40mm are too stiff for standard Bronco II routing
+    if diameter > 40.0:
+        return {
+            "category": "STIFFNESS",
+            "severity": "WARNING",
+            "value": diameter,
+            "message": f"Bundle diameter ({diameter:.2f}mm) exceeds 40mm flexible limit."
+        }
+    return None
