@@ -51,7 +51,7 @@
     "id": "PH1-2.3",
     "phase": 1,
     "task": "Infra: ProjectState YAML Serialization Round-Trip",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "notes": "Implement .to_yaml() and .from_yaml() for ProjectState. Test that mm precision is bit-perfect after reload.",
     "spec_reference": "talus_trace_data_schema.md"
   },
@@ -59,7 +59,7 @@
     "id": "PH1-3.1",
     "phase": 1,
     "task": "API: Implement Singleton Accessor",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Create the TalusAPI gateway. Ensure only one instance can exist to maintain the Stream of Truth.",
     "spec_reference": "talus_trace_intent.md"
   },
