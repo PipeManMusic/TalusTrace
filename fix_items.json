@@ -91,7 +91,7 @@
     "id": "PH1-4.3",
     "phase": 1,
     "task": "UI: Canvas Background Grid Rendering",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Implement drawBackground in QGraphicsView using 20px minor and 100px major grid lines.",
     "spec_reference": "theme_tokens.json"
   },
