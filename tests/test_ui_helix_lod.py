@@ -31,7 +31,12 @@ def test_lod_switcher_logic():
     high_detail_zoom = 2.0  # Zoomed in
     low_detail_zoom = 0.2   # Zoomed out
     
-    tp_item = TwistedPairItem()
+    # Provide minimal valid arguments for TwistedPairItem
+    dummy_path = [(0.0, 0.0), (10.0, 0.0)]
+    class DummyTransformer:
+        def mm_to_px(self, mm): return mm
+        def mm_to_px_tuple(self, pt): return pt
+    tp_item = TwistedPairItem(dummy_path, DummyTransformer())
     
     # Should use Helix (High Detail)
     assert tp_item.determine_lod(high_detail_zoom) == "HELIX"

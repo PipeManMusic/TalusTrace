@@ -15,7 +15,13 @@ def test_twisted_pair_lod_switching():
     mock_theme = MagicMock()
     mock_theme.get_dimension.return_value = lod_threshold
     
-    tp_item = TwistedPairItem(theme=mock_theme, transformer=mock_transformer)
+    mock_transformer.mm_to_px.return_value = 1.0
+    mock_transformer.mm_to_px_tuple.return_value = (0.0, 0.0)
+    
+    path = [(0.0, 0.0), (100.0, 0.0)]
+    
+    # Updated signature: (path_nodes, transformer)
+    tp_item = TwistedPairItem(path_nodes=path, transformer=mock_transformer)
     
     # Test Case 1: High Zoom (Close up) -> Expect High Fidelity Helix
     # In Qt, m11() represents the horizontal scaling factor

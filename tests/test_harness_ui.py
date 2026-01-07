@@ -5,7 +5,8 @@ from PySide6.QtCore import Qt, QRectF
 
 # Mocking core/api logic to ensure this script runs standalone 
 # Replace these imports with your actual project imports if preferred
-from core.geometry import calculate_bundle_diameter, generate_helix_points
+from core.logic import calculate_bundle_diameter
+from core.geometry import generate_helix_points
 from ui.coordinates import CoordinateTransformer
 
 class BundleItem(QGraphicsPathItem):

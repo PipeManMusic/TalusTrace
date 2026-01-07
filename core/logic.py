@@ -1,71 +1,63 @@
+import math
+from typing import List, Tuple, Optional, Dict, Any
+from core.geometry import SpatialHasher
+
 # PH3-1.2: Core: Implement Packing Factor Calculation
-def calculate_packing_diameter(wire_diameters):
+def calculate_bundle_diameter(wire_diameters: List[float]) -> float:
     """
-    Calculates bundle diameter using D = 1.15 * sqrt(sum d^2).
-    wire_diameters: list of float diameters (mm)
-    Returns float diameter (mm)
+    Calculates bundle diameter using the industrial formula (Spec 2.2):
+    D = 1.15 * sqrt(sum d^2).
     """
     if not wire_diameters:
         return 0.0
     return 1.15 * (sum(d**2 for d in wire_diameters) ** 0.5)
-from core.geometry import SpatialHasher
 
 # PH2-2.2: BundleEngine for automatic bundle grouping
 class BundleSegment:
-    def __init__(self, wire_ids, segment_key):
+    def __init__(self, wire_ids: List[str], segment_key: Tuple):
         self.wire_ids = wire_ids
         self.segment_key = segment_key
 
-
 class BundleEngine:
-    def __init__(self, grid_size=2.0):
+    def __init__(self, grid_size: float = 2.0):
         self.hasher = SpatialHasher(grid_size=grid_size)
 
-    def compute_bundles(self, wires):
+    def compute_bundles(self, wires: List[Any]) -> List[BundleSegment]:
         """
         Groups wires sharing a spatial hash into BundleSegments.
-        Returns a list of BundleSegment objects.
         """
         segment_map = {}
         for wire in wires:
             nodes = getattr(wire, 'path_nodes', [])
-            # For each segment in wire
             for i in range(len(nodes) - 1):
                 seg = (nodes[i], nodes[i+1])
                 key = self.hasher.get_key(seg)
                 if key not in segment_map:
                     segment_map[key] = set()
                 segment_map[key].add(wire.id)
-        # Create BundleSegments for segments with >1 wire
+        
         bundles = []
         for key, wire_ids in segment_map.items():
             if len(wire_ids) > 1:
                 bundles.append(BundleSegment(list(wire_ids), key))
         return bundles
 
-
 # PH2-3.2: Core: Calculate Label MM Position from T-Pos
-def calculate_label_mm_position(nodes, t):
+def calculate_label_mm_position(nodes: List[Tuple[float, float]], t: float) -> Tuple[float, float]:
     """
-    Interpolates the mm position along a multi-segment wire for a given t (0.0-1.0).
-    nodes: List of (x, y) mm tuples
-    t: float, 0.0=start, 1.0=end
-    Returns (x, y) mm tuple
+    Interpolates the mm position along a multi-segment wire (Spec 5).
     """
     if not nodes or len(nodes) < 2:
         raise ValueError("Wire must have at least two nodes")
-    # Calculate total length
+    
     segments = [(nodes[i], nodes[i+1]) for i in range(len(nodes)-1)]
-    lengths = []
-    for a, b in segments:
-        dx = b[0] - a[0]
-        dy = b[1] - a[1]
-        lengths.append((dx**2 + dy**2) ** 0.5)
+    lengths = [math.hypot(b[0]-a[0], b[1]-a[1]) for a, b in segments]
     total_length = sum(lengths)
+    
     if total_length == 0:
         return nodes[0]
+    
     target_length = t * total_length
-    # Walk segments to find where target_length falls
     acc = 0.0
     for idx, seg_len in enumerate(lengths):
         if acc + seg_len >= target_length:
@@ -75,16 +67,15 @@ def calculate_label_mm_position(nodes, t):
             y = a[1] + (b[1] - a[1]) * seg_t
             return (x, y)
         acc += seg_len
-    # If t==1.0, return last node
     return nodes[-1]
 
-def check_bundle_constraints(wire_diameters: list[float]) -> dict | None:
+# PH3-3.1: Engineering Rule for Bundle Stiffness
+def check_bundle_constraints(wire_diameters: List[float]) -> Optional[Dict[str, Any]]:
     """
-    Core engineering rule for bundle stiffness.
-    Aligned with PH3-1.2 and PH3-3.1.
+    Core engineering rule for bundle stiffness (Spec 7).
+    Standard Rule: Bundles > 40mm are too stiff for Bronco II routing.
     """
-    diameter = calculate_packing_diameter(wire_diameters)
-    # Industrial Rule: Bundles > 40mm are too stiff for standard Bronco II routing
+    diameter = calculate_bundle_diameter(wire_diameters)
     if diameter > 40.0:
         return {
             "category": "STIFFNESS",
