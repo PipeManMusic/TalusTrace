@@ -1,0 +1,55 @@
+from PySide6.QtWidgets import QGraphicsRectItem
+from PySide6.QtGui import QPen, QColor
+from PySide6.QtCore import QRectF, Qt
+
+class DeviceItem(QGraphicsRectItem):
+    def boundingRect(self):
+        meta = getattr(self.device_model, 'meta', {}) or {}
+        width_mm = meta.get('width_mm', 10)
+        height_mm = meta.get('height_mm', 10)
+        w = self.transformer.mm_to_px(width_mm)
+        h = self.transformer.mm_to_px(height_mm)
+        print(f"[DeviceItem.boundingRect] width_mm={width_mm}, height_mm={height_mm}, w={w}, h={h}, scale={self.transformer.physical_scale}")
+        return QRectF(0, 0, w, h)
+    def __init__(self, device_model, is_ghost=None, theme=None, transformer=None, parent=None):
+        # device_model: core.models.Device
+        from ui.coordinates import CoordinateTransformer
+        self.transformer = transformer or CoordinateTransformer(scale=1.0)
+        print(f"[DeviceItem.__init__] Using transformer.physical_scale = {self.transformer.physical_scale}")
+        self.device_model = device_model
+        meta = getattr(device_model, 'meta', {})
+        width_mm = meta.get('width_mm', 10)
+        height_mm = meta.get('height_mm', 10)
+        w = self.transformer.mm_to_px(width_mm)
+        h = self.transformer.mm_to_px(height_mm)
+        print(f"[DeviceItem.__init__] width_mm={width_mm}, height_mm={height_mm}, w={w}, h={h}")
+        super().__init__(0, 0, w, h)
+        self.setParentItem(parent)
+        # Prefer explicit is_ghost, else from model
+        self.is_ghost = is_ghost if is_ghost is not None else getattr(device_model, 'is_ghost', False)
+        self.theme = theme
+        self._outline_pen = self._make_pen()
+        self.setPen(self._outline_pen)
+        self.setBrush(Qt.NoBrush)
+
+    def _make_pen(self):
+        if self.is_ghost:
+            pen = QPen(QColor("red"))
+            pen.setStyle(Qt.DashLine)
+            pen.setWidth(3)
+        else:
+            color = QColor("#222")
+            if self.theme and hasattr(self.theme, "get_color"):
+                color = self.theme.get_color("device_outline")
+            pen = QPen(color)
+            pen.setStyle(Qt.SolidLine)
+            pen.setWidth(3)
+        return pen
+
+    def set_ghost(self, ghost: bool):
+        self.is_ghost = ghost
+        self._outline_pen = self._make_pen()
+        self.setPen(self._outline_pen)
+
+    def get_outline_pen(self):
+        return self._outline_pen

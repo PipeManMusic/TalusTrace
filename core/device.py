@@ -4,6 +4,7 @@ from typing import Optional, List, Tuple
 from core.pin import Pin
 
 class Device(BaseModel):
+    meta: dict = Field(default_factory=dict, description="Arbitrary device metadata, e.g. width_mm, height_mm")
     """
     Core Device model for Talus Trace.
     - name: Human-readable device name

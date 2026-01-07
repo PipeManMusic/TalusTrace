@@ -2,14 +2,16 @@ import json
 from pathlib import Path
 
 class CoordinateTransformer:
-    def __init__(self, theme_path=None):
+    def __init__(self, theme_path=None, scale=None):
         self.physical_scale = 1.0
         self.grid_size_mm = 1.0
+        if scale is not None:
+            self.physical_scale = float(scale)
         if theme_path is not None and Path(theme_path).exists():
             with open(theme_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
             dims = data.get("dimensions", {})
-            self.physical_scale = float(dims.get("physical_scale", 1.0))
+            self.physical_scale = float(dims.get("physical_scale", self.physical_scale))
             self.grid_size_mm = float(dims.get("grid_size_mm", 1.0))
 
     def mm_to_px(self, mm):

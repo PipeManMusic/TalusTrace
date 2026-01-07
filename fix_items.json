@@ -99,7 +99,7 @@
     "id": "PH1-4.4",
     "phase": 1,
     "task": "UI: Implement Generic DeviceItem Visuals",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Render a basic rect based on Core mm. Include logic for red dashed outline if is_ghost is True.",
     "spec_reference": "talus_trace_arch_ui_spec.md"
   },
