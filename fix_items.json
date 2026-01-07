@@ -7,13 +7,13 @@
     "notes": "Define the structure for a 'Violation' (severity, target_id, message). Implement the logic that generates these when a wire is UNDEFINED.",
     "spec_reference": "talus_trace_data_schema.md"
   },
-    "id": "PH3-2.2",
+  {
+    "id": "PH3-3.2",
     "phase": 3,
-    "task": "UI: Twisted Pair LOD Switcher",
+    "task": "UI: Persistent Audit Punch-List Panel",
     "status": "DONE",
-    "notes": "Implement logic to swap between Helix (High Detail) and Hatch (Low Detail) based on the lod_threshold_scale in theme_tokens.json.",
-    "spec_reference": "talus_trace_spec_twisted_pair.md"
-  },
+    "notes": "Create the UI list view that reflects the Audit YAML. Implement 'Click to Zoom' logic that centers the canvas on the violation target.",
+    "spec_reference": "talus_trace_intent.md"
   },
   {
     "id": "PH1-1.3",
