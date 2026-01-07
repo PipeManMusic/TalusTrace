@@ -163,7 +163,7 @@
     "id": "PH3-1.2",
     "phase": 3,
     "task": "Core: Implement Packing Factor Calculation",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Implement D = 1.15 * sqrt(sum d^2) for bundle sizing.",
     "spec_reference": "talus_trace_functional_logic.md"
   },
