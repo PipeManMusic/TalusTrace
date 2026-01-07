@@ -83,7 +83,7 @@
     "id": "PH1-4.2",
     "phase": 1,
     "task": "UI: Coordinate Transformation Math",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Implement the logic to scale mm to pixels based on theme_tokens.json physical_scale.",
     "spec_reference": "talus_trace_canvas_spec.md (proposed)"
   },
