@@ -1,3 +1,49 @@
+# PH3-2.1: Procedural Helix Sine Wave Logic
+import math
+
+def generate_helix_points(path, amplitude=2.0, pitch=5.0, num_points=20):
+    """
+    Generates two sets of helix points (A, B) offset by sine/cosine along the normal of the path.
+    path: list of (x, y) tuples (mm)
+    amplitude: float, helix amplitude (mm)
+    pitch: float, helix pitch (mm)
+    num_points: int, number of points to generate
+    Returns: (helix_a, helix_b) as lists of (x, y) tuples
+    """
+    if len(path) < 2:
+        raise ValueError("Path must have at least two points")
+    # For simplicity, treat as straight segment from path[0] to path[-1]
+    x0, y0 = path[0]
+    x1, y1 = path[-1]
+    dx = x1 - x0
+    dy = y1 - y0
+    length = math.hypot(dx, dy)
+    if length == 0:
+        return [path[0]], [path[0]]
+    # Unit tangent
+    tx = dx / length
+    ty = dy / length
+    # Unit normal (perpendicular)
+    nx = -ty
+    ny = tx
+    helix_a = []
+    helix_b = []
+    for i in range(num_points + 1):
+        t = (i / num_points) * length
+        # Sine/cosine offset for helix
+        offset_a = amplitude * math.sin(2 * math.pi * t / pitch)
+        offset_b = amplitude * math.cos(2 * math.pi * t / pitch)
+        # Base point along path
+        px = x0 + tx * t
+        py = y0 + ty * t
+        # Offset by normal
+        ax = px + nx * offset_a
+        ay = py + ny * offset_a
+        bx = px + nx * offset_b
+        by = py + ny * offset_b
+        helix_a.append((ax, ay))
+        helix_b.append((bx, by))
+    return helix_a, helix_b
 import math
 from typing import List
 

@@ -1,3 +1,31 @@
+# PH3-2.2: TwistedPairItem for LOD switching
+
+# PH3-2.2: TwistedPairItem for LOD switching and scene compatibility
+from PySide6.QtWidgets import QGraphicsRectItem
+
+class TwistedPairItem(QGraphicsRectItem):
+    def __init__(self, path_nodes=None, transformer=None, parent=None):
+        super().__init__(parent)
+        self.path_nodes = path_nodes or []
+        self.transformer = transformer
+        # For demo, set a bounding rect based on path
+        if self.path_nodes and self.transformer:
+            x0, y0 = self.path_nodes[0]
+            x1, y1 = self.path_nodes[-1]
+            w = abs(self.transformer.mm_to_px(x1 - x0))
+            h = abs(self.transformer.mm_to_px(y1 - y0)) + 10
+            self.setRect(0, 0, w if w > 0 else 10, h if h > 0 else 10)
+
+    def determine_lod(self, zoom_scale):
+        """
+        Returns 'HELIX' for high detail, 'HATCH' for low detail based on zoom scale.
+        Default threshold: 1.0
+        """
+        lod_threshold_scale = 1.0
+        if zoom_scale >= lod_threshold_scale:
+            return "HELIX"
+        else:
+            return "HATCH"
 from PySide6.QtWidgets import QGraphicsRectItem
 from PySide6.QtGui import QPen, QColor
 from PySide6.QtCore import QRectF, Qt

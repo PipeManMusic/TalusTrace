@@ -171,7 +171,7 @@
     "id": "PH3-2.1",
     "phase": 3,
     "task": "UI: Procedural Helix Path Generation",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Generate offset sine-wave points along a Bezier path for Twisted Pair rendering.",
     "spec_reference": "talus_trace_spec_twisted_pair.md"
   },
@@ -203,7 +203,7 @@
     "id": "PH3-2.2",
     "phase": 3,
     "task": "UI: Twisted Pair LOD Switcher",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Implement logic to swap between Helix (High Detail) and Hatch (Low Detail) based on the lod_threshold_scale in theme_tokens.json.",
     "spec_reference": "talus_trace_spec_twisted_pair.md"
   },
