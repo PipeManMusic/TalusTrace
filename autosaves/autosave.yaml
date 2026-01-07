@@ -1,21 +1,49 @@
+revision: 1
 meta: {}
-settings:
-  grid_size: 20
-devices: []
-wires: []
-twist_nodes:
-- id: '91975744'
-  x: -20.0
-  y: 60.0
-- id: def21e11
-  x: 180.0
-  y: 60.0
-bundles:
-- id: 4e36715b
-  from_node: '91975744'
-  to_node: def21e11
-  elbow:
-  - 160.0
-  - 0.0
-  amplitude: 5.0
-  wavelength: 40.0
+devices:
+- id: ab8c78eb
+  label: New Device
+  pins:
+  - id: '1'
+    label: null
+    side: right
+    anchor_x: null
+    anchor_y: null
+    meta: {}
+  x: -500.0
+  y: 0.0
+  svg_content: null
+  meta: {}
+- id: ef55e288
+  label: New Device
+  pins:
+  - id: '1'
+    label: null
+    side: left
+    anchor_x: null
+    anchor_y: null
+    meta: {}
+  x: -120.0
+  y: 0.0
+  svg_content: null
+  meta: {}
+wires:
+- id: 3a369b60
+  from_conn: ab8c78eb.1
+  to_conn: ef55e288.1
+  color: RD
+  gauge: null
+  route:
+  - - -280.0
+    - 40.0
+  - - -280.0
+    - 0.0
+  - - -140.0
+    - 0.0
+  - - -140.0
+    - 40.0
+  twisted: false
+  pair_id: null
+  labels: []
+  meta: {}
+twisted_pairs: []

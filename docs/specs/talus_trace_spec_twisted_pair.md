@@ -69,28 +69,72 @@ class TwistedPair(BaseModel):
     # Signal Data (Synced across the pair)
     wire_id_1: Optional[str] = None # High/Signal
     wire_id_2: Optional[str] = None # Low/Return
-4.2. Frontend Implementation (frontend/twisted_pair.py)We need a custom QGraphicsItem that manages the sub-items.Pythonclass TwistedPairItem(QGraphicsObject):
-    def __init__(self, model):
+```
+### 4.2. Frontend Implementation (frontend/twisted_pair.py)We need a custom QGraphicsItem that manages the sub-items.Pythonclass TwistedPairItem(QGraphicsObject):
+```python
+def __init__(self, model):
 
-        # 1. Create Anchors
-        self.anchor_a = TwistAnchorItem(self, model.node_a)
-        self.anchor_b = TwistAnchorItem(self, model.node_b)
-        self.helix = DoubleHelixPathItem(self)
+    # 1. Create Anchors
+    self.anchor_a = TwistAnchorItem(self, model.node_a)
+    self.anchor_b = TwistAnchorItem(self, model.node_b)
+    self.helix = DoubleHelixPathItem(self)
 
-        # Pins & Leaders are now CHILDREN of the Anchors. This keeps the TwistedPairItem container clean. Grid snapping is handled by mapping scene coordinates to the anchor's local space.
+    # Pins & Leaders are now CHILDREN of the Anchors. This keeps the TwistedPairItem container clean. Grid snapping is handled by mapping scene coordinates to the anchor's local space.
 
-    def update_layout(self):
-        """
-        Calculates pin positions based on Anchor Pos + Rotation + Grid Snap.
-        Updates the Bezier path for the helix.
-        """
-        pass
-        
-    def sync_colors(self):
-        """
-        Checks the wires connected to pins_a[0] and pins_a[1].
-        Updates pins_b to match.
-        Updates helix colors to match.
-        """
-        pass
-4.3. Procedural Helix RenderingTo draw the twisted look along a curve:Calculate the main Cubic Bezier path between Anchor A and Anchor B.Iterate along the path (e.g., every 5 pixels).At each point $t$, calculate the Normal Vector (perpendicular to direction).Offset two points using sin(t * frequency) and cos(t * frequency) scaled by the Normal.Connect these points to form two intertwining paths.5. Synchronization LogicThe "Sync" EventSince the twisted pair is a bridge, it must propagate identity.Event: Pin A1 receives a wire connection (e.g., Red, 18AWG, Label "CAN High").Logic:TwistedPairItem detects change on Pin A1.Updates internal model wire_id_1.Updates Pin B1 to virtually represent that same wire.Updates Helix Path A to Red.Triggers redraw.6. Development Phases (Issue Tracker)Phase 1: The Atomic Container[ ] Create TwistedPair model in backend.[ ] Create TwistedPairItem graphics container.[ ] Implement Atomic Deletion (selecting any part selects/deletes whole).Phase 2: Anchor & Pin Dynamics[ ] Implement TwistAnchorItem (The Drag Handle).[ ] Implement Pin rotation logic (Spacebar) with strict Grid Snapping.[ ] Draw "Tail" lines connecting Pins to Anchor.Phase 3: The Double Helix[ ] Implement DoubleHelixPathItem.[ ] Write algorithm to generate sine/cosine offsets along a Bezier curve.[ ] Bind colors to the wire_id state.Phase 4: Signal Propagation[ ] Implement observer logic: When a wire connects to End A, push data to End B.[ ] Ensure wire_id persists in YAML save/load.
+def update_layout(self):
+    """
+    Calculates pin positions based on Anchor Pos + Rotation + Grid Snap.
+    Updates the Bezier path for the helix.
+    """
+    pass
+    
+def sync_colors(self):
+    """
+    Checks the wires connected to pins_a[0] and pins_a[1].
+    Updates pins_b to match.
+    Updates helix colors to match.
+    """
+    pass
+```
+# Talus Trace Specification: Twisted Pair
+
+## 4.3 Rotation
+
+Anchors support 90-degree rotation increments via `rotate_90()`.
+
+- 0° / 180° = Vertical Layout (Pin 1 is offset Y).
+- 90° / 270° = Horizontal Layout (Pin 1 is offset X).
+
+## Data Model (Excerpt)
+
+| Field         | Type    | Description                       |
+|-------------- |---------|-----------------------------------|
+| id            | str     | Unique identifier                 |
+| node_a        | tuple   | Anchor A position (x, y)          |
+| node_b        | tuple   | Anchor B position (x, y)          |
+| rotation_a    | int     | Anchor A rotation (degrees, 0-359)|
+| rotation_b    | int     | Anchor B rotation (degrees, 0-359)|
+| wire_id_1     | str     | Wire 1 ID                         |
+| wire_id_2     | str     | Wire 2 ID                         |
+
+(Other fields omitted for brevity.)
+
+## 4.3. 
+Procedural Helix RenderingTo draw the twisted look along a curve:Calculate the main Cubic Bezier path between Anchor A and Anchor B.Iterate along the path (e.g., every 5 pixels).At each point $t$, calculate the Normal Vector (perpendicular to direction).Offset two points using sin(t * frequency) and cos(t * frequency) scaled by the Normal.Connect these points to form two intertwining paths.
+# 5. Synchronization LogicThe "Sync" EventSince the twisted pair is a bridge, it must propagate identity.Event: Pin A1 receives a wire connection (e.g., Red, 18AWG, Label "CAN High").Logic:TwistedPairItem detects change on Pin A1.Updates internal model wire_id_1.Updates Pin B1 to virtually represent that same wire.Updates Helix Path A to Red.Triggers redraw.
+
+# 6. Development 
+Phases (Issue Tracker)
+## Phase 1: The Atomic Container[ ] 
+Create TwistedPair model in backend.[ ] 
+Create TwistedPairItem graphics container.[ ] 
+Implement Atomic Deletion (selecting any part selects/deletes whole).
+## Phase 2: Anchor & Pin Dynamics[ ] 
+Implement TwistAnchorItem (The Drag Handle).[ ] 
+Implement Pin rotation logic (Spacebar) with strict Grid Snapping.[ ] 
+Draw "Tail" lines connecting Pins to Anchor.Phase 3: The Double Helix[ ] 
+Implement DoubleHelixPathItem.[ ] 
+Write algorithm to generate sine/cosine offsets along a Bezier curve.
+[ ] Bind colors to the wire_id state.Phase 4: Signal Propagation[ ] 
+Implement observer logic: When a wire connects to End A, push data to End B.[ ] 
+Ensure wire_id persists in YAML save/load.

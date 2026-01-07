@@ -2,8 +2,8 @@
   "context_menu_usage": {
     "device.bulk_add": 6,
     "pin.edit": 7,
-    "device.add_pin.left": 22,
-    "device.add_pin.right": 29,
+    "device.add_pin.left": 23,
+    "device.add_pin.right": 30,
     "device.edit": 3,
     "device.delete": 13,
     "pin.delete": 7,
