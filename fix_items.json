@@ -67,7 +67,7 @@
     "id": "PH1-3.2",
     "phase": 1,
     "task": "API: Implement State Update Observer",
-    "status": "OPEN",
+    "status": "DONE",
     "notes": "Create a callback/signal system to notify the UI only after a successful command commitment.",
     "spec_reference": "talus_trace_implementation_guide.md"
   },
