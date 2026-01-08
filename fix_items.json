@@ -1,161 +1,58 @@
 [
   {
-    "id": "PH1-1.3",
-    "phase": 1,
-    "task": "Core: Implement Device Pydantic Model",
-    "status": "DONE",
-    "notes": "Implement Device model with is_generic and is_ghost flags. Ensure the revision field is initialized to 0.",
-    "spec_reference": "talus_trace_data_schema.md"
+    "id": "PH4-1.1",
+    "phase": 4,
+    "task": "Core: Implement Pin-to-Pin Connectivity Model",
+    "status": "TODO",
+    "notes": "Extend Wire model to include 'from_pin' and 'to_pin' IDs. Create a Pin-Map lookup in the Harness model.",
+    "spec_reference": "talus_trace_wire_spec.md"
   },
   {
-    "id": "PH1-1.4",
-    "phase": 1,
-    "task": "Core: Implement Wire Pydantic Model",
-    "status": "DONE",
-    "notes": "Define Wire with path_nodes as a List of mm tuples. Set default status to UNDEFINED.",
-    "spec_reference": "talus_trace_arch_core_spec.md"
+    "id": "PH4-1.2",
+    "phase": 4,
+    "task": "Core: Implement Connector Pin-Layout Schema",
+    "status": "TODO",
+    "notes": "Define Pydantic model for Connectors (subclass of Device) with a fixed grid of Pin objects (e.g., 2x4 Matrix).",
+    "spec_reference": "talus_trace_spec_custom_devices.md"
   },
   {
-    "id": "PH1-2.1",
-    "phase": 1,
-    "task": "Infra: Define BaseCommand Interface",
-    "status": "DONE",
-    "notes": "Create Abstract Base Class with redo(), undo(), and base_revision requirement for every transaction.",
-    "spec_reference": "talus_trace_implementation_guide.md"
-  },
-  {
-    "id": "PH1-2.2",
-    "phase": 1,
-    "task": "Infra: Implement CommandManager Execution Logic",
-    "status": "DONE",
-    "notes": "Implement logic to check command.base_revision against entity.revision. Fail if state is stale.",
-    "spec_reference": "talus_trace_arch_infra_spec.md"
-  },
-  {
-    "id": "PH1-2.3",
-    "phase": 1,
-    "task": "Infra: ProjectState YAML Serialization Round-Trip",
-    "status": "DONE",
-    "notes": "Implement .to_yaml() and .from_yaml() for ProjectState. Test that mm precision is bit-perfect after reload.",
-    "spec_reference": "talus_trace_data_schema.md"
-  },
-  {
-    "id": "PH1-3.1",
-    "phase": 1,
-    "task": "API: Implement Singleton Accessor",
-    "status": "DONE",
-    "notes": "Create the TalusAPI gateway. Ensure only one instance can exist to maintain the Stream of Truth.",
-    "spec_reference": "talus_trace_intent.md"
-  },
-  {
-    "id": "PH1-3.2",
-    "phase": 1,
-    "task": "API: Implement State Update Observer",
-    "status": "DONE",
-    "notes": "Create a callback/signal system to notify the UI only after a successful command commitment.",
-    "spec_reference": "talus_trace_implementation_guide.md"
-  },
-  {
-    "id": "PH1-4.1",
-    "phase": 1,
-    "task": "UI: Theme Token Loader Utility",
-    "status": "DONE",
-    "notes": "Load theme_tokens.json and provide helper methods to resolve semantic color keys (e.g., wire_default).",
-    "spec_reference": "theme_tokens.json"
-  },
-  {
-    "id": "PH1-4.2",
-    "phase": 1,
-    "task": "UI: Coordinate Transformation Math",
-    "status": "DONE",
-    "notes": "Implement the logic to scale mm to pixels based on theme_tokens.json physical_scale.",
-    "spec_reference": "talus_trace_canvas_spec.md (proposed)"
-  },
-  {
-    "id": "PH1-4.3",
-    "phase": 1,
-    "task": "UI: Canvas Background Grid Rendering",
-    "status": "DONE",
-    "notes": "Implement drawBackground in QGraphicsView using 20px minor and 100px major grid lines.",
-    "spec_reference": "theme_tokens.json"
-  },
-  {
-    "id": "PH1-4.4",
-    "phase": 1,
-    "task": "UI: Implement Generic DeviceItem Visuals",
-    "status": "DONE",
-    "notes": "Render a basic rect based on Core mm. Include logic for red dashed outline if is_ghost is True.",
-    "spec_reference": "talus_trace_arch_ui_spec.md"
-  },
-  {
-    "id": "PH2-1.1",
-    "phase": 2,
-    "task": "Core: Orthogonal Grid Snapping Logic",
-    "status": "DONE",
-    "notes": "Implement helper in Core to round any mm input to the nearest 20px-equivalent grid coordinate.",
+    "id": "PH4-2.1",
+    "phase": 4,
+    "task": "Infra: Automated Netlist-to-Routing Engine",
+    "status": "TODO",
+    "notes": "Background worker that automatically generates path_nodes for a wire based on the physical position of its assigned pins.",
     "spec_reference": "talus_trace_functional_logic.md"
   },
   {
-    "id": "PH2-1.2",
-    "phase": 2,
-    "task": "Infra: MOVE_NODE Command Implementation",
-    "status": "DONE",
-    "notes": "Transaction to update a specific point in a wire's path_nodes. Must support Undo/Redo.",
-    "spec_reference": "talus_trace_implementation_guide.md"
+    "id": "PH4-2.2",
+    "phase": 4,
+    "task": "Infra: Implementation of Shielded Cable Objects",
+    "status": "TODO",
+    "notes": "Add support for Wires-inside-a-Wire (Shielding). Core math must account for the shielding layer in Packing Factor.",
+    "spec_reference": "talus_trace_wire_spec.md"
   },
   {
-    "id": "PH2-2.1",
-    "phase": 2,
-    "task": "Core: Spatial Hashing for Wire Segments",
-    "status": "DONE",
-    "notes": "Implement a hash map of wire segments to find overlapping paths on the grid.",
-    "spec_reference": "talus_trace_wire_bundle_spec.md"
+    "id": "PH4-3.1",
+    "phase": 4,
+    "task": "UI: Interactive Connector Pin-Mapping Dialog",
+    "status": "TODO",
+    "notes": "Create a QDialog to assign a Wire's end-treatment to a specific physical pin on a Connector.",
+    "spec_reference": "talus_trace_arch_ui_spec.md"
   },
   {
-    "id": "PH2-2.2",
-    "phase": 2,
-    "task": "Core: Automatic Bundle Grouping Logic",
-    "status": "DONE",
-    "notes": "Logic to group wires sharing a spatial hash into a logical Bundle Segment.",
-    "spec_reference": "talus_trace_wire_bundle_spec.md"
+    "id": "PH4-3.2",
+    "phase": 4,
+    "task": "UI: Real-time Bend Radius Violation Visualizer",
+    "status": "TODO",
+    "notes": "Highlight wire segments in RED if the path curvature exceeds the wire's minimum bend radius (e.g., 4x diameter).",
+    "spec_reference": "talus_trace_canvas_spec.md"
   },
   {
-    "id": "PH2-3.1",
-    "phase": 2,
-    "task": "UI: Implement Wire Label Drag Constraints",
-    "status": "DONE",
-    "notes": "Use itemChange to keep labels snapped to the parent wire's orthogonal path.",
-    "spec_reference": "talus_trace_wire_labels_spec.md"
-  },
-  {
-    "id": "PH2-3.2",
-    "phase": 2,
-    "task": "Core: Calculate Label MM Position from T-Pos",
-    "status": "DONE",
-    "notes": "Interpolate along a multi-segment wire to find precise mm coordinates for a label at t=0.5.",
-    "spec_reference": "talus_trace_wire_labels_spec.md"
-  },
-  {
-    "id": "PH3-1.1",
-    "phase": 3,
-    "task": "Infra: Background Worker Thread Pool",
-    "status": "DONE",
-    "notes": "Initialize thread pool for non-blocking engineering math tasks."
-  },
-  {
-    "id": "PH3-3.1",
-    "phase": 3,
-    "task": "Infra: Design Audit Logic & Violation Pydantic Model",
-    "status": "DONE",
-    "notes": "Define the structure for a 'Violation' (severity, target_id, message). Implement the logic that generates these when a wire is UNDEFINED.",
-    "spec_reference": "talus_trace_data_schema.md"
-  },
-  {
-    "id": "PH3-3.2",
-    "phase": 3,
-    "task": "UI: Persistent Audit Punch-List Panel",
-    "status": "DONE",
-    "notes": "Create the UI list view that reflects the Audit YAML. Implement 'Click to Zoom' logic that centers the canvas on the violation target.",
-    "spec_reference": "talus_trace_intent.md"
+    "id": "PH4-4.1",
+    "phase": 4,
+    "task": "API: Netlist Import/Export (CSV/XML)",
+    "status": "TODO",
+    "notes": "TalusAPI singleton method to import a From-To table and spawn logical wire entities in the Core.",
+    "spec_reference": "talus_trace_arch_api_spec.md"
   }
 ]

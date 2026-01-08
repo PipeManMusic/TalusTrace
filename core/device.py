@@ -1,7 +1,7 @@
-
 from pydantic import BaseModel, Field
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict
 from core.pin import Pin
+
 
 class Device(BaseModel):
     meta: dict = Field(default_factory=dict, description="Arbitrary device metadata, e.g. width_mm, height_mm")
@@ -27,3 +27,27 @@ class Device(BaseModel):
     library_id: Optional[str] = Field(None, description="Reference to the master YAML in the library.")
     promotion_source_id: Optional[str] = Field(None, description="Links an industrial device back to its generic ancestor.")
     revision: int = Field(0, description="Revision number for optimistic locking.")
+
+class Connector(Device):
+    rows: int = Field(..., description="Number of pin rows")
+    cols: int = Field(..., description="Number of pin columns")
+    pitch_mm: float = Field(..., description="Pin pitch in mm")
+    pins: Dict[str, Pin] = Field(default_factory=dict, description="Grid of Pin objects indexed by 'row:col'")
+
+    def __init__(self, **data):
+        super().__init__(**data)
+        # Auto-generate pin grid
+        pins = {}
+        for r in range(1, self.rows + 1):
+            for c in range(1, self.cols + 1):
+                pin_id = f"{r}:{c}"
+                x_mm = (c - 1) * self.pitch_mm
+                y_mm = (r - 1) * self.pitch_mm
+                pins[pin_id] = Pin(
+                    id=f"{self.id}:{pin_id}",
+                    head=(x_mm, y_mm),
+                    tail=(x_mm, y_mm),
+                    name=pin_id,
+                    device_id=self.id
+                )
+        self.pins = pins
