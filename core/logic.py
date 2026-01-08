@@ -7,10 +7,18 @@ def calculate_bundle_diameter(wire_diameters: List[float]) -> float:
     """
     Calculates bundle diameter using the industrial formula (Spec 2.2):
     D = 1.15 * sqrt(sum d^2).
+    Supports shielded wires as dicts: {"diameter": x, "shield_thickness": y}
     """
     if not wire_diameters:
         return 0.0
-    return 1.15 * (sum(d**2 for d in wire_diameters) ** 0.5)
+    effective_diameters = []
+    for d in wire_diameters:
+        if isinstance(d, dict):
+            # Shielded wire: diameter + 2*shield_thickness
+            effective_diameters.append(d["diameter"] + 2 * d.get("shield_thickness", 0))
+        else:
+            effective_diameters.append(d)
+    return 1.15 * (sum(dd**2 for dd in effective_diameters) ** 0.5)
 
 # PH2-2.2: BundleEngine for automatic bundle grouping
 class BundleSegment:
@@ -82,5 +90,41 @@ def check_bundle_constraints(wire_diameters: List[float]) -> Optional[Dict[str, 
             "severity": "WARNING",
             "value": diameter,
             "message": f"Bundle diameter ({diameter:.2f}mm) exceeds 40mm flexible limit."
+        }
+    return None
+
+def check_bend_radius_violations(path_nodes, wire_diameter, min_bend_factor=4.0):
+    """
+    Checks each wire segment for bend radius violations.
+    Returns None if compliant, or a dict with details if violations found.
+    path_nodes: List of (x, y) mm tuples
+    wire_diameter: Diameter in mm
+    min_bend_factor: Minimum allowed bend radius as a multiple of diameter (default 4x)
+    """
+    min_radius = wire_diameter * min_bend_factor
+    violations = []
+    # Check each corner (excluding endpoints)
+    for i in range(1, len(path_nodes) - 1):
+        p0, p1, p2 = path_nodes[i-1], path_nodes[i], path_nodes[i+1]
+        v1 = (p0[0] - p1[0], p0[1] - p1[1])
+        v2 = (p2[0] - p1[0], p2[1] - p1[1])
+        dot = v1[0]*v2[0] + v1[1]*v2[1]
+        mag1 = math.hypot(*v1)
+        mag2 = math.hypot(*v2)
+        if mag1 == 0 or mag2 == 0:
+            continue
+        cos_theta = dot / (mag1 * mag2)
+        cos_theta = max(-1.0, min(1.0, cos_theta))
+        theta = math.acos(cos_theta)
+        if theta == 0:
+            continue
+        radius = mag1 / math.tan(theta / 2)
+        if radius < min_radius:
+            violations.append(i)
+    if violations:
+        return {
+            "category": "BEND_RADIUS",
+            "severity": "ERROR",
+            "indices": violations
         }
     return None
