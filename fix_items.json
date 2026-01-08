@@ -3,7 +3,7 @@
     "id": "PH4-1.1",
     "phase": 4,
     "task": "Core: Implement Pin-to-Pin Connectivity Model",
-    "status": "TODO",
+    "status": "DONE",
     "notes": "Extend Wire model to include 'from_pin' and 'to_pin' IDs. Create a Pin-Map lookup in the Harness model.",
     "spec_reference": "talus_trace_wire_spec.md"
   },
@@ -11,7 +11,7 @@
     "id": "PH4-1.2",
     "phase": 4,
     "task": "Core: Implement Connector Pin-Layout Schema",
-    "status": "TODO",
+    "status": "IN_PROGRESS",
     "notes": "Define Pydantic model for Connectors (subclass of Device) with a fixed grid of Pin objects (e.g., 2x4 Matrix).",
     "spec_reference": "talus_trace_spec_custom_devices.md"
   },
