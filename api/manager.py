@@ -1,13 +1,21 @@
 from infra.context import ProjectContext
 
 
+
+
 class APIManager:
     _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
 
     def __init__(self):
         if not hasattr(self, '_initialized'):
             self.context = ProjectContext()
             self._observers = []
+            self.input_system = None  # Will be set by MainWindow
             self._initialized = True
 
     @classmethod
