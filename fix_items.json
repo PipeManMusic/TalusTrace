@@ -9,14 +9,14 @@
   {
     "id": "PH5-1.2",
     "task": "UI: 1:1 Scale DXF/PDF Export Engine",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "reference": "ui/exporters.py",
     "description": "Generate a vector-perfect assembly template for physical build-boards based on Holy Millimeter coordinates."
   },
   {
     "id": "PH5-2.1",
     "task": "Core: Revision Control & Optimistic Locking",
-    "status": "TODO",
+    "status": "IN_PROGRESS",
     "reference": "core/harness.py",
     "description": "Implement auto-incrementing 'revision' field on Harness save to prevent multi-user write conflicts."
   },

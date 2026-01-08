@@ -8,6 +8,15 @@ class Harness(BaseModel):
     pin_map: Dict[str, 'Pin'] = Field(default_factory=dict, description="Lookup of pin_id to Pin object")
     wires: Dict[str, 'Wire'] = Field(default_factory=dict, description="Lookup of wire_id to Wire object")
 
+    def mark_saved(self):
+        """Simulates a successful save and increments revision."""
+        self.increment_revision()
+
+    def sync_from_remote(self, remote_revision: int):
+        """Simulates syncing from a remote source and checks for revision mismatch."""
+        if remote_revision != self.revision:
+            raise RuntimeError(f"Revision Mismatch: local={self.revision} remote={remote_revision}")
+
     def auto_route_wires(self):
         """
         For each wire, generate path_nodes from source to target pin positions.
