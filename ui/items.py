@@ -1,26 +1,45 @@
 from PySide6.QtWidgets import QGraphicsPathItem, QGraphicsItem, QGraphicsRectItem
-from PySide6.QtGui import QPen, QPainterPath, QColor, QPainter
+from PySide6.QtGui import QPen, QPainterPath, QColor, QPainter, QBrush, QFont
 from PySide6.QtCore import Qt, QRectF
 from core.logic import calculate_bundle_diameter
 from core.geometry import generate_helix_points
 
-class DeviceItem(QGraphicsRectItem):
-    """PH1-4.4: Generic DeviceItem Visuals."""
-    def __init__(self, model, transformer, is_ghost=False, parent=None):
+class DeviceItem(QGraphicsItem):
+    def __init__(self, device, transformer, parent=None):
         super().__init__(parent)
-        self.model = model
+        self.device = device
         self.transformer = transformer
-        self.is_ghost = is_ghost
-        
-        # Scale dimensions from mm to pixels
-        width = self.transformer.mm_to_px(model.meta.get("width_mm", 50))
-        height = self.transformer.mm_to_px(model.meta.get("height_mm", 30))
-        self.setRect(0, 0, width, height)
-        
-    def get_outline_pen(self):
-        if self.is_ghost:
-            return QPen(QColor("red"), 2, Qt.PenStyle.DashLine)
-        return QPen(QColor("black"), 3, Qt.PenStyle.SolidLine)
+        # Dimensions in mm from device metadata
+        self.w_mm = float(self.device.meta.get("width_mm", 40.0))
+        self.h_mm = float(self.device.meta.get("height_mm", 30.0))
+        # Cache pixel dimensions for performance
+        self.w_px = self.transformer.mm_to_px(self.w_mm)
+        self.h_px = self.transformer.mm_to_px(self.h_mm)
+        self.setFlag(QGraphicsItem.GraphicsItemFlag.ItemIsSelectable)
+
+    def boundingRect(self):
+        return QRectF(-2, -2, self.w_px + 4, self.h_px + 4)
+
+    def paint(self, painter, option, widget):
+        # 1. Draw the Body
+        outline_pen = QPen(self.transformer.get_color("device_outline"), 2)
+        body_brush = QBrush(self.transformer.get_color("device_body"))
+        painter.setPen(outline_pen)
+        painter.setBrush(body_brush)
+        painter.drawRect(0, 0, self.w_px, self.h_px)
+
+        # 2. Draw the Pins (PH4-1.2 Logic)
+        pin_brush = QBrush(self.transformer.get_color("pin_fill"))
+        font = QFont("Arial", 8)
+        painter.setFont(font)
+        for pin_id, pin in self.device.pins.items():
+            px_x = self.transformer.mm_to_px(pin.head[0])
+            px_y = self.transformer.mm_to_px(pin.head[1])
+            painter.setBrush(pin_brush)
+            painter.setPen(Qt.NoPen)
+            painter.drawEllipse(px_x - 3, px_y - 3, 6, 6)
+            painter.setPen(QPen(self.transformer.get_color("device_outline")))
+            painter.drawText(px_x + 5, px_y + 10, str(pin_id))
 
 class BundleItem(QGraphicsPathItem):
     """
@@ -34,7 +53,7 @@ class BundleItem(QGraphicsPathItem):
         self.wire_diameters = wire_diameters
         mm_diameter = calculate_bundle_diameter(wire_diameters)
         px_width = self.transformer.mm_to_px(mm_diameter)
-        pen = QPen(QColor("#444444"), px_width)
+        pen = QPen(self.transformer.get_color("bundle_standard"), px_width)
         pen.setCapStyle(Qt.RoundCap)
         pen.setJoinStyle(Qt.RoundJoin)
         self.setPen(pen)
@@ -49,19 +68,15 @@ class BundleItem(QGraphicsPathItem):
 
     def update_compliance_visuals(self):
         from core.logic import check_bend_radius_violations
-        # Use the first wire diameter for compliance (simplified)
         wire_diameter = self.wire_diameters[0] if self.wire_diameters else 1.0
         violation = check_bend_radius_violations(self.path_nodes, wire_diameter)
         if violation:
-            pen = QPen(QColor("red"), self.pen().widthF())
-            pen.setCapStyle(Qt.RoundCap)
-            pen.setJoinStyle(Qt.RoundJoin)
-            self.setPen(pen)
+            pen = QPen(self.transformer.get_color("bundle_violation"), self.pen().widthF())
         else:
-            pen = QPen(QColor("#444444"), self.pen().widthF())
-            pen.setCapStyle(Qt.RoundCap)
-            pen.setJoinStyle(Qt.RoundJoin)
-            self.setPen(pen)
+            pen = QPen(self.transformer.get_color("bundle_standard"), self.pen().widthF())
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        self.setPen(pen)
 
 class TwistedPairItem(QGraphicsItem):
     """Aligned with PH3-2.1 Helix and PH3-2.2 LOD."""
@@ -70,7 +85,6 @@ class TwistedPairItem(QGraphicsItem):
         self.transformer = transformer
         self.path_nodes = path_nodes
         self.gauge_px = self.transformer.mm_to_px(gauge_mm)
-        
         self.helix_a, self.helix_b = generate_helix_points(
             path_nodes, pitch=10.0, amplitude=1.5, num_points=200
         )
@@ -80,10 +94,8 @@ class TwistedPairItem(QGraphicsItem):
 
     def paint(self, painter, option, widget):
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        
-        pen_a = QPen(QColor("#3498db"), self.gauge_px, Qt.SolidLine, Qt.RoundCap)
-        pen_b = QPen(QColor("#e67e22"), self.gauge_px, Qt.SolidLine, Qt.RoundCap)
-        
+        pen_a = QPen(self.transformer.get_color("twisted_pair_a"), self.gauge_px, Qt.SolidLine, Qt.RoundCap)
+        pen_b = QPen(self.transformer.get_color("twisted_pair_b"), self.gauge_px, Qt.SolidLine, Qt.RoundCap)
         current_scale = painter.transform().m11()
         if self.determine_lod(current_scale) == "HELIX":
             for helix, pen in [(self.helix_a, pen_a), (self.helix_b, pen_b)]:
@@ -97,7 +109,8 @@ class TwistedPairItem(QGraphicsItem):
                 painter.drawPath(qpath)
 
     def boundingRect(self):
-        if not self.path_nodes: return QRectF()
+        if not self.path_nodes:
+            return QRectF()
         pts = [self.transformer.mm_to_px_tuple(p) for p in self.path_nodes]
         min_x = min(p[0] for p in pts) - 15
         max_x = max(p[0] for p in pts) + 15

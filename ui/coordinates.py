@@ -7,16 +7,23 @@ class CoordinateTransformer:
         # Default: 1.0 Zoom = 20 Pixels per Inch (Mandated by Canvas Spec 2.1)
         self.pixels_per_inch = 20.0 
         self.grid_size_mm = 2.0 
-        
+        from ui.theme import ThemeLoader
+        self.theme = ThemeLoader(theme_path)
         if scale is not None:
             self.pixels_per_inch = float(scale)
-            
-        if theme_path and Path(theme_path).exists():
-            with open(theme_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            dims = data.get("dimensions", {})
+        # Try to get scale/grid from theme if available
+        try:
+            dims = self.theme.tokens.get("dimensions", {})
             self.pixels_per_inch = float(dims.get("physical_scale", self.pixels_per_inch))
             self.grid_size_mm = float(dims.get("grid_size_mm", self.grid_size_mm))
+        except Exception:
+            pass
+
+    def get_color(self, key):
+        return self.theme.get_color(key)
+
+    def get_dimension(self, key):
+        return self.theme.get_dimension(key)
 
     def mm_to_px(self, mm: float) -> float:
         """
