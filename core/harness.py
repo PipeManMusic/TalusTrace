@@ -7,10 +7,12 @@ from core.twisted_pair import TwistedPair
 class Harness(BaseModel):
     revision: int = 1
     meta: Dict[str, Any] = Field(default_factory=dict)
-    
     devices: List[Device] = Field(default_factory=list)
     wires: List[Wire] = Field(default_factory=list)
     twisted_pairs: List[TwistedPair] = Field(default_factory=list)
+
+    def add_device(self, device):
+        self.devices.append(device)
 
     def increment_revision(self):
         self.revision += 1

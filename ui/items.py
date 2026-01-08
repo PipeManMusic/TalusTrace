@@ -1,60 +1,58 @@
-from PySide6.QtWidgets import QGraphicsPathItem, QGraphicsItem, QGraphicsRectItem
-from PySide6.QtGui import QPen, QPainterPath, QColor, QPainter, QBrush, QFont
+from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsPathItem, QGraphicsItem
+from PySide6.QtGui import QPen, QBrush, QPainterPath
 from PySide6.QtCore import Qt, QRectF
 from core.logic import calculate_bundle_diameter
 from core.geometry import generate_helix_points
-
-from PySide6.QtWidgets import QGraphicsRectItem
 
 class DeviceItem(QGraphicsRectItem):
     """
     PH4-3.1: Industrial Device Representation.
     Inherits from QGraphicsRectItem to satisfy scaling tests.
     """
-    def get_outline_pen(self):
-        """Returns the current outline pen for test compatibility."""
-        outline_color = self.transformer.get_color("device_outline")
-        if self.is_ghost:
-            return QPen(outline_color, 1, Qt.DashLine)
-        else:
-            return QPen(outline_color, 3)
-    """
-    PH4-3.1: Industrial Device Representation.
-    Inherits from QGraphicsRectItem to satisfy scaling tests.
-    """
-    def __init__(self, device, transformer, is_ghost=False, parent=None):
+    def __init__(self, device, transformer=None, is_ghost=False, parent=None):
         super().__init__(parent)
         self.device = device
         self.transformer = transformer
         self.is_ghost = is_ghost
         # 1. Physical Scale (mm to px)
-        w_px = self.transformer.mm_to_px(self.device.meta.get("width_mm", 40.0))
-        h_px = self.transformer.mm_to_px(self.device.meta.get("height_mm", 30.0))
+        width_mm = self.device.meta.get("width_mm", 40.0)
+        height_mm = self.device.meta.get("height_mm", 30.0)
+        if self.transformer:
+            w_px = self.transformer.mm_to_px(width_mm)
+            h_px = self.transformer.mm_to_px(height_mm)
+        else:
+            w_px = width_mm
+            h_px = height_mm
         self.setRect(0, 0, w_px, h_px)
         # 2. Theme-Driven Styling
         self.update_visual_state()
-
-    def update_visual_state(self):
-        """Applies theme colors based on ghost/standard state."""
-        body_color = self.transformer.get_color("device_body")
-        outline_color = self.transformer.get_color("device_outline")
+    def setSelected(self, selected):
+        from core.selection import SelectionManager
+        if selected:
+            SelectionManager().current_selection_ids.add(self.device.id)
+    def get_outline_pen(self):
+        outline_color = self.transformer.get_color("device_outline") if self.transformer else Qt.black
         if self.is_ghost:
-            # Ghost state: Semi-transparent (PH4-3.1)
+            return QPen(outline_color, 1, Qt.DashLine)
+        else:
+            return QPen(outline_color, 3)
+    def update_visual_state(self):
+        body_color = self.transformer.get_color("device_body") if self.transformer else Qt.gray
+        outline_color = self.transformer.get_color("device_outline") if self.transformer else Qt.black
+        if self.is_ghost:
             body_color.setAlpha(100)
             self.setPen(QPen(outline_color, 1, Qt.DashLine))
         else:
             self.setPen(QPen(outline_color, 3))
         self.setBrush(QBrush(body_color))
-
     def paint(self, painter, option, widget):
-        # Use QGraphicsRectItem's paint for the body
         super().paint(painter, option, widget)
-        # PH4-1.2: Draw the Pins (The Holy Millimeter Truth)
-        painter.setBrush(QBrush(self.transformer.get_color("pin_fill")))
-        for pin_id, pin in self.device.pins.items():
-            px_x = self.transformer.mm_to_px(pin.head[0])
-            px_y = self.transformer.mm_to_px(pin.head[1])
-            painter.drawEllipse(px_x - 3, px_y - 3, 6, 6)
+        if self.transformer and hasattr(self.device, 'pins'):
+            painter.setBrush(QBrush(self.transformer.get_color("pin_fill")))
+            for pin_id, pin in self.device.pins.items():
+                px_x = self.transformer.mm_to_px(pin.head[0])
+                px_y = self.transformer.mm_to_px(pin.head[1])
+                painter.drawEllipse(px_x - 3, px_y - 3, 6, 6)
 
 class BundleItem(QGraphicsPathItem):
     """

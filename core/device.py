@@ -3,6 +3,7 @@ from pydantic import BaseModel, Field, ConfigDict
 from core.pin import Pin
 
 class Device(BaseModel):
+    model_config = ConfigDict(extra='allow', frozen=False)
     id: str
     label: Optional[str] = None
     
@@ -25,4 +26,4 @@ class Device(BaseModel):
     promotion_source_id: Optional[str] = None  # For ancestry tracking
     meta: Dict[str, Any] = Field(default_factory=dict)
 
-    model_config = ConfigDict(populate_by_name=True, extra='ignore')
+    # Only one model_config, above, to allow mutation

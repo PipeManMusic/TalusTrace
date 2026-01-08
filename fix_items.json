@@ -1,44 +1,92 @@
 [
   {
-    "id": "PH5-1.1",
-    "task": "API: Automated BOM & Cut-List Generator",
+    "id": "PH1-1.1",
+    "phase": "1",
+    "category": "UI Framework",
+    "task": "Implement Layout Manager to generate Toolbars from YAML configuration.",
     "status": "DONE",
-    "reference": "infra/bom.py",
-    "description": "Calculate true cut-lengths including 1.05x twist factor and 50mm slack. Export to industrial CSV."
+    "test_file": "tests/test_ui_layout_gen.py",
+    "yaml_dependency": "resources/config/ui_layout.yaml"
   },
   {
-    "id": "PH5-1.2",
-    "task": "UI: 1:1 Scale DXF/PDF Export Engine",
+    "id": "PH1-1.2",
+    "phase": "1",
+    "category": "UI Framework",
+    "task": "Main Window initialization & Global Input System installation.",
     "status": "DONE",
-    "reference": "ui/exporters.py",
-    "description": "Generate a vector-perfect assembly template for physical build-boards based on Holy Millimeter coordinates."
+    "test_file": "tests/test_ui_launch.py",
+    "yaml_dependency": "resources/config/actions.yaml"
   },
   {
-    "id": "PH5-2.1",
-    "task": "Core: Revision Control & Optimistic Locking",
+    "id": "PH1-1.3",
+    "phase": "1",
+    "category": "UI Framework",
+    "task": "Status Bar feedback loop connected to Action Registry signals.",
     "status": "DONE",
-    "reference": "core/harness.py",
-    "description": "Implement auto-incrementing 'revision' field on Harness save to prevent multi-user write conflicts."
+    "test_file": "tests/test_ui_feedback.py",
+    "yaml_dependency": "resources/config/actions.yaml (labels)"
   },
   {
-    "id": "PH5-2.2",
-    "task": "Infra: Harness YAML Persistence Layer",
+    "id": "PH2-2.1",
+    "phase": "2",
+    "category": "Interaction",
+    "task": "Global Selection Manager (Singleton) for device/wire synchronization.",
     "status": "DONE",
-    "reference": "infra/persistence.py",
-    "description": "Finalize serialization/deserialization of routed path_nodes to the master YAML project file."
+    "test_file": "tests/test_selection_sync.py",
+    "yaml_dependency": "None"
   },
   {
-    "id": "PH5-3.1",
-    "task": "Infra: SpatialHash Performance Optimization",
+    "id": "PH2-2.2",
+    "phase": "2",
+    "category": "Interaction",
+    "task": "Move Tool implementation with Ghosting and Command Pattern commit.",
     "status": "DONE",
-    "reference": "core/spatial.py",
-    "description": "Benchmark and optimize collision/routing lookups for high-density harnesses (>1000 wires)."
+    "test_file": "tests/test_tool_move.py",
+    "yaml_dependency": "resources/config/actions.yaml (edit.move)"
   },
   {
-    "id": "PH5-4.1",
-    "task": "UI: Final Theme & LOD Polish",
-    "status": "IN_PROGRESS",
-    "reference": "ui/items.py",
-    "description": "Ensure zero hex-code leakage and perfect helix rendering at zoom levels > 0.5x."
+    "id": "PH3-3.1",
+    "phase": "3",
+    "category": "Tools",
+    "task": "Wire Tool State Machine (Idle -> Hover -> Drag -> Place) with Pin Snapping.",
+    "status": "DONE",
+    "test_file": "tests/test_tool_wire.py",
+    "yaml_dependency": "resources/config/actions.yaml (tool.wire_mode)"
+  },
+  {
+    "id": "PH3-3.2",
+    "phase": "3",
+    "category": "Tools",
+    "task": "Twisted Pair Logic: Grouping wires and rendering Helix LOD.",
+    "status": "DONE",
+    "test_file": "tests/test_twisted_pair_grouping.py",
+    "yaml_dependency": "resources/config/actions.yaml (edit.twist)"
+  },
+  {
+    "id": "PH4-4.1",
+    "phase": "4",
+    "category": "Data Management",
+    "task": "Library Browser Panel: Drag & Drop instantiation from YAML parts.",
+    "status": "DONE",
+    "test_file": "tests/test_library_parsing.py",
+    "yaml_dependency": "resources/library/parts.yaml"
+  },
+  {
+    "id": "PH4-4.2",
+    "phase": "4",
+    "category": "Data Management",
+    "task": "Property Panel: Bidirectional editing via Command System (Undo/Redo support).",
+    "status": "DONE",
+    "test_file": "tests/test_ui_properties.py",
+    "yaml_dependency": "None"
+  },
+  {
+    "id": "PH4-4.3",
+    "phase": "4",
+    "category": "Compliance",
+    "task": "Audit Overlay: Visual markers for rule violations.",
+    "status": "DONE",
+    "test_file": "tests/test_ui_audit_feedback.py",
+    "yaml_dependency": "resources/rules/electrical.yaml"
   }
 ]

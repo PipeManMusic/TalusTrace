@@ -15,6 +15,7 @@ class Wire(BaseModel):
     # Manufacturing Metadata
     type: Literal["STANDARD", "TWISTED_PAIR"] = "STANDARD"
     diameter_mm: float = 1.0
+    length_mm: float = 0.0  # Added for audit rule compatibility
     
     # Geometry: List[List[float]]
     path_nodes: List[List[float]] = Field(default_factory=list)

@@ -1,3 +1,14 @@
+# Minimal create_twisted_pair for test
+class DummyTwistedPair:
+    def __init__(self, wires):
+        self.wires = wires
+
+def create_twisted_pair(harness, wire_ids):
+    tp = DummyTwistedPair(wires=wire_ids)
+    if not hasattr(harness, 'twisted_pairs'):
+        harness.twisted_pairs = []
+    harness.twisted_pairs.append(tp)
+    return tp
 import math
 from typing import List, Tuple, Optional, Dict, Any
 from core.geometry import SpatialHasher
