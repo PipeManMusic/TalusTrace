@@ -30,18 +30,14 @@ class BundleItem(QGraphicsPathItem):
     def __init__(self, path_nodes, wire_diameters, transformer, parent=None):
         super().__init__(parent)
         self.transformer = transformer
-        
-        # Calculate physical thickness in mm, then convert to pixels
+        self.path_nodes = path_nodes
+        self.wire_diameters = wire_diameters
         mm_diameter = calculate_bundle_diameter(wire_diameters)
         px_width = self.transformer.mm_to_px(mm_diameter)
-        
-        # Setup Visual Styling
         pen = QPen(QColor("#444444"), px_width)
         pen.setCapStyle(Qt.RoundCap)
         pen.setJoinStyle(Qt.RoundJoin)
         self.setPen(pen)
-        
-        # Build the path
         qpath = QPainterPath()
         if path_nodes:
             start_px = self.transformer.mm_to_px_tuple(path_nodes[0])
@@ -50,6 +46,22 @@ class BundleItem(QGraphicsPathItem):
                 next_px = self.transformer.mm_to_px_tuple(node)
                 qpath.lineTo(next_px[0], next_px[1])
         self.setPath(qpath)
+
+    def update_compliance_visuals(self):
+        from core.logic import check_bend_radius_violations
+        # Use the first wire diameter for compliance (simplified)
+        wire_diameter = self.wire_diameters[0] if self.wire_diameters else 1.0
+        violation = check_bend_radius_violations(self.path_nodes, wire_diameter)
+        if violation:
+            pen = QPen(QColor("red"), self.pen().widthF())
+            pen.setCapStyle(Qt.RoundCap)
+            pen.setJoinStyle(Qt.RoundJoin)
+            self.setPen(pen)
+        else:
+            pen = QPen(QColor("#444444"), self.pen().widthF())
+            pen.setCapStyle(Qt.RoundCap)
+            pen.setJoinStyle(Qt.RoundJoin)
+            self.setPen(pen)
 
 class TwistedPairItem(QGraphicsItem):
     """Aligned with PH3-2.1 Helix and PH3-2.2 LOD."""
@@ -92,5 +104,4 @@ class TwistedPairItem(QGraphicsItem):
         min_y = min(p[1] for p in pts) - 15
         max_y = max(p[1] for p in pts) + 15
         return QRectF(min_x, min_y, max_x - min_x, max_y - min_y)
-    
-    
+
