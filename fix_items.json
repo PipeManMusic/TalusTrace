@@ -1,58 +1,44 @@
 [
   {
-    "id": "PH4-1.1",
-    "phase": 4,
-    "task": "Core: Implement Pin-to-Pin Connectivity Model",
-    "status": "DONE",
-    "notes": "Extend Wire model to include 'from_pin' and 'to_pin' IDs. Create a Pin-Map lookup in the Harness model.",
-    "spec_reference": "talus_trace_wire_spec.md"
+    "id": "PH5-1.1",
+    "task": "API: Automated BOM & Cut-List Generator",
+    "status": "IN_PROGRESS",
+    "reference": "infra/bom.py",
+    "description": "Calculate true cut-lengths including 1.05x twist factor and 50mm slack. Export to industrial CSV."
   },
   {
-    "id": "PH4-1.2",
-    "phase": 4,
-    "task": "Core: Implement Connector Pin-Layout Schema",
-    "status": "DONE",
-    "notes": "Define Pydantic model for Connectors (subclass of Device) with a fixed grid of Pin objects (e.g., 2x4 Matrix).",
-    "spec_reference": "talus_trace_spec_custom_devices.md"
+    "id": "PH5-1.2",
+    "task": "UI: 1:1 Scale DXF/PDF Export Engine",
+    "status": "TODO",
+    "reference": "ui/exporters.py",
+    "description": "Generate a vector-perfect assembly template for physical build-boards based on Holy Millimeter coordinates."
   },
   {
-    "id": "PH4-2.1",
-    "phase": 4,
-    "task": "Infra: Automated Netlist-to-Routing Engine",
-    "status": "DONE",
-    "notes": "Background worker that automatically generates path_nodes for a wire based on the physical position of its assigned pins.",
-    "spec_reference": "talus_trace_functional_logic.md"
+    "id": "PH5-2.1",
+    "task": "Core: Revision Control & Optimistic Locking",
+    "status": "TODO",
+    "reference": "core/harness.py",
+    "description": "Implement auto-incrementing 'revision' field on Harness save to prevent multi-user write conflicts."
   },
   {
-    "id": "PH4-2.2",
-    "phase": 4,
-    "task": "Infra: Implementation of Shielded Cable Objects",
-    "status": "DONE",
-    "notes": "Add support for Wires-inside-a-Wire (Shielding). Core math must account for the shielding layer in Packing Factor.",
-    "spec_reference": "talus_trace_wire_spec.md"
+    "id": "PH5-2.2",
+    "task": "Infra: Harness YAML Persistence Layer",
+    "status": "TODO",
+    "reference": "infra/persistence.py",
+    "description": "Finalize serialization/deserialization of routed path_nodes to the master YAML project file."
   },
   {
-    "id": "PH4-3.1",
-    "phase": 4,
-    "task": "UI: Interactive Connector Pin-Mapping Dialog",
-    "status": "DONE",
-    "notes": "Create a QDialog to assign a Wire's end-treatment to a specific physical pin on a Connector.",
-    "spec_reference": "talus_trace_arch_ui_spec.md"
+    "id": "PH5-3.1",
+    "task": "Infra: SpatialHash Performance Optimization",
+    "status": "TODO",
+    "reference": "core/spatial.py",
+    "description": "Benchmark and optimize collision/routing lookups for high-density harnesses (>1000 wires)."
   },
   {
-    "id": "PH4-3.2",
-    "phase": 4,
-    "task": "UI: Real-time Bend Radius Violation Visualizer",
+    "id": "PH5-4.1",
+    "task": "UI: Final Theme & LOD Polish",
     "status": "DONE",
-    "notes": "Highlight wire segments in RED if the path curvature exceeds the wire's minimum bend radius (e.g., 4x diameter).",
-    "spec_reference": "talus_trace_canvas_spec.md"
-  },
-  {
-    "id": "PH4-4.1",
-    "phase": 4,
-    "task": "API: Netlist Import/Export (CSV/XML)",
-    "status": "DONE",
-    "notes": "TalusAPI singleton method to import a From-To table and spawn logical wire entities in the Core.",
-    "spec_reference": "talus_trace_arch_api_spec.md"
+    "reference": "ui/items.py",
+    "description": "Ensure zero hex-code leakage and perfect helix rendering at zoom levels > 0.5x."
   }
 ]
