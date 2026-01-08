@@ -16,28 +16,28 @@
   {
     "id": "PH5-2.1",
     "task": "Core: Revision Control & Optimistic Locking",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "reference": "core/harness.py",
     "description": "Implement auto-incrementing 'revision' field on Harness save to prevent multi-user write conflicts."
   },
   {
     "id": "PH5-2.2",
     "task": "Infra: Harness YAML Persistence Layer",
-    "status": "TODO",
+    "status": "DONE",
     "reference": "infra/persistence.py",
     "description": "Finalize serialization/deserialization of routed path_nodes to the master YAML project file."
   },
   {
     "id": "PH5-3.1",
     "task": "Infra: SpatialHash Performance Optimization",
-    "status": "TODO",
+    "status": "DONE",
     "reference": "core/spatial.py",
     "description": "Benchmark and optimize collision/routing lookups for high-density harnesses (>1000 wires)."
   },
   {
     "id": "PH5-4.1",
     "task": "UI: Final Theme & LOD Polish",
-    "status": "DONE",
+    "status": "IN_PROGRESS",
     "reference": "ui/items.py",
     "description": "Ensure zero hex-code leakage and perfect helix rendering at zoom levels > 0.5x."
   }

@@ -3,8 +3,8 @@ from pathlib import Path
 from core.models import Harness
 
 class ProjectContext:
-    def __init__(self):
-        self.harness = Harness()
+    def __init__(self, harness=None):
+        self.harness = harness if harness is not None else Harness()
         self.dirty = False
         self.current_file = None
         # Add command_manager for infra command execution

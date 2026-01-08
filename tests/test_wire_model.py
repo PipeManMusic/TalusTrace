@@ -4,7 +4,7 @@ from core.models import Wire
 
 def test_wire_initialization_path():
     """Verify a Wire stores its path as mm nodes and links to pins."""
-    path = [(0.0, 0.0), (10.0, 0.0), (10.0, 20.0)]
+    path = [[0.0, 0.0], [10.0, 0.0], [10.0, 20.0]]
     wire = Wire(
         id="w_001",
         source_pin_id="p_src_01",
@@ -14,7 +14,7 @@ def test_wire_initialization_path():
     
     assert wire.id == "w_001"
     assert len(wire.path_nodes) == 3
-    assert wire.path_nodes[1] == (10.0, 0.0)
+    assert wire.path_nodes[1] == [10.0, 0.0]
     assert wire.status == "UNDEFINED"  # Default draft state
 
 def test_wire_revision_initialization():
