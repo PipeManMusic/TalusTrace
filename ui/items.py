@@ -11,7 +11,6 @@ class DeviceItem(QGraphicsRectItem):
         self.device = device
         self.is_ghost = is_ghost
         
-        # Physical Dimensions (mm)
         width_mm = self.device.meta.get("width_mm", 40.0)
         height_mm = self.device.meta.get("height_mm", 30.0)
         
@@ -33,7 +32,7 @@ class DeviceItem(QGraphicsRectItem):
             body_color.setAlpha(100)
             self.setPen(QPen(outline_color, 1, Qt.DashLine))
         else:
-            self.setPen(QPen(outline_color, 0)) # Cosmetic pen
+            self.setPen(QPen(outline_color, 0)) 
             
         self.setBrush(QBrush(body_color))
         self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemIsMovable)
@@ -57,15 +56,39 @@ class BundleItem(QGraphicsPathItem):
         super().__init__(parent)
         self.path_nodes = path_nodes
         self.wire_diameters = wire_diameters
-        mm_diameter = calculate_bundle_diameter(wire_diameters)
-        pen = QPen(QColor(THEME_FALLBACK["bundle_standard"]), mm_diameter, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-        self.setPen(pen)
+        
+        # Initial Draw
+        self.update_compliance_visuals()
+        
         qpath = QPainterPath()
         if path_nodes:
             qpath.moveTo(path_nodes[0][0], path_nodes[0][1])
             for node in path_nodes[1:]:
                 qpath.lineTo(node[0], node[1])
         self.setPath(qpath)
+
+    def update_compliance_visuals(self):
+        """
+        Checks for bend radius violations and updates color.
+        """
+        from core.logic import check_bend_radius_violations
+        
+        # Calculate Diameter
+        mm_diameter = calculate_bundle_diameter(self.wire_diameters)
+        
+        # Check Rules
+        # We use the largest wire for bend radius check, or bundle diameter depending on rule
+        # Using first wire diameter as proxy for checking individual wire stress
+        check_diam = self.wire_diameters[0] if self.wire_diameters else 1.0
+        is_violation = check_bend_radius_violations(self.path_nodes, check_diam)
+        
+        if is_violation:
+            color = QColor(THEME_FALLBACK["bundle_violation"])
+        else:
+            color = QColor(THEME_FALLBACK["bundle_standard"])
+            
+        pen = QPen(color, mm_diameter, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
+        self.setPen(pen)
 
 class TwistedPairItem(QGraphicsItem):
     def __init__(self, path_nodes, gauge_mm=0.65, parent=None):
