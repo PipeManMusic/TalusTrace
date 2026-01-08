@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsPathItem, QGraphicsItem
 from PySide6.QtGui import QPen, QBrush, QPainterPath, QColor, QPainter
-from PySide6.QtCore import Qt, QRectF
+from PySide6.QtCore import Qt, QRectF, QPointF
 from core.logic import calculate_bundle_diameter
 from core.geometry import generate_helix_points
 from ui.coordinates import THEME_FALLBACK
@@ -56,8 +56,6 @@ class BundleItem(QGraphicsPathItem):
         super().__init__(parent)
         self.path_nodes = path_nodes
         self.wire_diameters = wire_diameters
-        
-        # Initial Draw
         self.update_compliance_visuals()
         
         qpath = QPainterPath()
@@ -68,21 +66,12 @@ class BundleItem(QGraphicsPathItem):
         self.setPath(qpath)
 
     def update_compliance_visuals(self):
-        """
-        Checks for bend radius violations and updates color.
-        """
+        # Fallback logic for compliance check
         from core.logic import check_bend_radius_violations
-        
-        # Calculate Diameter
         mm_diameter = calculate_bundle_diameter(self.wire_diameters)
-        
-        # Check Rules
-        # We use the largest wire for bend radius check, or bundle diameter depending on rule
-        # Using first wire diameter as proxy for checking individual wire stress
         check_diam = self.wire_diameters[0] if self.wire_diameters else 1.0
-        is_violation = check_bend_radius_violations(self.path_nodes, check_diam)
         
-        if is_violation:
+        if check_bend_radius_violations(self.path_nodes, check_diam):
             color = QColor(THEME_FALLBACK["bundle_violation"])
         else:
             color = QColor(THEME_FALLBACK["bundle_standard"])
@@ -124,3 +113,27 @@ class TwistedPairItem(QGraphicsItem):
         ys = [p[1] for p in self.path_nodes]
         margin = 5.0 
         return QRectF(min(xs)-margin, min(ys)-margin, (max(xs)-min(xs))+(margin*2), (max(ys)-min(ys))+(margin*2))
+
+class GhostWireItem(QGraphicsPathItem):
+    """
+    Temporary visual for the wire being drawn.
+    """
+    def __init__(self, start_pos, current_pos, parent=None):
+        super().__init__(parent)
+        self.start_pos = start_pos
+        self.current_pos = current_pos
+        
+        # Style: Dashed Cyan Line
+        pen = QPen(QColor("#00FFFF"), 2.0, Qt.DashLine, Qt.RoundCap)
+        self.setPen(pen)
+        self.update_path()
+
+    def update_target(self, new_pos):
+        self.current_pos = new_pos
+        self.update_path()
+
+    def update_path(self):
+        path = QPainterPath()
+        path.moveTo(self.start_pos)
+        path.lineTo(self.current_pos)
+        self.setPath(path)

@@ -1,29 +1,74 @@
-from typing import Optional
-from core.models import Wire
+import csv
 import math
+from pathlib import Path
 
 class BOMGenerator:
-    """
-    PH5-1.1: Automated BOM & Cut-List Generator
-    Calculates true cut-lengths for wires, including twist factor and slack.
-    """
-    def __init__(self, harness: Optional[object] = None):
-        self.harness = harness
+    def __init__(self, context):
+        self.context = context
 
-    def calculate_cut_length(self, wire: Wire) -> float:
+    def generate_bom(self, file_path):
         """
-        Returns the manufacturing cut length for a wire:
-        - Standard: sum of segment lengths + 50mm slack
-        - Twisted Pair: sum * 1.05 (twist factor) + 50mm slack
+        Exports a consolidated list of parts (Devices + Connectors).
         """
-        nodes = getattr(wire, 'path_nodes', [])
-        if not nodes or len(nodes) < 2:
-            return 0.0
-        total_length = 0.0
-        for i in range(len(nodes) - 1):
-            a, b = nodes[i], nodes[i+1]
-            total_length += math.hypot(b[0] - a[0], b[1] - a[1])
-        slack = 50.0
-        if getattr(wire, 'type', None) == 'TWISTED_PAIR':
-            return round(total_length * 1.05 + slack, 1)
-        return round(total_length + slack, 1)
+        counts = {}
+        
+        # 1. Count Devices (Connectors)
+        for dev in self.context.harness.devices:
+            # Group by Part Number or Label prefix (e.g. "DTM-2P")
+            # For this prototype, we strip the unique ID suffix (e.g. "DTM-2P_1" -> "DTM-2P")
+            part_number = dev.label.split('_')[0] if '_' in dev.label else dev.label
+            counts[part_number] = counts.get(part_number, 0) + 1
+
+        # 2. Write CSV
+        try:
+            with open(file_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Part Number", "Description", "Qty"])
+                
+                for part, qty in counts.items():
+                    writer.writerow([part, "Connector / Device", qty])
+            
+            print(f">> BOM Exported: {file_path}")
+            return True
+        except Exception as e:
+            print(f">> BOM Export Failed: {e}")
+            return False
+
+    def generate_wire_list(self, file_path):
+        """
+        Exports a Cut List: Wire ID, From, To, Length, Gauge.
+        """
+        harness = self.context.harness
+        
+        try:
+            with open(file_path, 'w', newline='') as f:
+                writer = csv.writer(f)
+                writer.writerow(["Wire ID", "From", "Pin", "To", "Pin", "Est. Length (mm)", "Color"])
+                
+                for wire in harness.wires:
+                    # Resolve Device Objects to get positions
+                    dev_from = next((d for d in harness.devices if d.id == wire.from_conn), None)
+                    dev_to = next((d for d in harness.devices if d.id == wire.to_conn), None)
+                    
+                    length = 0
+                    if dev_from and dev_to:
+                        # Manhattan Distance + 15% Slack (Standard Estimate)
+                        dx = abs(dev_from.x - dev_to.x)
+                        dy = abs(dev_from.y - dev_to.y)
+                        length = int((dx + dy) * 1.15)
+                    
+                    writer.writerow([
+                        wire.id, 
+                        wire.from_conn, 
+                        wire.from_pin, 
+                        wire.to_conn, 
+                        wire.to_pin, 
+                        length,
+                        "Red/White" # Placeholder for Phase 4 data
+                    ])
+            
+            print(f">> Wire List Exported: {file_path}")
+            return True
+        except Exception as e:
+            print(f">> Wire List Export Failed: {e}")
+            return False

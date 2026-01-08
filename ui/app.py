@@ -1,49 +1,41 @@
 import sys
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QApplication
 
-# Correct imports based on your tree
-from infra.context import ProjectContext
+from api.manager import APIManager
+import api.commands # Registers actions
+from ui.main_window import MainWindow
 from core.device import Device, Pin
-from ui.canvas import HarnessCanvas
+from tools.select_tool import SelectTool
+from tools.wire_tool import WireTool
 
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("TalusTrace - Clean Core UI")
-        self.resize(1024, 768)
-        
-        # 1. Init Infra
-        self.context = ProjectContext()
-        
-        # 2. Seed Data
-        self._seed_demo_data()
+def seed_demo_data(harness):
+    d1 = Device(id="ECU-A", label="Engine Ctrl", x=-150.0, y=0.0)
+    d1.pins.extend([Pin(id="1", x=-10, y=0), Pin(id="2", x=10, y=0)])
+    
+    d2 = Device(id="SENS-1", label="O2 Sensor", x=150.0, y=50.0)
+    d2.pins.append(Pin(id="A", x=0, y=0))
+    
+    harness.devices.extend([d1, d2])
+    print(f"Seeded {len(harness.devices)} devices.")
 
-        # 3. Setup UI
-        self.canvas = HarnessCanvas()
-        
-        container = QWidget()
-        layout = QVBoxLayout(container)
-        layout.addWidget(self.canvas)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.setCentralWidget(container)
-        
-        # 4. Load
-        self.canvas.load_harness(self.context.harness)
-
-    def _seed_demo_data(self):
-        h = self.context.harness
-        
-        d1 = Device(id="ECU", label="Engine Control", x=-150.0, y=0.0)
-        d1.pins.append(Pin(id="p1", x=-10.0, y=0.0))
-        d1.pins.append(Pin(id="p2", x=10.0, y=0.0))
-        
-        d2 = Device(id="SENS", label="Sensor A", x=150.0, y=80.0)
-        d2.pins.append(Pin(id="p1", x=0.0, y=0.0))
-        
-        h.devices.extend([d1, d2])
-
-if __name__ == "__main__":
+def main():
     app = QApplication(sys.argv)
+    api = APIManager.get_instance()
+    
+    # 1. Register Tools
+    api.tool_manager.register_tool("select", SelectTool())
+    api.tool_manager.register_tool("wire", WireTool())
+    
+    # 2. Set Default
+    api.tool_manager.set_tool("select")
+    
+    seed_demo_data(api.context.harness)
+    
     window = MainWindow()
     window.show()
+    window.canvas.load_harness(api.context.harness)
+    
     sys.exit(app.exec())
+
+if __name__ == "__main__":
+    main()

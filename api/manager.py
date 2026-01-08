@@ -1,7 +1,5 @@
 from infra.context import ProjectContext
-
-
-
+from api.tool_manager import ToolManager
 
 class APIManager:
     _instance = None
@@ -14,8 +12,12 @@ class APIManager:
     def __init__(self):
         if not hasattr(self, '_initialized'):
             self.context = ProjectContext()
+            
+            # --- FIX: Initialize Tool Manager ---
+            self.tool_manager = ToolManager()
+            
+            self.input_system = None
             self._observers = []
-            self.input_system = None  # Will be set by MainWindow
             self._initialized = True
 
     @classmethod
@@ -25,19 +27,14 @@ class APIManager:
         return cls._instance
 
     def subscribe(self, callback):
-        """Register an observer callback for state change notifications."""
         if callback not in self._observers:
             self._observers.append(callback)
 
     def unsubscribe(self, callback):
-        """Remove an observer callback."""
         if callback in self._observers:
             self._observers.remove(callback)
 
     def dispatch(self, event_type, payload):
-        """Simulate a state update and notify observers."""
-        # Here, you would update the core state as needed
-        # For test, just notify observers with the payload
         event_data = payload.copy()
         event_data['event_type'] = event_type
         for observer in self._observers:

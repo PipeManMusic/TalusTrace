@@ -22,3 +22,6 @@ context_menu:
   - command: edit.delete
   - separator: true
   - command: tool.measure
+  - separator: true
+  - command: file.export_bom
+  - command: file.export_wirelist

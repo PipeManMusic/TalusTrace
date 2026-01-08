@@ -1,71 +1,84 @@
-from typing import Dict, Any
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QFormLayout, QLineEdit, QLabel
+from PySide6.QtCore import Qt
+from api.manager import APIManager
 
-# Global registry for device lookup (Shared between App and Tests)
-device_registry: Dict[str, Any] = {}
+class PropertyPanel(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.layout = QVBoxLayout(self)
+        self.layout.setAlignment(Qt.AlignTop)
+        
+        # Header
+        self.header = QLabel("Properties")
+        self.header.setStyleSheet("font-weight: bold; font-size: 14px; margin-bottom: 10px;")
+        self.layout.addWidget(self.header)
+        
+        # Form Container
+        self.form_widget = QWidget()
+        self.form_layout = QFormLayout(self.form_widget)
+        self.layout.addWidget(self.form_widget)
+        
+        # State
+        self.current_item = None
+        
+        # Subscribe to Selection Changes
+        # (We use the APIManager observer pattern we verified earlier)
+        APIManager.get_instance().subscribe(self._on_app_event)
 
-class DummyField:
-    def __init__(self, text):
-        self._text = text
-    def text(self):
-        return self._text
-    def setText(self, value):
-        self._text = value
+    def _on_app_event(self, event):
+        """
+        Listens for 'selection_changed' events from the Core.
+        """
+        if event.get("event_type") == "selection_changed":
+            selection = event.get("selection", [])
+            if selection:
+                # Edit the first selected item
+                self.load_item(selection[0])
+            else:
+                self.clear_panel()
 
-class PropertyPanel:
-    def __init__(self):
-        from core.selection import SelectionManager
-        sel_mgr = SelectionManager()
+    def load_item(self, device_model):
+        """
+        Populates the form with Device data.
+        """
+        self.current_item = device_model
+        self._clear_layout()
         
-        # Access the module-level registry
-        global device_registry
+        # ID Field
+        self.id_edit = QLineEdit(device_model.id)
+        self.id_edit.editingFinished.connect(self._apply_id_change)
+        self.form_layout.addRow("ID:", self.id_edit)
         
-        sel_ids = list(getattr(sel_mgr, 'current_selection_ids', []))
-        dev = None
+        # Label Field
+        label_val = device_model.meta.get("label", "")
+        self.label_edit = QLineEdit(label_val)
+        self.label_edit.editingFinished.connect(self._apply_label_change)
+        self.form_layout.addRow("Label:", self.label_edit)
         
-        print(f"DEBUG: PropertyPanel Init - Selection: {sel_ids}")
-        print(f"DEBUG: PropertyPanel Init - Registry Keys: {list(device_registry.keys())}")
+        # X/Y Readouts (Read Only for now)
+        self.form_layout.addRow("X:", QLabel(f"{device_model.x:.2f}"))
+        self.form_layout.addRow("Y:", QLabel(f"{device_model.y:.2f}"))
 
-        for dev_id in sel_ids:
-            if dev_id in device_registry:
-                dev = device_registry[dev_id]
-                break
-        
-        if not dev:
-            print("DEBUG: Device not found in registry, creating dummy.")
-            # Fallback for when we run without a Harness loaded
-            dev = type('Dev', (), {'id': 'OLD_ID'})()
-            
-        self._device = dev
-        self.id_field = DummyField(self._device.id)
+    def _apply_id_change(self):
+        if self.current_item:
+            new_val = self.id_edit.text()
+            print(f">> Property Change: ID {self.current_item.id} -> {new_val}")
+            self.current_item.id = new_val
+            # TODO: Phase 5 - Trigger Scene Redraw via Signal
 
-    def apply_changes(self):
-        # Update the selected device's id from the field
-        global device_registry
-        from core.selection import SelectionManager
-        sel_mgr = SelectionManager()
-        sel_ids = list(getattr(sel_mgr, 'current_selection_ids', []))
-        
-        new_id = self.id_field.text()
-        updated = False
-        
-        for dev_id in sel_ids:
-            if dev_id in device_registry:
-                dev = device_registry[dev_id]
-                # Update the object's ID
-                object.__setattr__(dev, 'id', new_id)
-                
-                # Update Registry Keys to match new ID
-                if dev_id != new_id:
-                    device_registry[new_id] = dev
-                    if dev_id in device_registry:
-                        del device_registry[dev_id]
-                updated = True
-                
-        # Fallback if we are editing the dummy or an un-registered device
-        if not updated and hasattr(self, '_device') and hasattr(self._device, 'id'):
-            old_id = self._device.id
-            object.__setattr__(self._device, 'id', new_id)
-            # Try to update registry anyway if it existed
-            if old_id in device_registry:
-                del device_registry[old_id]
-            device_registry[new_id] = self._device
+    def _apply_label_change(self):
+        if self.current_item:
+            new_val = self.label_edit.text()
+            print(f">> Property Change: Label -> {new_val}")
+            self.current_item.meta["label"] = new_val
+
+    def clear_panel(self):
+        self.current_item = None
+        self._clear_layout()
+        self.form_layout.addRow(QLabel("No Selection"))
+
+    def _clear_layout(self):
+        while self.form_layout.count():
+            child = self.form_layout.takeAt(0)
+            if child.widget():
+                child.widget().deleteLater()

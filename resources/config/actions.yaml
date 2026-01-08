@@ -59,3 +59,11 @@ commands:
   label: Save
   icon: save.svg
   default_key: Ctrl+S
+- id: file.export_bom
+  label: Export BOM
+  icon: bom.svg
+  tooltip: Generate Bill of Materials
+- id: file.export_wirelist
+  label: Export Wires
+  icon: wirelist.svg
+  tooltip: Generate Wire Cut List
