@@ -1,7 +1,9 @@
+
 from pydantic import BaseModel, Field
 from typing import Dict, Any
 
 class Harness(BaseModel):
+    revision: int = 0
     meta: Dict[str, Any] = Field(default_factory=dict)
     pin_map: Dict[str, 'Pin'] = Field(default_factory=dict, description="Lookup of pin_id to Pin object")
     wires: Dict[str, 'Wire'] = Field(default_factory=dict, description="Lookup of wire_id to Wire object")
@@ -16,6 +18,15 @@ class Harness(BaseModel):
             tgt_pin = self.pin_map.get(wire.target_pin_id)
             if src_pin and tgt_pin:
                 wire.path_nodes = [src_pin.head, tgt_pin.head]
+
+    def increment_revision(self):
+        """PH5-2.1: Bumps version on successful save."""
+        self.revision += 1
+
+    def validate_revision(self, incoming_rev: int):
+        """Prevents overwriting newer data with older data."""
+        if incoming_rev < self.revision:
+            raise RuntimeError(f"Conflict: Incoming revision {incoming_rev} is older than current {self.revision}.")
 
     def to_dict(self) -> Dict[str, Any]:
         return self.model_dump()

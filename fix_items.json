@@ -2,14 +2,14 @@
   {
     "id": "PH5-1.1",
     "task": "API: Automated BOM & Cut-List Generator",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "reference": "infra/bom.py",
     "description": "Calculate true cut-lengths including 1.05x twist factor and 50mm slack. Export to industrial CSV."
   },
   {
     "id": "PH5-1.2",
     "task": "UI: 1:1 Scale DXF/PDF Export Engine",
-    "status": "TODO",
+    "status": "IN_PROGRESS",
     "reference": "ui/exporters.py",
     "description": "Generate a vector-perfect assembly template for physical build-boards based on Holy Millimeter coordinates."
   },
