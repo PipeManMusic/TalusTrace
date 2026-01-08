@@ -6,6 +6,7 @@ import yaml
 # ==========================================
 
 # A. The Action Registry (Command Definitions)
+# Maps IDs to human-readable labels, icons, and default hotkeys.
 actions_default = {
     "commands": [
         # Editing - Home Row Optimization
@@ -32,6 +33,7 @@ actions_default = {
 }
 
 # B. The UI Layout (Where things go)
+# Defines the toolbar and context menus.
 layout_default = {
     "toolbar": {
         "visible": True,
@@ -171,10 +173,11 @@ def build_resources():
     
     if os.path.exists(gitignore_path):
         with open(gitignore_path, "r") as f:
-            if ".cache/" not in f.read():
-                with open(gitignore_path, "a") as f2:
-                    f2.write(cache_entry)
-                print("  [UPD]  .gitignore")
+            content = f.read()
+        if ".cache/" not in content:
+            with open(gitignore_path, "a") as f2:
+                f2.write(cache_entry)
+            print("  [UPD]  .gitignore")
     else:
         with open(gitignore_path, "w") as f:
             f.write(cache_entry)
