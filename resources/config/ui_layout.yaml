@@ -1,0 +1,24 @@
+toolbar:
+  visible: true
+  items:
+  - command: file.save
+  - separator: true
+  - command: edit.undo
+  - command: edit.redo
+  - separator: true
+  - command: tool.wire_mode
+  - command: tool.measure
+  - separator: true
+  - command: view.zoom_extents
+  - command: view.toggle_props
+context_menu:
+  device:
+  - command: edit.move
+  - command: edit.rotate_cw
+  - separator: true
+  - command: edit.delete
+    style: danger
+  wire:
+  - command: edit.delete
+  - separator: true
+  - command: tool.measure

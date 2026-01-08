@@ -1,25 +1,32 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Tuple, List
+from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, Field, ConfigDict, model_validator
+from core.enums import Side
 
 class Pin(BaseModel):
     """
-    Core Pin model for Talus Trace.
-    All coordinates are in millimeters (float, mm).
-    - head: logical wiring point (mm)
-    - tail: physical SVG point (mm)
+    The Single Source of Truth for Pin data.
     """
-    id: str = Field(..., description="Unique identifier for the pin")
-    head: List[float] = Field(..., description="Logical wiring point (mm)")
-    tail: List[float] = Field(..., description="Physical SVG point (mm)")
-    name: Optional[str] = Field(None, description="Human-readable pin name or label")
-    device_id: Optional[str] = Field(None, description="Owning device UUID")
-    net: Optional[str] = Field(None, description="Net/signal name this pin is connected to")
-    is_ghost: bool = Field(False, description="True if the pin is a ghost (missing physical asset)")
-    revision: int = Field(0, description="Revision number for optimistic locking.")
+    id: str
+    label: Optional[str] = None
+    side: Side = Side.LEFT
+    
+    # Coordinate System (Standard)
+    x: float = 0.0
+    y: float = 0.0
+    
+    # Legacy/Routing Support
+    head: List[float] = Field(default_factory=lambda: [0.0, 0.0])
+    tail: List[float] = Field(default_factory=lambda: [0.0, 0.0])
+    
+    # Metadata
+    device_id: Optional[str] = None
+    net: Optional[str] = None
+    meta: Dict[str, Any] = Field(default_factory=dict)
+    
+    model_config = ConfigDict(populate_by_name=True, extra='ignore')
 
-    @property
-    def exit_vector(self) -> List[float]:
-        """
-        Returns the vector from tail to head (in mm).
-        """
-        return [self.head[0] - self.tail[0], self.head[1] - self.tail[1]]
+    @model_validator(mode='after')
+    def set_default_label(self):
+        if self.label is None:
+            self.label = self.id
+        return self

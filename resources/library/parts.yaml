@@ -1,0 +1,6 @@
+parts:
+  CONN-DT-2S:
+    manufacturer: TE Connectivity
+    part_number: DT06-2S
+    description: 2-Way Plug, Deutsch DT
+    ip_rating: IP68

@@ -1,0 +1,7 @@
+rules:
+- id: ELEC_001
+  name: Voltage Drop Critical
+  target: wire
+  severity: error
+  check: ((length_mm / 1000) * library.resistance_ohm_m * load_amps) > 1.0
+  message: Voltage drop exceeds 1.0V critical limit

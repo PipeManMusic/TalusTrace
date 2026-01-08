@@ -1,0 +1,12 @@
+canvas:
+  background_color: '#2E2E2E'
+  grid:
+    minor_spacing_mm: 5.0
+    major_spacing_mm: 25.0
+    minor_color: '#444444'
+    major_color: '#666666'
+    minor_opacity: 0.3
+    major_opacity: 0.6
+  interaction:
+    selection_halo: '#FFD166'
+    active_drag: '#EF476F'

@@ -1,0 +1,13 @@
+wires:
+  TXL-18:
+    family: SAE J1128 TXL
+    gauge: 18AWG
+    od_mm: 2.18
+    resistance_ohm_m: 0.021
+    weight_g_m: 9.6
+  TXL-20:
+    family: SAE J1128 TXL
+    gauge: 20AWG
+    od_mm: 1.9
+    resistance_ohm_m: 0.033
+    weight_g_m: 7.2
