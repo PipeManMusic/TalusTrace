@@ -1,29 +1,38 @@
+
 import json
 from pathlib import Path
+from PySide6.QtGui import QColor
 from typing import Tuple
 
 class CoordinateTransformer:
-    def __init__(self, theme_path: str = None, scale: float = None):
-        # Default: 1.0 Zoom = 20 Pixels per Inch (Mandated by Canvas Spec 2.1)
-        self.pixels_per_inch = 20.0 
-        self.grid_size_mm = 2.0 
-        from ui.theme import ThemeLoader
-        self.theme = ThemeLoader(theme_path)
-        if scale is not None:
-            self.pixels_per_inch = float(scale)
-        # Try to get scale/grid from theme if available
+    def __init__(self, theme_path: str = "resources/theme_tokens.json"):
+        self.theme_data = {}
+        self.pixels_per_inch = 20.0
+        self.grid_size_mm = 2.0
+        self.load_theme(theme_path)
+
+    def load_theme(self, theme_path: str):
         try:
-            dims = self.theme.tokens.get("dimensions", {})
-            self.pixels_per_inch = float(dims.get("physical_scale", self.pixels_per_inch))
-            self.grid_size_mm = float(dims.get("grid_size_mm", self.grid_size_mm))
-        except Exception:
-            pass
+            path = Path(theme_path)
+            if path.exists():
+                with open(path, "r") as f:
+                    self.theme_data = json.load(f)
+                dims = self.theme_data.get("dimensions", {})
+                self.pixels_per_inch = float(dims.get("physical_scale", self.pixels_per_inch))
+                self.grid_size_mm = float(dims.get("grid_size_mm", self.grid_size_mm))
+            else:
+                print(f"UI_WARN: Theme file {theme_path} missing. Using Magenta Fallback.")
+        except Exception as e:
+            print(f"UI_ERROR: Could not parse theme: {e}")
 
-    def get_color(self, key):
-        return self.theme.get_color(key)
+    def get_color(self, key: str) -> QColor:
+        color_hex = self.theme_data.get("colors", {}).get(key)
+        if not color_hex:
+            return QColor("#FF00FF")
+        return QColor(color_hex)
 
-    def get_dimension(self, key):
-        return self.theme.get_dimension(key)
+    def get_dimension(self, key: str):
+        return self.theme_data.get("dimensions", {}).get(key)
 
     def mm_to_px(self, mm: float) -> float:
         """

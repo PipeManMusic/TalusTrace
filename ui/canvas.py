@@ -20,16 +20,9 @@ class ZoomableGraphicsView(QGraphicsView):
         self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
         self.setDragMode(QGraphicsView.DragMode.ScrollHandDrag)
         
-        # Grid Styling
-        self.grid_minor_color = QColor("#E0E0E0")
-        self.grid_major_color = QColor("#B0B0B0")
-        
-        if theme_path and Path(theme_path).exists():
-            with open(theme_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
-            colors = data.get("colors", {})
-            self.grid_minor_color = QColor(colors.get("grid_minor", "#E0E0E0"))
-            self.grid_major_color = QColor(colors.get("grid_major", "#B0B0B0"))
+        # Grid Styling (Theme Engine)
+        self.grid_minor_color = self.transformer.get_color("grid_minor")
+        self.grid_major_color = self.transformer.get_color("grid_major")
 
     def wheelEvent(self, event: QWheelEvent):
         """Dynamic Zoom logic for industrial navigation."""

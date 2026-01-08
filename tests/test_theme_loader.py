@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 from PySide6.QtGui import QColor
 # Assuming the utility is placed in ui/utils.py or ui/theme.py
-from ui.theme import ThemeLoader 
+from ui.coordinates import CoordinateTransformer
 
 def test_theme_token_resolution(tmp_path):
     """
@@ -26,26 +26,24 @@ def test_theme_token_resolution(tmp_path):
     theme_file.write_text(json.dumps(mock_tokens))
 
     # 2. Initialize loader with the mock file
-    loader = ThemeLoader(theme_path=theme_file)
+    transformer = CoordinateTransformer(theme_path=str(theme_file))
 
     # 3. Test Color Resolution (Semantic Key -> QColor)
-    wire_color = loader.get_color("wire_default")
+    wire_color = transformer.get_color("wire_default")
     assert isinstance(wire_color, QColor)
     assert wire_color.name().upper() == "#000000"
 
     # 4. Test Dimension Resolution (Semantic Key -> Int/Float)
-    assert loader.get_dimension("wire_width_px") == 3
-    assert loader.get_dimension("control_node_radius") == 10
+    assert transformer.get_dimension("wire_width_px") == 3
+    assert transformer.get_dimension("control_node_radius") == 10
 
 def test_theme_loader_fallback():
     """Ensures the loader provides a safe fallback for missing tokens."""
-    loader = ThemeLoader() # Uses default project theme_tokens.json
-    
-    # Resolving a non-existent key should return a default (e.g., Magenta or Black)
-    # to prevent the UI from crashing during development.
-    fallback_color = loader.get_color("non_existent_key")
+    transformer = CoordinateTransformer() # Uses default project theme_tokens.json
+    # Resolving a non-existent key should return magenta fallback
+    fallback_color = transformer.get_color("non_existent_key")
     assert isinstance(fallback_color, QColor)
-    assert fallback_color.isValid()
+    assert fallback_color.name().upper() == "#FF00FF"
 
 def test_theme_file_location():
     """Enforces that the theme_tokens.json exists in the mandated specs folder."""

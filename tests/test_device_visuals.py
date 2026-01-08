@@ -19,7 +19,8 @@ def test_device_rect_scaling(qtbot):
     )
     
     # 1mm = 1px for verification
-    transformer = CoordinateTransformer(scale=25.4)
+    transformer = CoordinateTransformer()
+    transformer.pixels_per_inch = 25.4
     item = DeviceItem(dev_model, transformer=transformer)
     
     rect = item.rect() # DeviceItem inherits from QGraphicsRectItem
@@ -32,7 +33,8 @@ def test_ghost_device_visual_state():
     Supports Section 4 of Project Intent (Ghosting).
     """
     dev_model = Device(id="ghost_001")
-    transformer = CoordinateTransformer(scale=25.4)
+    transformer = CoordinateTransformer()
+    transformer.pixels_per_inch = 25.4
     
     item = DeviceItem(dev_model, transformer=transformer, is_ghost=True)
     pen = item.get_outline_pen() 
@@ -42,7 +44,8 @@ def test_ghost_device_visual_state():
 def test_standard_device_visual_state():
     """Ensures non-ghost devices use the standard industrial theme."""
     dev_model = Device(id="std_001")
-    transformer = CoordinateTransformer(scale=25.4)
+    transformer = CoordinateTransformer()
+    transformer.pixels_per_inch = 25.4
     item = DeviceItem(dev_model, transformer=transformer, is_ghost=False)
     pen = item.get_outline_pen()
     assert pen.style() == Qt.PenStyle.SolidLine
