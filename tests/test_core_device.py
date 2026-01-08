@@ -6,20 +6,20 @@ def test_device_initialization_with_pins():
     """Verify a Device can contain Pins and maintains mm-based position."""
     test_pin = Pin(
         id="p1",
-        head=(5.0, 5.0),
-        tail=(0.0, 0.0),
+        head=[5.0, 5.0],
+        tail=[0.0, 0.0],
         name="Source"
     )
     
     device = Device(
         id="dev_001",
         name="BATT_CONN",
-        pos=(100.0, 250.0),
+        pos=[100.0, 250.0],
         pins=[test_pin]
     )
     
     assert device.id == "dev_001"
-    assert device.pos == (100.0, 250.0)
+    assert device.pos == [100.0, 250.0]
     assert len(device.pins) == 1
     assert device.pins[0].id == "p1"
     assert device.is_ghost is True  # Default state

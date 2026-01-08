@@ -13,7 +13,7 @@ class ProjectContext:
 
     def save_as(self, file_path: Path):
         with open(file_path, 'w') as f:
-            yaml.dump(self.harness.to_dict(), f, sort_keys=False)
+            yaml.safe_dump(self.harness.to_dict(), f, sort_keys=False)
         self.dirty = False
         self.current_file = file_path
 

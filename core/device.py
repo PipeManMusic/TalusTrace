@@ -19,7 +19,7 @@ class Device(BaseModel):
     """
     id: str = Field(..., description="Unique identifier for the device")
     name: Optional[str] = Field(None, description="Human-readable device name")
-    pos: Optional[Tuple[float, float]] = Field(None, description="Device position (mm)")
+    pos: Optional[List[float]] = Field(None, description="Device position (mm)")
     pins: Optional[List[Pin]] = Field(default_factory=list, description="List of Pin objects")
     rotation: float = Field(0.0, description="Device rotation in degrees")
     is_generic: bool = Field(False, description="True if this is a temporary DIY 'Napkin' device.")
@@ -27,6 +27,7 @@ class Device(BaseModel):
     library_id: Optional[str] = Field(None, description="Reference to the master YAML in the library.")
     promotion_source_id: Optional[str] = Field(None, description="Links an industrial device back to its generic ancestor.")
     revision: int = Field(0, description="Revision number for optimistic locking.")
+    service_slack_mm: float = Field(50.0, description="Service slack in mm for cut-length calculations.")
 
 class Connector(Device):
     rows: int = Field(..., description="Number of pin rows")
