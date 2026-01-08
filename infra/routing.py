@@ -30,7 +30,7 @@ class RoutingEngine:
         Updates every wire in the harness meta based on source/target pin IDs.
         """
         for wire in self.harness.wires.values():
-            src_pin = self.harness.pin_map.get(wire.source_pin_id)
-            tgt_pin = self.harness.pin_map.get(wire.target_pin_id)
+            src_pin = self.harness.pin_map.get(wire.from_conn)
+            tgt_pin = self.harness.pin_map.get(wire.to_conn)
             if src_pin and tgt_pin:
                 wire.path_nodes = self.compute_orthogonal_path(src_pin.head, tgt_pin.head)

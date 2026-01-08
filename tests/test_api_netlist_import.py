@@ -25,4 +25,4 @@ def test_ph4_4_1_netlist_csv_import(tmp_path):
     # Verify Core state
     harness = api.get_harness()
     assert "W1" in harness.meta["wires"]
-    assert harness.meta["wires"]["W1"].source_pin_id == "J1:1"
+    assert harness.meta["wires"]["W1"].from_conn == "J1:1"

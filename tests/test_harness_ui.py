@@ -4,7 +4,7 @@ from PySide6.QtCore import Qt
 
 # Core & Infra
 from core.harness import Harness
-from core.device import Connector
+from core.device import Device
 from core.models import Wire
 from core.pin import Pin
 from infra.routing import RoutingEngine
@@ -32,10 +32,10 @@ def launch_phase4_workbench():
 
     # 1. Setup Connectors with distinct MM positions
     # J1 is at (50, 100), J2 is at (250, 100)
-    j1 = Connector(id="J1", rows=2, cols=2, pitch_mm=10.0)
+    j1 = Device(id="J1", rows=2, cols=2, pitch_mm=10.0)
     j1.meta.update({"x": 50.0, "y": 100.0})
     
-    j2 = Connector(id="J2", rows=2, cols=2, pitch_mm=10.0)
+    j2 = Device(id="J2", rows=2, cols=2, pitch_mm=10.0)
     j2.meta.update({"x": 250.0, "y": 100.0})
 
     # 2. Fix the Wire Start/End (Absolute MM)

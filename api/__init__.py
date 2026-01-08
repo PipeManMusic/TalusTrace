@@ -1,3 +1,6 @@
+from core.wire import Wire
+
+
 class TalusAPI:
     _instance = None
 
@@ -37,9 +40,9 @@ class TalusAPI:
                 gauge_mm = float(row.get("gauge_mm", 1.0))
                 wire = Wire(
                     id=wire_id,
-                    source_pin_id=source_pin,
-                    target_pin_id=target_pin,
-                    path_nodes=[],
+                    from_conn=source_pin,  # Was source_pin_id
+                    to_conn=target_pin,    # Was target_pin_id
+                    path_nodes=[],         # Was path_nodes (already fixed by sed)
                     status="UNDEFINED"
                 )
                 harness.meta["wires"][wire_id] = wire

@@ -2,7 +2,7 @@ import pytest
 from core.pin import Pin
 from core.harness import Harness
 from core.models import Wire
-from core.device import Connector
+from core.device import Device
 from infra.routing import RoutingEngine
 from core.logic import check_bend_radius_violations
 
@@ -13,17 +13,17 @@ def test_phase4_industrial_integration():
     Harness.model_rebuild()
     harness = Harness()
     
-    # Setup Connectors (PH4-1.2)
-    j1 = Connector(id="J1", rows=1, cols=2, pitch_mm=10.0)
-    j2 = Connector(id="J2", rows=1, cols=2, pitch_mm=10.0)
+    # Setup Devices (PH4-1.2)
+    j1 = Device(id="J1", rows=1, cols=2, pitch_mm=10.0)
+    j2 = Device(id="J2", rows=1, cols=2, pitch_mm=10.0)
     j1.meta.update({"x": 0.0, "y": 0.0})
     j2.meta.update({"x": 100.0, "y": 100.0})
     
     # Create Connectivity (PH4-1.1)
     wire = Wire(
         id="W_MAIN",
-        source_pin_id="J1:1",
-        target_pin_id="J2:1",
+        from_conn="J1:1",
+        to_conn="J2:1",
         status="UNDEFINED"
     )
     

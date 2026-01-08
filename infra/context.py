@@ -1,25 +1,39 @@
 import yaml
 from pathlib import Path
-from core.models import Harness
+# FIX: Import directly from core
+from core.harness import Harness
 
 class ProjectContext:
-    def __init__(self, harness=None):
-        self.harness = harness if harness is not None else Harness()
-        self.dirty = False
+    def __init__(self, harness: Harness = None):
+        self.harness = harness or Harness(meta={"name": "New Harness", "trunk_length_mm": 1000})
         self.current_file = None
-        # Add command_manager for infra command execution
-        from infra.commands import CommandManager
-        self.command_manager = CommandManager()
-
-    def save_as(self, file_path: Path):
-        with open(file_path, 'w') as f:
-            yaml.safe_dump(self.harness.to_dict(), f, sort_keys=False)
         self.dirty = False
-        self.current_file = file_path
 
-    def load(self, file_path: Path):
-        with open(file_path, 'r') as f:
+    def load(self, path: Path):
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Harness file not found: {path}")
+
+        with open(path, 'r') as f:
             data = yaml.safe_load(f)
-        self.harness = Harness.from_dict(data)
+            
+        self.harness = Harness.model_validate(data)
+        self.current_file = path
         self.dirty = False
-        self.current_file = file_path
+
+    def save_as(self, path: Path):
+        """
+        PH6-2.1: Uses safe_dump + model_dump(mode='json') for clean YAML.
+        """
+        path = Path(path)
+        
+        self.harness.increment_revision()
+        
+        # Converts all Models -> Dicts, Lists -> Lists, Enums -> Strings
+        data = self.harness.model_dump(mode='json')
+        
+        with open(path, 'w') as f:
+            yaml.safe_dump(data, f, sort_keys=False)
+            
+        self.current_file = path
+        self.dirty = False

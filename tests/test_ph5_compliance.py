@@ -1,54 +1,49 @@
 import pytest
 import yaml
+import io
 from pathlib import Path
-from core.harness import Harness
-from core.wire import Wire
-from core.device import Device
+
+from core.models import Harness, Wire, Device
 from infra.context import ProjectContext
 
 def test_ph5_serialization_tuple_to_list_conversion():
     """
-    Verify PH5-2.2: Ensure coordinates are serialized as Lists, not Tuples,
-    to prevent !!python/tuple tags in YAML.
+    Verify PH5-2.2: Ensure coordinates are serialized as Lists.
     """
     path_nodes = [[0.0, 0.0], [10.5, 20.0]]
     wire = Wire(
         id="W-TEST",
-        source_pin_id="J1.1",
-        target_pin_id="J2.1",
-        path_nodes=path_nodes  # Should be accepted as List[List[float]]
+        from_conn="J1.1",
+        to_conn="J2.1",
+        path_nodes=path_nodes 
     )
-    harness = Harness(wires={wire.id: wire})
+    harness = Harness(wires=[wire])
     context = ProjectContext(harness=harness)
-    
-    # Dump to string to inspect raw YAML content
-    import io
     stream = io.StringIO()
     data = context.harness.model_dump(mode='json')
     yaml.safe_dump(data, stream)
     yaml_content = stream.getvalue()
-    
-    # Assertions
-    assert "!!python/tuple" not in yaml_content, "Found Python-specific tuple tags in YAML"
-    assert "[0.0, 0.0]" in yaml_content or "- 0.0" in yaml_content
+    assert "!!python/tuple" not in yaml_content
+    assert "- 0.0" in yaml_content or "[0.0, 0.0]" in yaml_content
 
 def test_ph5_manufacturing_metadata():
     """
-    Verify PH5-1.1: Ensure Wire and Device models contain the 
-    necessary fields for industrial BOM generation.
+    Verify PH5-1.1: Ensure Wire and Device models contain BOM fields.
     """
     wire = Wire(
         id="W-TP",
-        source_pin_id="J1.1",
-        target_pin_id="J2.1",
-        type="TWISTED_PAIR", # New required field
-        diameter_mm=2.5      # New required field
+        from_conn="J1.1",
+        to_conn="J2.1",
+        type="TWISTED_PAIR", 
+        diameter_mm=2.5      
     )
     device = Device(
         id="J1",
-        service_slack_mm=75.0 # New required field
+        service_slack_mm=75.0 
     )
     assert wire.type == "TWISTED_PAIR"
+    assert wire.diameter_mm == 2.5
+    assert device.service_slack_mm == 75.0
     assert wire.diameter_mm == 2.5
     assert device.service_slack_mm == 75.0
 
@@ -86,4 +81,4 @@ def test_ph5_persistence_safe_dump(tmp_path):
     with open(temp_file, 'r') as f:
         data = yaml.safe_load(f)
     
-    assert data['revision'] == 1
+    assert data['revision'] == 2

@@ -1,7 +1,7 @@
 import pytest
 from core.harness import Harness
 from core.models import Wire
-from core.device import Connector
+from core.device import Device
 from core.pin import Pin
 from infra.routing import RoutingEngine
 
@@ -12,13 +12,13 @@ def test_ph4_2_1_auto_route_generation():
     Validates that the routing engine generates path_nodes between pins.
     Includes explicit model rebuilding to resolve Pin annotations.
     """
-    # 1. Setup Harness with Connectors
+    # 1. Setup Harness with Devices
     harness = Harness()
     
-    # Connector J1 with 2 pins
-    j1 = Connector(id="J1", rows=1, cols=2, pitch_mm=10.0) 
-    # Connector J2 with 2 pins
-    j2 = Connector(id="J2", rows=1, cols=2, pitch_mm=10.0)
+    # Device J1 with 2 pins
+    j1 = Device(id="J1", rows=1, cols=2, pitch_mm=10.0) 
+    # Device J2 with 2 pins
+    j2 = Device(id="J2", rows=1, cols=2, pitch_mm=10.0)
     
     # Industrial Positioning (PH1-4.2)
     j1.meta["x"] = 50.0

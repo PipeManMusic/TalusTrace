@@ -34,9 +34,12 @@ class MoveDeviceCommand(BaseCommand):
         current_rev = getattr(target_entity, 'revision', None)
         if current_rev != self.base_revision:
             raise Exception(f"Revision mismatch: expected {self.base_revision} but got {current_rev}")
-        
         # Update position (mm) and increment revision
-        target_entity.pos = self.new_pos
+        if hasattr(self, 'new_pos') and isinstance(self.new_pos, (list, tuple)) and len(self.new_pos) == 2:
+            target_entity.x = self.new_pos[0]
+            target_entity.y = self.new_pos[1]
+        target_entity.revision += 1
+        return True
         target_entity.revision += 1
         return True
 
