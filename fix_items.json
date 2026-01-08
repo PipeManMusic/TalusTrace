@@ -27,7 +27,7 @@
     "id": "PH4-2.2",
     "phase": 4,
     "task": "Infra: Implementation of Shielded Cable Objects",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "notes": "Add support for Wires-inside-a-Wire (Shielding). Core math must account for the shielding layer in Packing Factor.",
     "spec_reference": "talus_trace_wire_spec.md"
   },
@@ -35,7 +35,7 @@
     "id": "PH4-3.1",
     "phase": 4,
     "task": "UI: Interactive Connector Pin-Mapping Dialog",
-    "status": "TODO",
+    "status": "IN_PROGRESS",
     "notes": "Create a QDialog to assign a Wire's end-treatment to a specific physical pin on a Connector.",
     "spec_reference": "talus_trace_arch_ui_spec.md"
   },
