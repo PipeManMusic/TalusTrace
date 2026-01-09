@@ -35,17 +35,26 @@ class DeviceItem(QGraphicsRectItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, True)
         self.update_visual_state()
+        if self.is_ghost:
+            self.setAcceptedMouseButtons(Qt.NoButton)
+            self.setFlag(QGraphicsItem.ItemIsMovable, False)
+            self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+            self.setZValue(1000)
         if not self.is_ghost and hasattr(self.device, 'pins'):
             for pin in self.device.pins:
                 pin_item = PinItem(pin, self)
-                # Ensure pin_item.setPos(pin.x, pin.y) is only called once and not offset again.
-                pin_item.setPos(pin.x, pin.y) 
+                pin_item.setPos(pin.x, pin.y)
 
     def setSelected(self, selected):
         from core.selection import SelectionManager
         super().setSelected(selected)
         if selected:
             SelectionManager().current_selection_ids.add(self.device.id)
+            SelectionManager().selected_models = [self.device]
+        else:
+            SelectionManager().current_selection_ids.discard(self.device.id)
+            SelectionManager().selected_models = []
+        self.update_visual_state()
 
     def update_visual_state(self):
         body_color = QColor(THEME_FALLBACK["device_body"])
@@ -54,15 +63,33 @@ class DeviceItem(QGraphicsRectItem):
         if self.is_ghost:
             body_color.setAlpha(100)
             self.setPen(QPen(outline_color, 1, Qt.DashLine))
+            self.setAcceptedMouseButtons(Qt.NoButton)
+            self.setFlag(QGraphicsItem.ItemIsMovable, False)
+            self.setFlag(QGraphicsItem.ItemIsSelectable, False)
+            self.setZValue(1000)
         else:
             self.setPen(QPen(outline_color, 0))
+            self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+            self.setFlag(QGraphicsItem.ItemIsMovable, True)
+            self.setAcceptedMouseButtons(Qt.LeftButton)
         self.setBrush(QBrush(body_color))
+
+        # Selection halo (cyan drop shadow)
+        from PySide6.QtWidgets import QGraphicsDropShadowEffect
+        if self.isSelected():
+            effect = QGraphicsDropShadowEffect()
+            effect.setBlurRadius(15)
+            effect.setColor(QColor(0, 200, 255))
+            effect.setOffset(0, 0)
+            self.setGraphicsEffect(effect)
+        else:
+            self.setGraphicsEffect(None)
 
     def paint(self, painter, option, widget):
         # Draw the device body
         super().paint(painter, option, widget)
-        # Draw selection halo if selected
-        if self.isSelected():
+        # Draw selection halo if selected and not ghost
+        if self.isSelected() and not self.is_ghost:
             rect = self.rect().adjusted(-4, -4, 4, 4)
             halo_color = QColor(0, 180, 255, 100)
             painter.setPen(QPen(halo_color, 4, Qt.SolidLine))
@@ -87,13 +114,13 @@ class BundleItem(QGraphicsPathItem):
     def paint(self, painter, option, widget):
         # Draw the bundle path
         super().paint(painter, option, widget)
-        # Draw grips at endpoints if selected
+        # Draw grips at every node if selected
         if self.isSelected() and self.path_nodes:
-            grip_color = QColor(0, 180, 255)
+            grip_color = QColor(0, 200, 255)
             painter.setBrush(QBrush(grip_color))
             painter.setPen(Qt.NoPen)
-            radius = 3.5
-            for pt in [self.path_nodes[0], self.path_nodes[-1]]:
+            radius = 2.0  # 2mm
+            for pt in self.path_nodes:
                 painter.drawEllipse(QPointF(pt[0], pt[1]), radius, radius)
 
     def shape(self):

@@ -1,13 +1,13 @@
 from api.manager import APIManager
 
+
 class SelectionManager:
     _instance = None
-
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance.current_selection_ids = set()
-            cls._instance.selected_models = [] # Keep track of actual objects
+            cls._instance.selected_models = []
         return cls._instance
 
     def set_selection(self, items):

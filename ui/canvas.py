@@ -15,6 +15,23 @@ class CanvasEvent:
 
 
 class HarnessCanvas(QGraphicsView):
+    def set_active_tool(self, tool):
+        self.active_tool = tool
+
+    def mouseMoveEvent(self, event):
+        if hasattr(self, 'active_tool') and self.active_tool:
+            scene_pos = self.mapToScene(event.position().toPoint() if hasattr(event, 'position') else event.pos())
+            self.active_tool.on_mouse_move(scene_pos)
+        else:
+            super().mouseMoveEvent(event)
+
+    def mousePressEvent(self, event):
+        if hasattr(self, 'active_tool') and self.active_tool:
+            scene_pos = self.mapToScene(event.position().toPoint() if hasattr(event, 'position') else event.pos())
+            self.active_tool.on_mouse_press(scene_pos)
+        else:
+            super().mousePressEvent(event)
+
     def _init_move_tool(self):
         from tools.move_tool import MoveTool
         self._move_tool = MoveTool()
@@ -61,7 +78,7 @@ class HarnessCanvas(QGraphicsView):
         self.setDragMode(QGraphicsView.NoDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
-        self.setMouseTracking(True)  # CRITICAL: PH5-CLN.3 Enable hover tracking
+        self.setMouseTracking(True)
         self.scene.setSceneRect(-50000, -50000, 100000, 100000)
         self.setBackgroundBrush(QBrush(QColor(THEME_FALLBACK["canvas_bg"])))
         self.scale(1.0, 1.0)
@@ -96,10 +113,32 @@ class HarnessCanvas(QGraphicsView):
 
     def load_harness(self, harness):
         self.scene.clear()
-        if not harness: return
+        if not harness:
+            return
+        # 1. Add devices
+        device_map = {d.id: d for d in harness.devices}
         for device in harness.devices:
             item = DeviceItem(device)
             self.scene.addItem(item)
+        # 2. Add wires (BundleItem)
+        from ui.items import BundleItem
+        for wire in getattr(harness, 'wires', []):
+            d_from = device_map.get(getattr(wire, 'from_conn', None))
+            d_to = device_map.get(getattr(wire, 'to_conn', None))
+            def find_pin(device, pin_id):
+                if device and hasattr(device, 'pins'):
+                    for pin in device.pins:
+                        if pin.id == pin_id:
+                            return pin
+                return None
+            pin_from = find_pin(d_from, getattr(wire, 'from_pin', ''))
+            pin_to = find_pin(d_to, getattr(wire, 'to_pin', ''))
+            from_pt = (d_from.x + (pin_from.x if pin_from else 0), d_from.y + (pin_from.y if pin_from else 0)) if d_from else (0, 0)
+            to_pt = (d_to.x + (pin_to.x if pin_to else 0), d_to.y + (pin_to.y if pin_to else 0)) if d_to else (0, 0)
+            path_nodes = [from_pt] + list(getattr(wire, 'points', [])) + [to_pt]
+            wire_diameters = [getattr(wire, 'diameter_mm', 1.0)] * len(path_nodes)
+            bundle_item = BundleItem(path_nodes, wire_diameters, wire_model=wire)
+            self.scene.addItem(bundle_item)
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasText():
@@ -151,6 +190,11 @@ class HarnessCanvas(QGraphicsView):
         scene_pos = self.mapToScene(pos)
         item = self.scene.itemAt(scene_pos, self.transform())
         from ui.items import DeviceItem
+        # Shift+LeftClick places a generic device
+        if event.button() == Qt.LeftButton and event.modifiers() & Qt.ShiftModifier:
+            from api.actions import registry
+            registry.execute("tool.add_generic_device", pos=(scene_pos.x(), scene_pos.y()))
+            return
         if event.button() == Qt.LeftButton and isinstance(item, DeviceItem):
             self._dragging_device = item
             self._last_mouse_pos = scene_pos

@@ -1,69 +1,73 @@
 commands:
-- id: edit.move
-  label: Move Item
-  icon: move.svg
-  default_key: G
-  tooltip: Grab/Move Selection
-- id: edit.rotate_cw
-  label: "Rotate 90\xB0"
-  icon: rotate_cw.svg
-  default_key: Space
-- id: edit.rotate_ccw
-  label: "Rotate -90\xB0"
-  icon: rotate_ccw.svg
-  default_key: Shift+Space
-- id: edit.delete
-  label: Delete
-  icon: trash.svg
-  default_key: Delete
-- id: edit.undo
-  label: Undo
-  icon: undo.svg
-  default_key: Ctrl+Z
-- id: edit.redo
-  label: Redo
-  icon: redo.svg
-  default_key: Ctrl+Shift+Z
-- id: tool.wire_mode
-  label: Draw Wire
-  icon: wire.svg
-  default_sequence:
-  - W
-  - A
-- id: tool.measure
-  label: Measure
-  icon: ruler.svg
-  default_sequence:
-  - M
-  - E
-- id: view.zoom_extents
-  label: Zoom All
-  icon: zoom_all.svg
-  default_sequence:
-  - Z
-  - E
-- id: view.zoom_selected
-  label: Zoom Sel
-  icon: zoom_sel.svg
-  default_sequence:
-  - Z
-  - S
-- id: view.toggle_grid
-  label: Grid
-  icon: grid.svg
-- id: view.toggle_props
-  label: Properties
-  icon: panel.svg
-  default_key: Tab
-- id: file.save
-  label: Save
-  icon: save.svg
-  default_key: Ctrl+S
-- id: file.export_bom
-  label: Export BOM
-  icon: bom.svg
-  tooltip: Generate Bill of Materials
-- id: file.export_wirelist
-  label: Export Wires
-  icon: wirelist.svg
-  tooltip: Generate Wire Cut List
+  - id: tool.add_generic_device
+    label: Place Generic Device
+    icon: device.svg
+    tooltip: Place a generic device on the canvas
+  - id: edit.move
+    label: Move Item
+    icon: move.svg
+    default_key: G
+    tooltip: Grab/Move Selection
+  - id: edit.rotate_cw
+    label: "Rotate 90\xB0"
+    icon: rotate_cw.svg
+    default_key: Space
+  - id: edit.rotate_ccw
+    label: "Rotate -90\xB0"
+    icon: rotate_ccw.svg
+    default_key: Shift+Space
+  - id: edit.delete
+    label: Delete
+    icon: trash.svg
+    default_key: Delete
+  - id: edit.undo
+    label: Undo
+    icon: undo.svg
+    default_key: Ctrl+Z
+  - id: edit.redo
+    label: Redo
+    icon: redo.svg
+    default_key: Ctrl+Shift+Z
+  - id: tool.wire_mode
+    label: Draw Wire
+    icon: wire.svg
+    default_sequence:
+      - W
+      - A
+  - id: tool.measure
+    label: Measure
+    icon: ruler.svg
+    default_sequence:
+      - M
+      - E
+  - id: view.zoom_extents
+    label: Zoom All
+    icon: zoom_all.svg
+    default_sequence:
+      - Z
+      - E
+  - id: view.zoom_selected
+    label: Zoom Sel
+    icon: zoom_sel.svg
+    default_sequence:
+      - Z
+      - S
+  - id: view.toggle_grid
+    label: Grid
+    icon: grid.svg
+  - id: view.toggle_props
+    label: Properties
+    icon: panel.svg
+    default_key: Tab
+  - id: file.save
+    label: Save
+    icon: save.svg
+    default_key: Ctrl+S
+  - id: file.export_bom
+    label: Export BOM
+    icon: bom.svg
+    tooltip: Generate Bill of Materials
+  - id: file.export_wirelist
+    label: Export Wires
+    icon: wirelist.svg
+    tooltip: Generate Wire Cut List

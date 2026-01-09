@@ -41,15 +41,17 @@ class MainWindow(QMainWindow):
             self.setWindowTitle(base)
 
 
-    def subscribe_undo_stack_refresh(self):
-        """Subscribe the canvas refresh to the undo stack using the event-driven API for testability."""
+
+    def subscribe_undo_stack(self):
+        """Subscribe the canvas refresh to the undo stack for testability."""
         api = APIManager.get_instance()
-        # Remove any previous subscription to avoid duplicates in tests
-        try:
-            api.context.undo_stack._callbacks.remove(self._refresh_canvas)
-        except (ValueError, AttributeError):
-            pass
-        api.context.undo_stack.subscribe(lambda event: self._refresh_canvas())
+        # Use UndoStack.subscribe for callback registration
+        if hasattr(api.context.undo_stack, 'subscribe'):
+            api.context.undo_stack.subscribe(self._refresh_canvas_from_undo)
+
+    def _refresh_canvas_from_undo(self, *args, **kwargs):
+        api = APIManager.get_instance()
+        self.canvas.load_harness(api.context.harness)
 
     def _refresh_canvas(self):
         api = APIManager.get_instance()
@@ -104,8 +106,8 @@ class MainWindow(QMainWindow):
 
         # Show git hash on startup
         self._show_git_hash()
-        # Wire undo stack to canvas refresh (event-driven, testable)
-        self.subscribe_undo_stack_refresh()
+        # Wire undo stack to canvas refresh (testable)
+        self.subscribe_undo_stack()
 
     def _on_action_triggered(self, action_id, context):
         self.statusBar().showMessage(f"Action Triggered: {action_id}")
@@ -115,6 +117,11 @@ class MainWindow(QMainWindow):
                 self.prop_dock.hide()
             else:
                 self.prop_dock.show()
+        elif action_id == "view.toggle_library":
+            if self.lib_dock.isVisible():
+                self.lib_dock.hide()
+            else:
+                self.lib_dock.show()
 
     def _show_git_hash(self):
         import subprocess

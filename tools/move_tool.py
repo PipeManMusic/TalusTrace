@@ -113,20 +113,56 @@ class MoveTool:
 		if self.ghost_item:
 			self.ghost_item.x += dx
 			self.ghost_item.y += dy
-		# For UI: only move the visual, not the model, during drag
 		if self.selected_item is not None:
-			# Get current pos and add delta
 			cur_pos = self.selected_item.pos()
 			new_pos = cur_pos + type(cur_pos)(dx, dy)
 			self.selected_item.setPos(new_pos)
 			self.selected_item.update()
-			# Redraw wires connected to this device
+			device = getattr(self.selected_item, 'device', None)
+			if device is not None:
+				device.x = new_pos.x()
+				device.y = new_pos.y()
+			# Update all BundleItems connected to this device by id
 			if hasattr(self.selected_item, 'scene') and self.selected_item.scene() is not None:
-				for item in self.selected_item.scene().items():
-					if hasattr(item, 'device') and hasattr(self.selected_item, 'device') and item.device == self.selected_item.device:
-						if hasattr(item, 'update_compliance_visuals'):
-							item.update_compliance_visuals()
-						item.update()
+				scene = self.selected_item.scene()
+				for item in scene.items():
+					if hasattr(item, 'device') and item.device is not None:
+						wire = item.device
+						if hasattr(wire, 'from_conn') and hasattr(wire, 'to_conn'):
+							if wire.from_conn == device.id or wire.to_conn == device.id:
+								# Recalculate path_nodes using updated device and pin positions
+								def find_device(dev_id):
+									for dev_item in scene.items():
+										if hasattr(dev_item, 'device') and hasattr(dev_item.device, 'id'):
+											if dev_item.device.id == dev_id:
+												return dev_item.device
+									return None
+								d_from = find_device(wire.from_conn)
+								d_to = find_device(wire.to_conn)
+								def find_pin(device, pin_id):
+									if device and hasattr(device, 'pins'):
+										for pin in device.pins:
+											if pin.id == pin_id:
+												return pin
+									return None
+								pin_from = find_pin(d_from, getattr(wire, 'from_pin', ''))
+								pin_to = find_pin(d_to, getattr(wire, 'to_pin', ''))
+								from_pt = (d_from.x + (pin_from.x if pin_from else 0), d_from.y + (pin_from.y if pin_from else 0)) if d_from else (0, 0)
+								to_pt = (d_to.x + (pin_to.x if pin_to else 0), d_to.y + (pin_to.y if pin_to else 0)) if d_to else (0, 0)
+								new_nodes = [from_pt] + list(getattr(wire, 'points', [])) + [to_pt]
+								item.path_nodes = new_nodes
+								if not hasattr(item, 'wire_diameters') or len(item.wire_diameters) != len(new_nodes):
+									item.wire_diameters = [1.0] * len(new_nodes)
+								from PySide6.QtGui import QPainterPath
+								qpath = QPainterPath()
+								if new_nodes:
+									qpath.moveTo(new_nodes[0][0], new_nodes[0][1])
+									for node in new_nodes[1:]:
+										qpath.lineTo(node[0], node[1])
+									item.setPath(qpath)
+								if hasattr(item, 'update_compliance_visuals'):
+									item.update_compliance_visuals()
+								item.update()
 
 	def commit(self):
 		# On commit, update the model to match the visual

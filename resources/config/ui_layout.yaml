@@ -22,6 +22,8 @@ toolbar:
     - command: "tool.move"
     - separator: true
     - command: "device.create_wizard"
+    - command: "tool.add_generic_device"
+      label: "Place Generic Device"
 
 # PH5-CLN.1: Context Menu Definitions
 context_menu:

@@ -27,9 +27,15 @@ class DeviceWizard(QDialog):
     def accept(self):
         from api.manager import APIManager
         from core.device import Device
+        import uuid
         name = self.name_input.text().strip()
         if name:
             api = APIManager.get_instance()
-            new_device = Device(label=name)
+            new_device = Device(id=str(uuid.uuid4()), label=name)
             api.context.harness.devices.append(new_device)
+            # PH6-FIX.5: Trigger canvas refresh
+            from PySide6.QtWidgets import QApplication
+            window = QApplication.activeWindow()
+            if window and hasattr(window, 'canvas'):
+                window.canvas.load_harness(api.context.harness)
         super().accept()
