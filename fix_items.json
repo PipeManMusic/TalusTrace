@@ -4,7 +4,7 @@
     "phase": "6",
     "category": "Architecture",
     "task": "Refactor InputSystem to act as a Central Event Dispatcher.",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_ui_input_orchestration.py",
     "ai_prompt": "Update ui/input_system.py based on the Input Orchestration Specification. Create a method 'handle_canvas_event(event)' that retrieves the active tool from APIManager.tool_manager and calls the corresponding tool method (e.g., on_mouse_press) based on the type of the original Qt event."
   },
@@ -13,7 +13,7 @@
     "phase": "6",
     "category": "Architecture",
     "task": "Decouple HarnessCanvas from Tool Logic via HAL.",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_canvas_decoupling.py",
     "ai_prompt": "Refactor ui/canvas.py to follow the Hardware Abstraction Layer (HAL) spec. In mouse events, remove direct calls to active_tool and replace with 'input_system.handle_canvas_event(self._create_tool_event(event))'."
   },
