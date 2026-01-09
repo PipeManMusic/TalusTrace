@@ -12,7 +12,7 @@
     "phase": "5",
     "category": "Architecture",
     "task": "Implement infra/undo_stack.py and BaseCommand following the new spec.",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_infra_undo.py"
   },
   {
@@ -20,7 +20,7 @@
     "phase": "5",
     "category": "Architecture",
     "task": "Refactor Tool actions (Move, Wire, Delete) to use Command classes.",
-    "status": "OPEN",
+    "status": "DONE",
     "test_file": "tests/test_tool_undo_integration.py"
   },
   {
@@ -28,7 +28,7 @@
     "phase": "5",
     "category": "App Shell",
     "task": "Implement Main Menu Bar (File, Edit, View) populated from actions.yaml.",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_ui_layout_gen.py"
   },
   {

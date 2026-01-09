@@ -1,3 +1,24 @@
+
+from infra.undo_stack import BaseCommand
+from api.manager import APIManager
+
+class MoveCommand(BaseCommand):
+	def __init__(self, target, new_x, new_y):
+		super().__init__("MoveCommand")
+		self.target = target
+		self.new_x = new_x
+		self.new_y = new_y
+		self.old_x = target.x
+		self.old_y = target.y
+
+	def execute(self):
+		self.target.x = self.new_x
+		self.target.y = self.new_y
+
+	def undo(self):
+		self.target.x = self.old_x
+		self.target.y = self.old_y
+
 class MoveTool:
 	def __init__(self):
 		self.ghost_item = None
@@ -14,14 +35,13 @@ class MoveTool:
 			self.ghost_item.y += dy
 
 	def commit(self):
-		# Return a command that applies the ghost's position to the real object
-		class MoveCommand:
-			def __init__(self, x, y):
-				self.x = x
-				self.y = y
-			def apply(self, target):
-				target.x = self.x
-				target.y = self.y
-			def execute(self, target):
-				self.apply(target)
-		return MoveCommand(self.ghost_item.x, self.ghost_item.y)
+		# Return a MoveCommand for the move
+		return MoveCommand(self._target, self.ghost_item.x, self.ghost_item.y)
+
+	def on_mouse_release(self, event):
+		# Only push if a ghost move was performed
+		if self.ghost_item is None:
+			return
+		api = APIManager.get_instance()
+		cmd = self.commit()
+		api.context.undo_stack.push(cmd)

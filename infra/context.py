@@ -8,6 +8,8 @@ class ProjectContext:
         self.harness = harness or Harness(meta={"name": "New Harness", "trunk_length_mm": 1000})
         self.current_file = None
         self.dirty = False
+        from infra.undo_stack import UndoStack
+        self.undo_stack = UndoStack()
 
     def load(self, path: Path):
         path = Path(path)

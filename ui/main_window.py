@@ -8,6 +8,9 @@ from api.actions import registry
 from api.manager import APIManager
 from ui.panels.library import LibraryPanel
 
+from ui.commands import CommandStack
+command_stack = CommandStack()  # Global stack for UI commands
+
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
