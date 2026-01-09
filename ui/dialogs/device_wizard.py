@@ -23,3 +23,13 @@ class DeviceWizard(QDialog):
 
     def validate(self):
         return bool(self.name_input.text().strip())
+
+    def accept(self):
+        from api.manager import APIManager
+        from core.device import Device
+        name = self.name_input.text().strip()
+        if name:
+            api = APIManager.get_instance()
+            new_device = Device(label=name)
+            api.context.harness.devices.append(new_device)
+        super().accept()

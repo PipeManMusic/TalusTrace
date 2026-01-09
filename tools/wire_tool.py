@@ -10,6 +10,21 @@ class WireToolState(Enum):
     DRAGGING = auto()
 
 class WireTool(BaseTool):
+    GRID_SIZE_MM = 25.0
+    def _snap_to_grid(self, x, y):
+        grid = self.GRID_SIZE_MM
+        import math
+        return (math.floor(x / grid) * grid, math.floor(y / grid) * grid)
+    def on_mouse_move(self, event):
+        # Snap coordinates to grid before updating model/ghost
+        if hasattr(event, 'pos_mm'):
+            x, y = event.pos_mm.x(), event.pos_mm.y()
+            x, y = self._snap_to_grid(x, y)
+            # Update ghost wire or model as needed
+            if self.ghost_item and hasattr(self.ghost_item, 'setEndPoint'):
+                self.ghost_item.setEndPoint(x, y)
+            # If dragging a wire segment, update the model
+            # (Add your wire segment update logic here as needed)
 
     def on_mouse_double_click(self, event):
         # Allow adding elbow points to existing wires (BundleItem)
@@ -82,7 +97,13 @@ class WireTool(BaseTool):
 
     def on_mouse_press(self, event):
         device, pin = None, None
-        if isinstance(event.scene_item, PinItem):
+        # Prioritize PinItem hits for DRAGGING state
+        if self.state == WireToolState.DRAGGING and isinstance(event.scene_item, PinItem):
+            device_item = event.scene_item.parentItem()
+            device = device_item.device
+            pin = event.scene_item.pin
+            print(f">> Visual Hit: {device.id}:{pin.id}")
+        elif isinstance(event.scene_item, PinItem):
             device_item = event.scene_item.parentItem()
             device = device_item.device
             pin = event.scene_item.pin

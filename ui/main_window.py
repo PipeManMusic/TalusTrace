@@ -40,6 +40,21 @@ class MainWindow(QMainWindow):
         else:
             self.setWindowTitle(base)
 
+
+    def subscribe_undo_stack_refresh(self):
+        """Subscribe the canvas refresh to the undo stack using the event-driven API for testability."""
+        api = APIManager.get_instance()
+        # Remove any previous subscription to avoid duplicates in tests
+        try:
+            api.context.undo_stack._callbacks.remove(self._refresh_canvas)
+        except (ValueError, AttributeError):
+            pass
+        api.context.undo_stack.subscribe(lambda event: self._refresh_canvas())
+
+    def _refresh_canvas(self):
+        api = APIManager.get_instance()
+        self.canvas.load_harness(api.context.harness)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Talus Trace")
@@ -89,20 +104,17 @@ class MainWindow(QMainWindow):
 
         # Show git hash on startup
         self._show_git_hash()
+        # Wire undo stack to canvas refresh (event-driven, testable)
+        self.subscribe_undo_stack_refresh()
 
-    def subscribe_undo_stack(self):
-        api = APIManager.get_instance()
-        api.context.undo_stack.subscribe(self._on_undo_stack_event)
-
-    def _on_undo_stack_event(self, event_type):
-        # Refresh canvas on undo/redo
-        api = APIManager.get_instance()
-        self.canvas.load_harness(api.context.harness)
-
-    def _on_undo_stack_event(self, event_type):
-        # Refresh canvas on undo/redo
-        api = APIManager.get_instance()
-        self.canvas.load_harness(api.context.harness)
+    def _on_action_triggered(self, action_id, context):
+        self.statusBar().showMessage(f"Action Triggered: {action_id}")
+        # Toggle Panel Logic (Command Handler)
+        if action_id == "view.toggle_props":
+            if self.prop_dock.isVisible():
+                self.prop_dock.hide()
+            else:
+                self.prop_dock.show()
 
     def _show_git_hash(self):
         import subprocess
@@ -117,12 +129,3 @@ class MainWindow(QMainWindow):
 
     def show_tool_hint(self, hint):
         self.statusBar().showMessage(f"Hint: {hint}")
-
-    def _on_action_triggered(self, action_id, context):
-        self.statusBar().showMessage(f"Action Triggered: {action_id}")
-        # Toggle Panel Logic (Command Handler)
-        if action_id == "view.toggle_props":
-            if self.prop_dock.isVisible():
-                self.prop_dock.hide()
-            else:
-                self.prop_dock.show()

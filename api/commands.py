@@ -4,6 +4,7 @@ from PySide6.QtWidgets import QFileDialog, QApplication
 from core.device import Device
 from core.wire import Wire
 from ui.dialogs.device_wizard import DeviceWizard
+from tools.move_tool import MoveTool
 
 # --- Device Wizard ---
 @register_action("device.create_wizard")
@@ -13,11 +14,15 @@ def device_create_wizard(context):
     parent = app.activeWindow() if app else None
     wizard = DeviceWizard(parent)
     wizard.exec()
-from api.actions import register_action
-from api.manager import APIManager
-from PySide6.QtWidgets import QFileDialog, QApplication
-from core.device import Device
-from core.wire import Wire
+
+# --- Move Tool ---
+@register_action("tool.move")
+def tool_move(context):
+    api = APIManager.get_instance()
+    # Ensure MoveTool is registered
+    if not hasattr(api.tool_manager, '_tools') or 'move' not in api.tool_manager._tools:
+        api.tool_manager.register_tool("move", MoveTool())
+    api.tool_manager.set_tool("move")
 
 # --- File Operations ---
 @register_action("file.new")

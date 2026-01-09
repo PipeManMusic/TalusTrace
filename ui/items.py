@@ -50,15 +50,24 @@ class DeviceItem(QGraphicsRectItem):
     def update_visual_state(self):
         body_color = QColor(THEME_FALLBACK["device_body"])
         outline_color = QColor(THEME_FALLBACK["device_outline"])
-        
+        self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemIsMovable)
         if self.is_ghost:
             body_color.setAlpha(100)
             self.setPen(QPen(outline_color, 1, Qt.DashLine))
         else:
-            self.setPen(QPen(outline_color, 0)) 
-            
+            self.setPen(QPen(outline_color, 0))
         self.setBrush(QBrush(body_color))
-        self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemIsMovable)
+
+    def paint(self, painter, option, widget):
+        # Draw the device body
+        super().paint(painter, option, widget)
+        # Draw selection halo if selected
+        if self.isSelected():
+            rect = self.rect().adjusted(-4, -4, 4, 4)
+            halo_color = QColor(0, 180, 255, 100)
+            painter.setPen(QPen(halo_color, 4, Qt.SolidLine))
+            painter.setBrush(Qt.NoBrush)
+            painter.drawRect(rect)
 
 class BundleItem(QGraphicsPathItem):
     def __init__(self, path_nodes, wire_diameters, wire_model=None, parent=None):
@@ -67,7 +76,6 @@ class BundleItem(QGraphicsPathItem):
         self.wire_diameters = wire_diameters
         self.device = wire_model 
         self.update_compliance_visuals()
-        
         qpath = QPainterPath()
         if path_nodes:
             qpath.moveTo(path_nodes[0][0], path_nodes[0][1])
@@ -75,6 +83,18 @@ class BundleItem(QGraphicsPathItem):
                 qpath.lineTo(node[0], node[1])
         self.setPath(qpath)
         self.setFlags(QGraphicsItem.ItemIsSelectable)
+
+    def paint(self, painter, option, widget):
+        # Draw the bundle path
+        super().paint(painter, option, widget)
+        # Draw grips at endpoints if selected
+        if self.isSelected() and self.path_nodes:
+            grip_color = QColor(0, 180, 255)
+            painter.setBrush(QBrush(grip_color))
+            painter.setPen(Qt.NoPen)
+            radius = 3.5
+            for pt in [self.path_nodes[0], self.path_nodes[-1]]:
+                painter.drawEllipse(QPointF(pt[0], pt[1]), radius, radius)
 
     def shape(self):
         path = self.path()

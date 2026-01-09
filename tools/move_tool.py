@@ -30,17 +30,19 @@ class MoveTool:
 	def on_mouse_press(self, event):
 		# Elbow drag for BundleItem
 		self.elbow_index = None
+		self.elbow_drag = False
 		if hasattr(event, 'scene_item'):
 			item = event.scene_item
 			# BundleItem elbow detection
 			if hasattr(item, 'path_nodes'):
 				pos = event.pos_mm
-				min_dist = 10.0  # mm radius for elbow selection
+				min_dist = 5.0  # mm radius for elbow selection (per spec)
 				for idx, node in enumerate(item.path_nodes):
 					dist = ((pos.x() - node[0]) ** 2 + (pos.y() - node[1]) ** 2) ** 0.5
 					if dist < min_dist:
 						self.elbow_index = idx
 						self.selected_item = item
+						self.elbow_drag = True
 						break
 			# DeviceItem fallback
 			elif hasattr(item, 'device'):
@@ -49,7 +51,20 @@ class MoveTool:
 				self.selected_item = item
 
 	def on_mouse_release(self, event):
-		# Only push if a ghost move was performed
+		# Commit elbow drag for BundleItem
+		if getattr(self, 'elbow_drag', False) and self.selected_item is not None and hasattr(self.selected_item, 'path_nodes'):
+			# Commit the new path to the Wire model (if available)
+			# Ensure wire_diameters are present
+			if not hasattr(self.selected_item, 'wire_diameters') or not self.selected_item.wire_diameters:
+				self.selected_item.wire_diameters = [1.0 for _ in self.selected_item.path_nodes]
+			# If the BundleItem has a wire model, update its path
+			if hasattr(self.selected_item, 'device') and self.selected_item.device:
+				self.selected_item.device.path_nodes = list(self.selected_item.path_nodes)
+			self.elbow_drag = False
+			self.elbow_index = None
+			self.selected_item = None
+			return
+		# Only push if a ghost move was performed (DeviceItem)
 		if self.ghost_item is None:
 			return
 		api = APIManager.get_instance()
