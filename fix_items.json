@@ -1,92 +1,138 @@
 [
   {
-    "id": "PH1-1.1",
-    "phase": "1",
-    "category": "UI Framework",
-    "task": "Implement Layout Manager to generate Toolbars from YAML configuration.",
+    "id": "PH5-DOC.1",
+    "phase": "5",
+    "category": "Documentation",
+    "task": "Create docs/specs/talus_trace_command_pattern.md to standardize Undo/Redo logic.",
     "status": "DONE",
-    "test_file": "tests/test_ui_layout_gen.py",
-    "yaml_dependency": "resources/config/ui_layout.yaml"
+    "test_file": "N/A"
   },
   {
-    "id": "PH1-1.2",
-    "phase": "1",
-    "category": "UI Framework",
-    "task": "Main Window initialization & Global Input System installation.",
-    "status": "DONE",
-    "test_file": "tests/test_ui_launch.py",
-    "yaml_dependency": "resources/config/actions.yaml"
+    "id": "PH5-CMD.1",
+    "phase": "5",
+    "category": "Architecture",
+    "task": "Implement infra/undo_stack.py and BaseCommand following the new spec.",
+    "status": "IN_PROGRESS",
+    "test_file": "tests/test_infra_undo.py"
   },
   {
-    "id": "PH1-1.3",
-    "phase": "1",
-    "category": "UI Framework",
-    "task": "Status Bar feedback loop connected to Action Registry signals.",
-    "status": "DONE",
-    "test_file": "tests/test_ui_feedback.py",
-    "yaml_dependency": "resources/config/actions.yaml (labels)"
+    "id": "PH5-CMD.2",
+    "phase": "5",
+    "category": "Architecture",
+    "task": "Refactor Tool actions (Move, Wire, Delete) to use Command classes.",
+    "status": "OPEN",
+    "test_file": "tests/test_tool_undo_integration.py"
   },
   {
-    "id": "PH2-2.1",
-    "phase": "2",
+    "id": "PH5-SHELL.1",
+    "phase": "5",
+    "category": "App Shell",
+    "task": "Implement Main Menu Bar (File, Edit, View) populated from actions.yaml.",
+    "status": "OPEN",
+    "test_file": "tests/test_ui_layout_gen.py"
+  },
+  {
+    "id": "PH5-SHELL.2",
+    "phase": "5",
+    "category": "App Shell",
+    "task": "Implement Global Keyboard Shortcuts (Ctrl+Z, Ctrl+S, Del) via InputSystem.",
+    "status": "OPEN",
+    "test_file": "tests/test_ui_input_shortcuts.py"
+  },
+  {
+    "id": "PH5-SHELL.3",
+    "phase": "5",
+    "category": "App Shell",
+    "task": "Implement Status Bar Logic (Show coordinates, Tool Hints, Git Hash).",
+    "status": "OPEN",
+    "test_file": "tests/test_ui_feedback.py"
+  },
+  {
+    "id": "PH5-SHELL.4",
+    "phase": "5",
+    "category": "App Shell",
+    "task": "Implement 'Dirty State' management: Window Title (*) and 'Unsaved Changes' dialog on exit.",
+    "status": "OPEN",
+    "test_file": "tests/test_app_lifecycle.py"
+  },
+  {
+    "id": "PH5-INTER.1",
+    "phase": "5",
     "category": "Interaction",
-    "task": "Global Selection Manager (Singleton) for device/wire synchronization.",
-    "status": "DONE",
-    "test_file": "tests/test_selection_sync.py",
-    "yaml_dependency": "None"
+    "task": "Implement Marquee Selection (Rubber Band) with Crossing vs. Enclosing logic.",
+    "status": "OPEN",
+    "test_file": "tests/test_tool_select.py"
   },
   {
-    "id": "PH2-2.2",
-    "phase": "2",
+    "id": "PH5-INTER.2",
+    "phase": "5",
     "category": "Interaction",
-    "task": "Move Tool implementation with Ghosting and Command Pattern commit.",
-    "status": "DONE",
-    "test_file": "tests/test_tool_move.py",
-    "yaml_dependency": "resources/config/actions.yaml (edit.move)"
+    "task": "Implement Right-Click Context Menus (Add Elbow, Edit Properties, Delete).",
+    "status": "OPEN",
+    "test_file": "tests/test_ui_context_menu.py"
   },
   {
-    "id": "PH3-3.1",
-    "phase": "3",
-    "category": "Tools",
-    "task": "Wire Tool State Machine (Idle -> Hover -> Drag -> Place) with Pin Snapping.",
-    "status": "DONE",
-    "test_file": "tests/test_tool_wire.py",
-    "yaml_dependency": "resources/config/actions.yaml (tool.wire_mode)"
+    "id": "PH5-INTER.3",
+    "phase": "5",
+    "category": "Interaction",
+    "task": "Implement Snapping Toolbar (Toggle, Grid Size Slider) and connect to MoveTool.",
+    "status": "OPEN",
+    "test_file": "tests/test_core_snapping.py"
   },
   {
-    "id": "PH3-3.2",
-    "phase": "3",
-    "category": "Tools",
-    "task": "Twisted Pair Logic: Grouping wires and rendering Helix LOD.",
-    "status": "DONE",
-    "test_file": "tests/test_twisted_pair_grouping.py",
-    "yaml_dependency": "resources/config/actions.yaml (edit.twist)"
+    "id": "PH5-DEV.1",
+    "phase": "5",
+    "category": "Device Mgmt",
+    "task": "Implement 'Device Wizard' Dialog for creating custom parts.",
+    "status": "OPEN",
+    "test_file": "tests/test_ui_dialogs.py"
   },
   {
-    "id": "PH4-4.1",
-    "phase": "4",
-    "category": "Data Management",
-    "task": "Library Browser Panel: Drag & Drop instantiation from YAML parts.",
-    "status": "DONE",
-    "test_file": "tests/test_library_parsing.py",
-    "yaml_dependency": "resources/library/parts.yaml"
+    "id": "PH5-WIRE.1",
+    "phase": "5",
+    "category": "Wires",
+    "task": "Fix Elbow Logic: Hit-testing for thin wires & 'Add Point' Context Action.",
+    "status": "OPEN",
+    "test_file": "tests/test_tool_wire.py"
   },
   {
-    "id": "PH4-4.2",
-    "phase": "4",
-    "category": "Data Management",
-    "task": "Property Panel: Bidirectional editing via Command System (Undo/Redo support).",
-    "status": "DONE",
-    "test_file": "tests/test_ui_properties.py",
-    "yaml_dependency": "None"
+    "id": "PH5-WIRE.2",
+    "phase": "5",
+    "category": "Wires",
+    "task": "Implement 'Create Bundle' command (Visual grouping of selected wires).",
+    "status": "OPEN",
+    "test_file": "tests/test_core_bundling.py"
   },
   {
-    "id": "PH4-4.3",
-    "phase": "4",
-    "category": "Compliance",
-    "task": "Audit Overlay: Visual markers for rule violations.",
-    "status": "DONE",
-    "test_file": "tests/test_ui_audit_feedback.py",
-    "yaml_dependency": "resources/rules/electrical.yaml"
+    "id": "PH5-EDIT.1",
+    "phase": "5",
+    "category": "Editors",
+    "task": "Implement Theme Editor Dialog with persistence to user_theme.yaml.",
+    "status": "OPEN",
+    "test_file": "tests/test_ui_compliance.py"
+  },
+  {
+    "id": "PH5-EDIT.2",
+    "phase": "5",
+    "category": "Editors",
+    "task": "Refactor Audit Panel to be interactive (Click error -> Zoom to Item).",
+    "status": "OPEN",
+    "test_file": "tests/test_ui_audit_feedback.py"
+  },
+  {
+    "id": "PH5-FILE.1",
+    "phase": "5",
+    "category": "File Ops",
+    "task": "Implement robust file.new/open/save with full scene serialization.",
+    "status": "OPEN",
+    "test_file": "tests/test_infra_persistence.py"
+  },
+  {
+    "id": "PH5-FILE.2",
+    "phase": "5",
+    "category": "File Ops",
+    "task": "Implement SVG/DXF Export feature.",
+    "status": "OPEN",
+    "test_file": "tests/test_file_export.py"
   }
 ]
