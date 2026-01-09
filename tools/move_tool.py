@@ -28,11 +28,25 @@ class MoveTool:
 		pass
 
 	def on_mouse_press(self, event):
-		# Initialize drag state if event is for a DeviceItem
-		if hasattr(event, 'scene_item') and hasattr(event.scene_item, 'device'):
-			self._target = event.scene_item.device
-			self.ghost_item = type(self._target)(**self._target.model_dump())
-			self.selected_item = event.scene_item
+		# Elbow drag for BundleItem
+		self.elbow_index = None
+		if hasattr(event, 'scene_item'):
+			item = event.scene_item
+			# BundleItem elbow detection
+			if hasattr(item, 'path_nodes'):
+				pos = event.pos_mm
+				min_dist = 10.0  # mm radius for elbow selection
+				for idx, node in enumerate(item.path_nodes):
+					dist = ((pos.x() - node[0]) ** 2 + (pos.y() - node[1]) ** 2) ** 0.5
+					if dist < min_dist:
+						self.elbow_index = idx
+						self.selected_item = item
+						break
+			# DeviceItem fallback
+			elif hasattr(item, 'device'):
+				self._target = item.device
+				self.ghost_item = type(self._target)(**self._target.model_dump())
+				self.selected_item = item
 
 	def on_mouse_release(self, event):
 		# Only push if a ghost move was performed
@@ -43,15 +57,32 @@ class MoveTool:
 		api.context.undo_stack.push(cmd)
 
 	def on_mouse_move(self, event):
-		# Update the device model's coordinates in real time during drag, snapping to grid
-		if hasattr(event, 'pos_mm') and hasattr(event, 'scene_item') and hasattr(event.scene_item, 'device'):
-			dev = event.scene_item.device
+		# Elbow drag for BundleItem
+		if hasattr(event, 'pos_mm') and hasattr(event, 'scene_item'):
+			item = event.scene_item
 			grid_size = 25.0
 			import math
 			def snap(val):
 				return math.floor(val / grid_size) * grid_size
-			dev.x = snap(event.pos_mm.x())
-			dev.y = snap(event.pos_mm.y())
+			if hasattr(item, 'path_nodes') and self.elbow_index is not None:
+				# Snap elbow to grid
+				x = snap(event.pos_mm.x())
+				y = snap(event.pos_mm.y())
+				item.path_nodes[self.elbow_index] = (x, y)
+				# Optionally update visual path if needed
+				if hasattr(item, 'setPath'):
+					from PySide6.QtGui import QPainterPath
+					qpath = QPainterPath()
+					nodes = item.path_nodes
+					if nodes:
+						qpath.moveTo(nodes[0][0], nodes[0][1])
+						for node in nodes[1:]:
+							qpath.lineTo(node[0], node[1])
+					item.setPath(qpath)
+			elif hasattr(item, 'device'):
+				dev = item.device
+				dev.x = snap(event.pos_mm.x())
+				dev.y = snap(event.pos_mm.y())
 	def __init__(self):
 		self.ghost_item = None
 		self._target = None
