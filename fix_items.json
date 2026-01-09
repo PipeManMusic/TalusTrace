@@ -68,7 +68,7 @@
     "phase": "5",
     "category": "Interaction",
     "task": "Implement Right-Click Context Menus (Add Elbow, Edit Properties, Delete).",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_ui_context_menu.py"
   },
   {
@@ -76,7 +76,7 @@
     "phase": "5",
     "category": "Interaction",
     "task": "Implement Snapping Toolbar (Toggle, Grid Size Slider) and connect to MoveTool.",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_core_snapping.py"
   },
   {

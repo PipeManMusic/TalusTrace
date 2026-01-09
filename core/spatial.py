@@ -1,3 +1,19 @@
+
+# --- Snapping/Grid Manager for PH5-INTER.3 ---
+from PySide6.QtCore import QPointF
+
+class SpatialManager:
+    def __init__(self):
+        self.grid_size = 25.0
+        self.snap_enabled = True
+
+    def snap(self, point: QPointF) -> QPointF:
+        if not self.snap_enabled:
+            return QPointF(point)
+        g = self.grid_size
+        x = round(point.x() / g) * g
+        y = round(point.y() / g) * g
+        return QPointF(x, y)
 from collections import defaultdict
 from typing import Tuple, List, Dict, Any
 import math
