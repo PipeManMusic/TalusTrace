@@ -8,8 +8,21 @@ from api.actions import registry
 class InputSystem(QObject):
     def __init__(self, config_path: str = "resources/config/actions.yaml"):
         super().__init__()
-        self.key_map = {} 
+        self.key_map = {}
+        self._shortcuts = self.key_map  # Alias for test compatibility
         self._load_config(config_path)
+
+    def register_shortcut(self, key: str, action_id: str):
+        """Register a shortcut key to an action id."""
+        self._shortcuts[key] = action_id
+
+    def process_key_sequence(self, key: str):
+        """Simulate processing a key sequence (for testing)."""
+        if key in self._shortcuts:
+            action_id = self._shortcuts[key]
+            registry.execute(action_id)
+            return True
+        return False
 
     def install(self):
         app = QApplication.instance()
