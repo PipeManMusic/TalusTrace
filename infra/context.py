@@ -11,9 +11,21 @@ class ProjectContext:
         from infra.undo_stack import UndoStack
         self.undo_stack = UndoStack()
 
+
     @property
     def is_dirty(self):
         return self.dirty
+
+    @is_dirty.setter
+    def is_dirty(self, value):
+        self.dirty = value
+
+    def new_project(self):
+        """Resets the context to a new harness and clears undo stack."""
+        self.harness = Harness(meta={"name": "New Harness", "trunk_length_mm": 1000})
+        self.current_file = None
+        self.dirty = False
+        self.undo_stack.clear()
 
     def mark_dirty(self):
         self.dirty = True

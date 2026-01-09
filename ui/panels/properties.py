@@ -25,6 +25,7 @@ class PropertyPanel(QWidget):
         self.scroll.setWidget(self.content_widget)
         self.layout.addWidget(self.scroll)
         
+        # Do not define id_edit and label_edit here; set dynamically
         # Initial State
         self.clear_panel()
         
@@ -51,6 +52,10 @@ class PropertyPanel(QWidget):
 
     def clear_panel(self):
         self._clear_layout()
+        if hasattr(self, 'id_edit'):
+            del self.id_edit
+        if hasattr(self, 'label_edit'):
+            del self.label_edit
         self.form_layout.addRow(QLabel("No Selection"))
 
     def _clear_layout(self):

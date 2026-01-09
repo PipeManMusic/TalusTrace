@@ -11,9 +11,10 @@ class MoveCommand(BaseCommand):
 		self.old_x = target.x
 		self.old_y = target.y
 
-	def execute(self):
-		self.target.x = self.new_x
-		self.target.y = self.new_y
+	def execute(self, target=None):
+		tgt = target if target is not None else self.target
+		tgt.x = self.new_x
+		tgt.y = self.new_y
 
 	def undo(self):
 		self.target.x = self.old_x

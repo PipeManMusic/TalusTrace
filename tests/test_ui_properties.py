@@ -9,6 +9,8 @@ def test_property_panel_loads_selection(qtbot):
     Validates that the Property Panel updates when Selection changes.
     """
     # 1. Setup
+    from api.manager import APIManager
+    APIManager.reset()
     panel = PropertyPanel()
     qtbot.add_widget(panel)
     
@@ -20,7 +22,9 @@ def test_property_panel_loads_selection(qtbot):
     APIManager.get_instance().dispatch("selection_changed", {
         "selection": [dev]
     })
-    
+
+    # Wait for the UI to update
+    qtbot.waitUntil(lambda: hasattr(panel, 'id_edit'))
     # 4. Assertions
     # Check if the ID field was populated
     assert panel.id_edit.text() == "TEST-01"

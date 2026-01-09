@@ -17,7 +17,7 @@ class AuditController:
             return
 
         # Dispatches the FOCUS_ENTITY transaction
-        self.api.dispatch(
-            "FOCUS_ENTITY", 
+        APIManager.dispatch(
+            "FOCUS_ENTITY",
             {"id": target_id, "zoom_level": 1.5}
         )

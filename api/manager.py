@@ -37,17 +37,22 @@ class APIManager:
         if callback not in self._observers:
             self._observers.append(callback)
 
-    def dispatch(self, event_name, data=None):
+
+    def _dispatch(self, event_name, data=None):
         """Notify all observers of an event."""
         if data is None:
             data = {}
-        
         # Standardize event packet
         if isinstance(data, dict):
             data['event'] = event_name
-        
         for callback in self._observers:
             try:
                 callback(data)
             except Exception as e:
                 print(f"Error in observer {callback}: {e}")
+
+    @classmethod
+    def dispatch(cls, event_name, data=None):
+        """Class-level dispatch for test patching."""
+        instance = cls.get_instance()
+        instance._dispatch(event_name, data)

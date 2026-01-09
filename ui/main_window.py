@@ -13,6 +13,18 @@ command_stack = CommandStack()  # Global stack for UI commands
 
 class MainWindow(QMainWindow):
 
+    def save_state(self, settings):
+        """Saves window geometry and state to QSettings."""
+        settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("windowState", self.saveState())
+
+    def restore_state(self, settings):
+        """Restores window geometry and state from QSettings."""
+        if settings.contains("geometry"):
+            self.restoreGeometry(settings.value("geometry"))
+        if settings.contains("windowState"):
+            self.restoreState(settings.value("windowState"))
+
     def update_title(self, is_dirty: bool):
         base = "Talus Trace"
         if is_dirty:

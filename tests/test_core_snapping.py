@@ -9,18 +9,16 @@ def test_dynamic_snapping_config():
     
     # Default 25mm
     manager.grid_size = 25.0
-    point = QPointF(26.0, 52.0)
+    point = (26.0, 52.0)
     snapped = manager.snap(point)
-    assert snapped.x() == 25.0
-    assert snapped.y() == 50.0
-    
+    assert snapped == (25.0, 50.0)
+
     # Change to 10mm
     manager.grid_size = 10.0
     snapped = manager.snap(point)
-    assert snapped.x() == 30.0 # Closest 10 is 30
-    assert snapped.y() == 50.0
-    
+    assert snapped == (30.0, 50.0) # Closest 10 is 30
+
     # Toggle Off
     manager.snap_enabled = False
     snapped = manager.snap(point)
-    assert snapped.x() == 26.0
+    assert snapped == (26.0, 52.0)

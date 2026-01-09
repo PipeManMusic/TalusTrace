@@ -92,7 +92,7 @@
     "phase": "5",
     "category": "Wires",
     "task": "Fix Elbow Logic: Hit-testing for thin wires & 'Add Point' Context Action.",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_tool_wire.py"
   },
   {
@@ -100,7 +100,7 @@
     "phase": "5",
     "category": "Wires",
     "task": "Implement 'Create Bundle' command (Visual grouping of selected wires).",
-    "status": "OPEN",
+    "status": "DONE",
     "test_file": "tests/test_core_bundling.py"
   },
   {
@@ -108,7 +108,7 @@
     "phase": "5",
     "category": "Editors",
     "task": "Implement Theme Editor Dialog with persistence to user_theme.yaml.",
-    "status": "OPEN",
+    "status": "DONE",
     "test_file": "tests/test_ui_compliance.py"
   },
   {
@@ -116,7 +116,7 @@
     "phase": "5",
     "category": "Editors",
     "task": "Refactor Audit Panel to be interactive (Click error -> Zoom to Item).",
-    "status": "OPEN",
+    "status": "DONE",
     "test_file": "tests/test_ui_audit_feedback.py"
   },
   {
@@ -124,7 +124,7 @@
     "phase": "5",
     "category": "File Ops",
     "task": "Implement robust file.new/open/save with full scene serialization.",
-    "status": "OPEN",
+    "status": "DONE",
     "test_file": "tests/test_infra_persistence.py"
   },
   {
@@ -132,7 +132,7 @@
     "phase": "5",
     "category": "File Ops",
     "task": "Implement SVG/DXF Export feature.",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_file_export.py"
   }
 ]

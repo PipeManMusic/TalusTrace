@@ -1,19 +1,18 @@
 
-# --- Snapping/Grid Manager for PH5-INTER.3 ---
-from PySide6.QtCore import QPointF
-
 class SpatialManager:
     def __init__(self):
         self.grid_size = 25.0
         self.snap_enabled = True
 
-    def snap(self, point: QPointF) -> QPointF:
+    def snap(self, point: tuple) -> tuple:
+        """Snaps a (x, y) tuple to the nearest grid point. Returns a tuple."""
+        x0, y0 = point
         if not self.snap_enabled:
-            return QPointF(point)
+            return (x0, y0)
         g = self.grid_size
-        x = round(point.x() / g) * g
-        y = round(point.y() / g) * g
-        return QPointF(x, y)
+        x = round(x0 / g) * g
+        y = round(y0 / g) * g
+        return (x, y)
 from collections import defaultdict
 from typing import Tuple, List, Dict, Any
 import math

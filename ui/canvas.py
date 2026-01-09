@@ -15,7 +15,12 @@ class CanvasEvent:
 
 
 class HarnessCanvas(QGraphicsView):
+
     GRID_SIZE_MM = 25.0
+
+    def zoom_extents(self):
+        """Fits all items in the scene into view (stub for test)."""
+        self.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
 
     def show_context_menu(self, pos):
         # Placeholder for context menu logic; test will patch this
