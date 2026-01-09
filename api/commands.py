@@ -5,15 +5,43 @@ from PySide6.QtWidgets import QFileDialog
 # --- File Operations ---
 @register_action("file.new")
 def file_new(context):
-    print(">> COMMAND: New File executed.")
+    """Resets the project to a new harness and clears undo stack."""
+    from infra.context import ProjectContext
+    api = APIManager.get_instance()
+    api.context = ProjectContext()  # New context with new Harness
+    api.context.undo_stack.clear()
+    api.context.current_file = None
+    api.context.dirty = False
+    print(">> COMMAND: New File executed. Project reset.")
 
 @register_action("file.open")
 def file_open(context):
-    print(">> COMMAND: Open File executed.")
+    """Prompts for a YAML file and loads it into the project context."""
+    from infra.context import ProjectContext
+    api = APIManager.get_instance()
+    path, _ = QFileDialog.getOpenFileName(None, "Open Harness File", "", "YAML Files (*.yaml *.yml)")
+    if path:
+        api.context = ProjectContext()
+        api.context.load(path)
+        api.context.current_file = path
+        api.context.dirty = False
+        print(f">> COMMAND: Open File executed. Loaded {path}")
+    else:
+        print(">> COMMAND: Open File cancelled.")
 
 @register_action("file.save")
 def file_save(context):
-    print(">> COMMAND: Save File executed.")
+    """Saves the current project context to file, prompting if needed."""
+    api = APIManager.get_instance()
+    ctx = api.context
+    path = getattr(ctx, 'current_file', None)
+    if not path:
+        path, _ = QFileDialog.getSaveFileName(None, "Save Harness File", "harness.yaml", "YAML Files (*.yaml *.yml)")
+        if not path:
+            print(">> COMMAND: Save File cancelled.")
+            return
+    ctx.save_as(path)
+    print(f">> COMMAND: Save File executed. Saved to {path}")
 
 # --- Edit Operations ---
 @register_action("edit.undo")
