@@ -10,6 +10,31 @@ from ui.items import PinItem, BundleItem
 from core.wire import Wire
 
 class SelectTool(BaseTool):
+
+    def _calculate_marquee_hits(self, rect, crossing=False):
+        """
+        Returns a list of devices hit by the marquee selection.
+        If crossing is False: only devices fully enclosed by rect are selected.
+        If crossing is True: devices partially or fully intersecting rect are selected.
+        """
+        from PySide6.QtCore import QRectF
+        harness = self._get_harness()
+        hits = []
+        for device in getattr(harness, 'devices', []):
+            x = getattr(device, 'x', 0)
+            y = getattr(device, 'y', 0)
+            w = getattr(device, 'width', 20)
+            h = getattr(device, 'height', 20)
+            dev_rect = QRectF(x, y, w, h)
+            if crossing:
+                if rect.intersects(dev_rect):
+                    hits.append(device)
+            else:
+                if rect.contains(dev_rect):
+                    hits.append(device)
+        return hits
+        return hits
+
     def __init__(self):
         self.dragging = False
         self.start_pos = None

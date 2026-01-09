@@ -52,7 +52,7 @@
     "phase": "5",
     "category": "App Shell",
     "task": "Implement 'Dirty State' management: Window Title (*) and 'Unsaved Changes' dialog on exit.",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_app_lifecycle.py"
   },
   {
@@ -60,7 +60,7 @@
     "phase": "5",
     "category": "Interaction",
     "task": "Implement Marquee Selection (Rubber Band) with Crossing vs. Enclosing logic.",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_tool_select.py"
   },
   {

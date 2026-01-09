@@ -15,17 +15,17 @@ def test_marquee_selection_logic():
     
     # 1. Enclosing Selection (Left-to-Right drag)
     # Box completely surrounds D1
-    selection_rect = QRectF(-5, -5, 30, 30) 
-    hits = tool._calculate_marquee_hits(selection_rect, crossing=False)
+    enclosing_rect = QRectF(0, 0, 50, 50)  # (0,0) to (50,50) fully encloses (10,10)-(30,30)
+    hits = tool._calculate_marquee_hits(enclosing_rect, crossing=False)
     assert d1 in hits
 
     # 2. Partial Selection (Left-to-Right drag)
-    # Box cuts through D1 -> Should NOT select (Enclosing mode)
-    partial_rect = QRectF(5, 5, 30, 30)
+    # Box clips the corner of D1 -> Should NOT select (Enclosing mode)
+    partial_rect = QRectF(20, 20, 20, 20)  # (20,20)-(40,40) only clips lower-right corner
     hits = tool._calculate_marquee_hits(partial_rect, crossing=False)
     assert d1 not in hits
 
     # 3. Crossing Selection (Right-to-Left drag logic usually triggers this)
-    # Box cuts through D1 -> Should select
+    # Box clips the corner of D1 -> Should select (Crossing mode)
     hits = tool._calculate_marquee_hits(partial_rect, crossing=True)
     assert d1 in hits
