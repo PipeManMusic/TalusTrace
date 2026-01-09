@@ -17,6 +17,9 @@ class MainWindow(QMainWindow):
         """Saves window geometry and state to QSettings."""
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
+        # Explicitly save dock sizes
+        settings.setValue("propDockSize", self.prop_dock.size())
+        settings.setValue("libDockSize", self.lib_dock.size())
 
     def restore_state(self, settings):
         """Restores window geometry and state from QSettings."""
@@ -24,6 +27,11 @@ class MainWindow(QMainWindow):
             self.restoreGeometry(settings.value("geometry"))
         if settings.contains("windowState"):
             self.restoreState(settings.value("windowState"))
+        # Explicitly restore dock sizes
+        if settings.contains("propDockSize"):
+            self.prop_dock.resize(settings.value("propDockSize"))
+        if settings.contains("libDockSize"):
+            self.lib_dock.resize(settings.value("libDockSize"))
 
     def update_title(self, is_dirty: bool):
         base = "Talus Trace"
@@ -56,10 +64,12 @@ class MainWindow(QMainWindow):
         # Initialize Toolbar from YAML config
         self.toolbar = self.layout_manager.create_toolbar(self)
         if self.toolbar:
+            self.toolbar.setObjectName("MainToolbar")
             self.addToolBar(self.toolbar)
 
         # 4. Property Panel (Dock)
         self.prop_dock = QDockWidget("Properties", self)
+        self.prop_dock.setObjectName("PropertiesDock")
         self.prop_panel = PropertyPanel()
         self.prop_dock.setWidget(self.prop_panel)
         self.prop_dock.setAllowedAreas(Qt.RightDockWidgetArea | Qt.LeftDockWidgetArea)
@@ -67,6 +77,7 @@ class MainWindow(QMainWindow):
 
         # 4b. Library Panel (Dock)
         self.lib_dock = QDockWidget("Library", self)
+        self.lib_dock.setObjectName("LibraryDock")
         self.lib_panel = LibraryPanel() # Uses defaults
         self.lib_dock.setWidget(self.lib_panel)
         self.lib_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
