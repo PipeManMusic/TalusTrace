@@ -1,0 +1,34 @@
+# resources/config/ui_layout.yaml
+menubar:
+  - label: "File"
+    items:
+      - command: "file.new"
+      - command: "file.open"
+      - command: "file.save"
+      - separator: true
+      - command: "file.exit"
+  - label: "Edit"
+    items:
+      - command: "edit.undo"
+      - command: "edit.redo"
+
+toolbar:
+  visible: true
+  items:
+    - command: "file.save"
+    - separator: true
+    - command: "tool.select"
+    - command: "tool.wire"
+    - command: "tool.move"
+
+# PH5-CLN.1: Context Menu Definitions
+context_menu:
+  device:
+    - command: "edit.move"
+    - command: "edit.rotate_cw"
+    - separator: true
+    - command: "edit.delete"
+  wire:
+    - command: "tool.add_elbow"
+    - separator: true
+    - command: "edit.delete"

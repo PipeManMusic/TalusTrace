@@ -152,32 +152,16 @@ class HarnessCanvas(QGraphicsView):
         super().mouseDoubleClickEvent(event)
 
     def mouseMoveEvent(self, event):
-        # PH5-CLN.3: Smart Cursor Affordance with Debug Logging
+        # PH5-CLN.3: Smart Cursor Affordance
         from ui.items import PinItem, DeviceItem
-        # Use event.position().toPoint() for Qt6 compliance (avoids deprecation warning)
         pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
         scene_pos = self.mapToScene(pos)
-        # Increase search rect to 8x8mm for robust hit detection
         search_rect = QRectF(scene_pos.x() - 4, scene_pos.y() - 4, 8, 8)
         items = self.scene.items(search_rect, Qt.IntersectsItemShape, Qt.DescendingOrder, self.transform())
-        print(f"\n[DEBUG] Mouse Move at Scene Pos: {scene_pos.x():.2f}, {scene_pos.y():.2f} (viewport: {pos.x()}, {pos.y()})")
-        print(f"[DEBUG] Search rect: {search_rect}")
-        print(f"[DEBUG] Items found: {len(items)}")
-        for i, item in enumerate(items):
-            print(f"  {i}: Type={type(item).__name__}, Visible={item.isVisible()}, Z={item.zValue()}")
-            if isinstance(item, DeviceItem):
-                print(f"    [DEBUG] DeviceItem.device.id: {getattr(item.device, 'id', None)}")
-                print(f"    [DEBUG] DeviceItem.sceneBoundingRect: {item.sceneBoundingRect()}")
-        # Fallback: try itemAt for precise hit
         if not items:
             item_at = self.scene.itemAt(scene_pos, self.transform())
-            print(f"[DEBUG] Fallback itemAt: {item_at} at {scene_pos}")
             if item_at:
                 items = [item_at]
-        # Print all DeviceItems in scene for debug
-        for item in self.scene.items():
-            if isinstance(item, DeviceItem):
-                print(f"[DEBUG] Scene DeviceItem: id={getattr(item.device, 'id', None)}, sceneBoundingRect={item.sceneBoundingRect()}")
         new_cursor = Qt.ArrowCursor
         for item in items:
             if isinstance(item, PinItem):
@@ -186,7 +170,6 @@ class HarnessCanvas(QGraphicsView):
             elif isinstance(item, DeviceItem):
                 new_cursor = Qt.OpenHandCursor
                 break
-        print(f"[DEBUG] Cursor set to: {new_cursor}")
         self.viewport().setCursor(new_cursor)
 
         tool = APIManager.get_instance().tool_manager.active_tool
