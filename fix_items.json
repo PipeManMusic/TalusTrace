@@ -13,7 +13,7 @@
     "phase": "6",
     "category": "Architecture",
     "task": "Decouple HarnessCanvas from Tool Logic via HAL.",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_canvas_decoupling.py",
     "ai_prompt": "Refactor ui/canvas.py to follow the Hardware Abstraction Layer (HAL) spec. In mouse events, remove direct calls to active_tool and replace with 'input_system.handle_canvas_event(self._create_tool_event(event))'."
   },
@@ -22,7 +22,7 @@
     "phase": "6",
     "category": "Engineering",
     "task": "Implement Real-Time Model Sync in Move and Wire Tools.",
-    "status": "OPEN",
+    "status": "DONE",
     "test_file": "tests/test_tool_realtime_sync.py",
     "ai_prompt": "Update tools/move_tool.py and tools/wire_tool.py to comply with State Synchronization. In move_tool.py, update device.x and device.y attributes immediately on mouseMove so concurrent pin detection is accurate."
   },
@@ -31,7 +31,7 @@
     "phase": "6",
     "category": "Performance",
     "task": "Implement MoveCommand Bundling for Undo Stack.",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_command_bundling.py",
     "ai_prompt": "Implement Command Bundling in tools/move_tool.py. Create a MoveCommand that stores initial position on mousePress and finalizes on mouseRelease, ensuring high-frequency moves don't bloat the UndoStack."
   }
