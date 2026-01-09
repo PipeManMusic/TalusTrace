@@ -95,13 +95,36 @@ class BundleItem(QGraphicsPathItem):
         self.setPen(pen)
 
 class TwistedPairItem(QGraphicsItem):
+    def get_geometry(self):
+        # Use a hash of path_nodes as the cache key
+        import hashlib
+        import numpy as np
+        try:
+            from infra.cache_manager import CacheManager
+        except ModuleNotFoundError:
+            import sys, os
+            sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+            from infra.cache_manager import CacheManager
+        cache = CacheManager()
+        # Convert path_nodes to a bytestring for hashing
+        arr = np.array(self.path_nodes, dtype=np.float32)
+        key = hashlib.sha1(arr.tobytes()).hexdigest()
+        cached = cache.load(key)
+        if cached:
+            self.helix_a, self.helix_b = cached
+            return self.helix_a, self.helix_b
+        # If not cached, compute and store
+        self.helix_a, self.helix_b = generate_helix_points(
+            self.path_nodes, pitch=10.0, amplitude=1.5, num_points=200
+        )
+        cache.save(key, (self.helix_a, self.helix_b))
+        return self.helix_a, self.helix_b
+
     def __init__(self, path_nodes, gauge_mm=0.65, parent=None):
         super().__init__(parent)
         self.path_nodes = path_nodes
         self.gauge_mm = gauge_mm
-        self.helix_a, self.helix_b = generate_helix_points(
-            path_nodes, pitch=10.0, amplitude=1.5, num_points=200
-        )
+        self.helix_a, self.helix_b = self.get_geometry()
 
     def determine_lod(self, view_scale: float) -> str:
         return "HELIX" if view_scale >= 0.5 else "HATCH"

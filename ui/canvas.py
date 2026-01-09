@@ -23,8 +23,25 @@ class HarnessCanvas(QGraphicsView):
         self.fitInView(self.scene.itemsBoundingRect(), Qt.KeepAspectRatio)
 
     def show_context_menu(self, pos):
-        # Placeholder for context menu logic; test will patch this
-        pass
+        from ui.layout_manager import LayoutManager
+        from ui.items import DeviceItem
+        menu_manager = LayoutManager().get_context_menu_manager()
+        scene_pos = self.mapToScene(pos)
+        item = self.scene.itemAt(scene_pos, self.transform())
+        item_type = None
+        if item is not None:
+            # Determine type for context menu
+            from ui.items import DeviceItem
+            if isinstance(item, DeviceItem):
+                item_type = 'device'
+            # Add more types as needed (e.g., WireItem)
+            elif hasattr(item, 'wire') or hasattr(item, 'is_wire'):
+                item_type = 'wire'
+        if not item_type:
+            return
+        menu = menu_manager.build_menu(item_type, parent=self)
+        if menu:
+            menu.exec(self.mapToGlobal(pos))
 
     def contextMenuEvent(self, event):
         # Use event.position().toPoint() for Qt6 compliance
@@ -116,6 +133,17 @@ class HarnessCanvas(QGraphicsView):
         super().mouseDoubleClickEvent(event)
 
     def mouseMoveEvent(self, event):
+        # Smart Cursor Implementation
+        from ui.items import PinItem, DeviceItem
+        scene_pos = self.mapToScene(event.pos())
+        item = self.scene.itemAt(scene_pos, self.transform())
+        if isinstance(item, PinItem):
+            self.viewport().setCursor(Qt.CrossCursor)
+        elif isinstance(item, DeviceItem):
+            self.viewport().setCursor(Qt.OpenHandCursor)
+        else:
+            self.viewport().setCursor(Qt.ArrowCursor)
+
         tool = APIManager.get_instance().tool_manager.active_tool
         if tool:
             tool.on_mouse_move(self._create_tool_event(event))

@@ -6,6 +6,9 @@ from PySide6.QtCore import Qt
 from api.actions import registry
 
 class LayoutManager:
+    def get_context_menu_manager(self):
+        from ui.context_menu_manager import ContextMenuManager
+        return ContextMenuManager(self.layout_cfg, self.actions_map)
 
     def create_menubar(self, parent=None):
         from PySide6.QtWidgets import QMenuBar, QMenu
@@ -36,11 +39,12 @@ class LayoutManager:
         self.actions_map = self._load_actions_map(actions_path)
 
     def _load_yaml(self, path):
+        from resources.defaults import DEFAULT_LAYOUT
         try:
             with open(path, 'r') as f:
                 return yaml.safe_load(f) or {}
-        except Exception as e:
-            return {}
+        except Exception:
+            return DEFAULT_LAYOUT.copy()
 
     def _load_actions_map(self, path):
         data = self._load_yaml(path)

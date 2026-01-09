@@ -12,10 +12,14 @@ class ThemeManager:
 			self._load_user_theme()
 
 	def _load_user_theme(self):
-		with open(self.user_path, 'r') as f:
-			data = yaml.safe_load(f)
-			if "colors" in data:
-				self.colors.update(data["colors"])
+		from resources.defaults import DEFAULT_THEME
+		try:
+			with open(self.user_path, 'r') as f:
+				data = yaml.safe_load(f)
+				if "colors" in data:
+					self.colors.update(data["colors"])
+		except Exception:
+			self.colors = DEFAULT_THEME.copy()
 
 	def get_color(self, key):
 		return self.colors.get(key, "#2E2E2E")
