@@ -44,7 +44,7 @@
     "phase": "5",
     "category": "App Shell",
     "task": "Implement Status Bar Logic (Show coordinates, Tool Hints, Git Hash).",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_ui_feedback.py"
   },
   {
@@ -52,7 +52,7 @@
     "phase": "5",
     "category": "App Shell",
     "task": "Implement 'Dirty State' management: Window Title (*) and 'Unsaved Changes' dialog on exit.",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_app_lifecycle.py"
   },
   {

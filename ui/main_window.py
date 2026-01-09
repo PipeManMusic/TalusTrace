@@ -13,6 +13,13 @@ command_stack = CommandStack()  # Global stack for UI commands
 
 class MainWindow(QMainWindow):
 
+    def update_title(self, is_dirty: bool):
+        base = "Talus Trace"
+        if is_dirty:
+            self.setWindowTitle(f"*{base}")
+        else:
+            self.setWindowTitle(base)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Talus Trace")

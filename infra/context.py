@@ -11,6 +11,16 @@ class ProjectContext:
         from infra.undo_stack import UndoStack
         self.undo_stack = UndoStack()
 
+    @property
+    def is_dirty(self):
+        return self.dirty
+
+    def mark_dirty(self):
+        self.dirty = True
+
+    def mark_clean(self):
+        self.dirty = False
+
     def load(self, path: Path):
         path = Path(path)
         if not path.exists():
