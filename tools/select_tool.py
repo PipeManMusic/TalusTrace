@@ -1,3 +1,4 @@
+import math
 from PySide6.QtCore import Qt, QPointF, QLineF
 from PySide6.QtWidgets import QMenu
 from PySide6.QtGui import QAction, QPainterPath
@@ -10,6 +11,76 @@ from ui.items import PinItem, BundleItem
 from core.wire import Wire
 
 class SelectTool(BaseTool):
+
+    def _get_harness(self):
+        # For testability: allow monkeypatching or override
+        return None
+
+    def hit_test_wire(self, point, tolerance):
+        """
+        Returns True if any wire in the harness is within tolerance of the point.
+        """
+        harness = self._get_harness()
+        wires = getattr(harness, 'wires', [])
+        for wire in wires:
+            # Get all points: start, bends, end
+            pts = self._get_wire_points(wire, harness)
+            for i in range(len(pts) - 1):
+                p1 = QPointF(*pts[i])
+                p2 = QPointF(*pts[i+1])
+                dist = self._point_to_segment_distance(point, p1, p2)
+                if dist <= tolerance:
+                    return True
+        return False
+
+    def _get_wire_points(self, wire, harness):
+        # For test, assume from_conn/to_conn are device ids, devices have x/y
+        d1 = next((d for d in getattr(harness, 'devices', []) if d.id == getattr(wire, 'from_conn', None)), None)
+        d2 = next((d for d in getattr(harness, 'devices', []) if d.id == getattr(wire, 'to_conn', None)), None)
+        points = []
+        if d1:
+            points.append((d1.x, d1.y))
+        points.extend(getattr(wire, 'points', []))
+        if d2:
+            points.append((d2.x, d2.y))
+        return points
+
+    def _point_to_segment_distance(self, pt, p1, p2):
+        # Returns the minimum distance from pt (QPointF) to segment p1-p2
+        x, y = pt.x(), pt.y()
+        x1, y1 = p1.x(), p1.y()
+        x2, y2 = p2.x(), p2.y()
+        dx, dy = x2 - x1, y2 - y1
+        if dx == dy == 0:
+            return math.hypot(x - x1, y - y1)
+        t = max(0, min(1, ((x - x1) * dx + (y - y1) * dy) / (dx * dx + dy * dy)))
+        proj_x = x1 + t * dx
+        proj_y = y1 + t * dy
+        return math.hypot(x - proj_x, y - proj_y)
+
+    def add_bend_point(self, wire_id, location):
+        """
+        Inserts a bend point (tuple) into the wire's points list at the segment closest to location.
+        """
+        harness = self._get_harness()
+        wire = next((w for w in getattr(harness, 'wires', []) if w.id == wire_id), None)
+        if not wire:
+            return
+        # Get all points: start, bends, end
+        pts = self._get_wire_points(wire, harness)
+        min_dist = float('inf')
+        insert_idx = 0
+        loc_pt = QPointF(*location)
+        for i in range(len(pts) - 1):
+            p1 = QPointF(*pts[i])
+            p2 = QPointF(*pts[i+1])
+            dist = self._point_to_segment_distance(loc_pt, p1, p2)
+            if dist < min_dist:
+                min_dist = dist
+                insert_idx = i
+        # Insert into wire.points (which is bends only, not endpoints)
+        # wire.points index = insert_idx (after start), so insert at insert_idx
+        wire.points.insert(insert_idx, location)
 
     def _calculate_marquee_hits(self, rect, crossing=False):
         """

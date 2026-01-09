@@ -84,7 +84,7 @@
     "phase": "5",
     "category": "Device Mgmt",
     "task": "Implement 'Device Wizard' Dialog for creating custom parts.",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_ui_dialogs.py"
   },
   {
@@ -92,7 +92,7 @@
     "phase": "5",
     "category": "Wires",
     "task": "Fix Elbow Logic: Hit-testing for thin wires & 'Add Point' Context Action.",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_tool_wire.py"
   },
   {
