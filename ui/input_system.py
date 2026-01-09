@@ -72,8 +72,7 @@ class InputSystem(QObject):
         if not tool or not hasattr(event, 'original_event'):
             return
         qt_event = event.original_event
-        # Map Qt event type to tool method
-        if hasattr(qt_event, 'type'):
+        if qt_event and hasattr(qt_event, 'type'):
             etype = qt_event.type()
             from PySide6.QtCore import QEvent
             if etype == QEvent.MouseButtonPress:

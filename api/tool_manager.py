@@ -22,3 +22,7 @@ class ToolManager:
     @property
     def active_tool(self):
         return self._active_tool
+
+    def get_tool(self, name: str):
+        """Return the tool instance by name, or None if not found."""
+        return self._tools.get(name)

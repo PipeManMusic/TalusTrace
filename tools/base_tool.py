@@ -6,6 +6,8 @@ class Tool:
     def stop(self):
         pass
     def on_mouse_move(self, event):
+        """event: CanvasEvent"""
         pass
     def on_mouse_press(self, event):
+        """event: CanvasEvent"""
         pass

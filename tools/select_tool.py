@@ -113,14 +113,15 @@ class SelectTool(BaseTool):
         self.selection_manager = SelectionManager()
 
     def on_mouse_press(self, event):
-        if event.original_event.button() == Qt.RightButton:
+        # event: CanvasEvent
+        if hasattr(event, 'original_event') and event.original_event.button() == Qt.RightButton:
             self._show_context_menu(event)
             return
 
-        item = event.scene_item
-        
+        item = getattr(event, 'scene_item', None)
+
         # Handle Pins: Select Parent Device
-        if isinstance(item, PinItem):
+        if item and item.__class__.__name__ == 'PinItem':
             return
 
         # Handle Ghost/Unknown Items
@@ -237,13 +238,14 @@ class SelectTool(BaseTool):
         pass # Visuals handled by TwistedPairItem later
 
     def on_mouse_move(self, event):
+        # event: CanvasEvent
         if self.dragging and self.start_pos:
-            current_pos = event.pos_mm
+            current_pos = getattr(event, 'pos_mm', None)
             dx = current_pos.x() - self.start_pos.x()
             dy = current_pos.y() - self.start_pos.y()
             self.move_logic.update(dx, dy)
             if hasattr(event, 'scene_item') and event.scene_item:
-                 event.scene_item.setPos(self.move_logic.ghost_item.x, self.move_logic.ghost_item.y)
+                event.scene_item.setPos(self.move_logic.ghost_item.x, self.move_logic.ghost_item.y)
 
     def on_mouse_release(self, event):
         if self.dragging:
