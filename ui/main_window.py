@@ -90,6 +90,20 @@ class MainWindow(QMainWindow):
         # Show git hash on startup
         self._show_git_hash()
 
+    def subscribe_undo_stack(self):
+        api = APIManager.get_instance()
+        api.context.undo_stack.subscribe(self._on_undo_stack_event)
+
+    def _on_undo_stack_event(self, event_type):
+        # Refresh canvas on undo/redo
+        api = APIManager.get_instance()
+        self.canvas.load_harness(api.context.harness)
+
+    def _on_undo_stack_event(self, event_type):
+        # Refresh canvas on undo/redo
+        api = APIManager.get_instance()
+        self.canvas.load_harness(api.context.harness)
+
     def _show_git_hash(self):
         import subprocess
         try:

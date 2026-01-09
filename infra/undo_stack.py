@@ -29,6 +29,18 @@ class UndoStack:
     def __init__(self):
         self._undo_stack = []
         self._redo_stack = []
+        self._callbacks = []
+
+    def subscribe(self, callback):
+        if callback not in self._callbacks:
+            self._callbacks.append(callback)
+
+    def _notify(self, event_type):
+        for cb in self._callbacks:
+            try:
+                cb(event_type)
+            except Exception as e:
+                print(f"UndoStack callback error: {e}")
 
     def push(self, command: BaseCommand):
         self.do(command)
@@ -45,6 +57,7 @@ class UndoStack:
         command = self._undo_stack.pop()
         command.undo()
         self._redo_stack.append(command)
+        self._notify('undo')
 
     def redo(self):
         if not self._redo_stack:
@@ -52,6 +65,7 @@ class UndoStack:
         command = self._redo_stack.pop()
         command.redo()
         self._undo_stack.append(command)
+        self._notify('redo')
 
     def clear(self):
         self._undo_stack.clear()
