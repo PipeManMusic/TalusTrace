@@ -2,6 +2,7 @@
 from PySide6.QtWidgets import QWidget, QListWidget, QVBoxLayout
 from api.manager import APIManager
 
+
 class AuditPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -12,6 +13,10 @@ class AuditPanel(QWidget):
         self.setLayout(layout)
         # For demo, connect selection to handler
         self.list_widget.itemClicked.connect(self._on_item_clicked)
+
+    def on_zoom_clicked(self, violation):
+        """Dispatches a zoom event for the given violation (for test_ui_audit_feedback.py)."""
+        self.api.dispatch("view.zoom_to", {"target_id": violation["id"]})
 
     def set_violations(self, violations):
         self.list_widget.clear()
