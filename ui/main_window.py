@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt
 from ui.canvas import HarnessCanvas
 from ui.input_system import InputSystem
 from ui.layout_manager import LayoutManager
-from ui.panels.properties import PropertyPanel # <--- NEW
+from ui.panels.properties import PropertyPanel
 from api.actions import registry
 from api.manager import APIManager
 from ui.panels.library import LibraryPanel
@@ -46,8 +46,14 @@ class MainWindow(QMainWindow):
         self.input_system.install()
         APIManager.get_instance().input_system = self.input_system
 
-        # 3. Toolbar
+        # 3. Layout Resources (Toolbar & Menubar)
         self.layout_manager = LayoutManager()
+        
+        # PH5-CLN.1: Initialize Menubar from YAML config
+        # This call creates the QMenuBar and attaches it to the QMainWindow
+        self.setMenuBar(self.layout_manager.create_menubar(self))
+
+        # Initialize Toolbar from YAML config
         self.toolbar = self.layout_manager.create_toolbar(self)
         if self.toolbar:
             self.addToolBar(self.toolbar)
