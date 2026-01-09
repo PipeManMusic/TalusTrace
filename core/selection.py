@@ -1,6 +1,5 @@
 from api.manager import APIManager
 
-
 class SelectionManager:
     _instance = None
     def __new__(cls, *args, **kwargs):
@@ -24,3 +23,10 @@ class SelectionManager:
         })
         
         print(f">> Selection Updated: {len(items)} items")
+
+    def clear_selection(self):
+        """
+        Standard method to reset the selection state.
+        This resolves the AttributeError in edit_delete.
+        """
+        self.set_selection([])

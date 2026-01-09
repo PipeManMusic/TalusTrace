@@ -1,28 +1,30 @@
-from tools.base import BaseTool
-
 class ToolManager:
     def __init__(self):
-        self._active_tool = None
         self._tools = {}
+        self.active_tool = None
 
-    def register_tool(self, name: str, tool_instance: BaseTool):
-        self._tools[name] = tool_instance
+    def register_tool(self, name, tool):
+        self._tools[name] = tool
 
-    def set_tool(self, name: str):
-        if self._active_tool:
-            self._active_tool.deactivate()
-        
-        if name in self._tools:
-            self._active_tool = self._tools[name]
-            self._active_tool.activate()
-            print(f">> Tool Changed: {name}")
-        else:
-            print(f">> Error: Tool '{name}' not registered.")
-
-    @property
-    def active_tool(self):
-        return self._active_tool
-
-    def get_tool(self, name: str):
-        """Return the tool instance by name, or None if not found."""
+    def get_tool(self, name):
+        """Retrieves a registered tool by its name."""
         return self._tools.get(name)
+
+    def set_tool(self, name):
+        """Sets active tool and handles transition cleanup internally."""
+        if name not in self._tools:
+            print(f">> Error: Tool '{name}' not found.")
+            return
+
+        if self.active_tool == self._tools[name]:
+            return
+
+        # Deactivate existing tool before switching
+        if self.active_tool:
+            self.active_tool.deactivate()
+
+        self.active_tool = self._tools[name]
+        print(f">> Tool Changed: {name}")
+        
+        # Initialize the new state
+        self.active_tool.start()

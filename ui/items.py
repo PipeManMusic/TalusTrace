@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsPathItem, QGraphicsItem, QGraphicsEllipseItem
+from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsPathItem, QGraphicsItem, QGraphicsEllipseItem, QGraphicsDropShadowEffect
 from PySide6.QtGui import QPen, QBrush, QPainterPath, QColor, QPainter, QPainterPathStroker
 from PySide6.QtCore import Qt, QRectF, QPointF
 from core.logic import calculate_bundle_diameter
@@ -14,7 +14,6 @@ class PinItem(QGraphicsEllipseItem):
         self.setAcceptHoverEvents(True)
     
     def hoverEnterEvent(self, event):
-        # COMPLIANCE FIX: Use Qt Enum instead of hex string
         self.setBrush(QBrush(Qt.cyan)) 
         super().hoverEnterEvent(event)
 
@@ -27,56 +26,48 @@ class DeviceItem(QGraphicsRectItem):
         super().__init__(parent)
         self.device = device
         self.is_ghost = is_ghost
+        
+        # Setup dimensions
         width_mm = self.device.meta.get("width_mm", 40.0)
         height_mm = self.device.meta.get("height_mm", 30.0)
         self.setRect(-width_mm/2, -height_mm/2, width_mm, height_mm)
         self.setPos(self.device.x, self.device.y)
+        
+        # Vital interaction flags
         self.setAcceptHoverEvents(True)
-        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-        self.setFlag(QGraphicsItem.ItemIsFocusable, True)
-        self.update_visual_state()
+        self.setFlag(QGraphicsItem.ItemIsSelectable, not self.is_ghost)
+        self.setFlag(QGraphicsItem.ItemIsMovable, not self.is_ghost)
+        self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
+        
         if self.is_ghost:
+            self.setZValue(2000)
             self.setAcceptedMouseButtons(Qt.NoButton)
-            self.setFlag(QGraphicsItem.ItemIsMovable, False)
-            self.setFlag(QGraphicsItem.ItemIsSelectable, False)
-            self.setZValue(1000)
-        if not self.is_ghost and hasattr(self.device, 'pins'):
-            for pin in self.device.pins:
-                pin_item = PinItem(pin, self)
-                pin_item.setPos(pin.x, pin.y)
-
-    def setSelected(self, selected):
-        from core.selection import SelectionManager
-        super().setSelected(selected)
-        if selected:
-            SelectionManager().current_selection_ids.add(self.device.id)
-            SelectionManager().selected_models = [self.device]
-        else:
-            SelectionManager().current_selection_ids.discard(self.device.id)
-            SelectionManager().selected_models = []
+        
         self.update_visual_state()
+
+    def itemChange(self, change, value):
+        """Stops halo trails by ensuring visual sync during movement."""
+        if change == QGraphicsItem.ItemSelectedChange:
+            from core.selection import SelectionManager
+            if value:
+                SelectionManager().current_selection_ids.add(self.device.id)
+            else:
+                SelectionManager().current_selection_ids.discard(self.device.id)
+            self.update_visual_state()
+            self.update() # Force clear old halo
+            
+        if change == QGraphicsItem.ItemPositionChange:
+            # Sync model coordinates during drag
+            self.device.x = value.x()
+            self.device.y = value.y()
+            
+        return super().itemChange(change, value)
 
     def update_visual_state(self):
+        """Unified state handler for shadows and halos."""
         body_color = QColor(THEME_FALLBACK["device_body"])
-        outline_color = QColor(THEME_FALLBACK["device_outline"])
-        self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemIsMovable)
-        if self.is_ghost:
-            body_color.setAlpha(100)
-            self.setPen(QPen(outline_color, 1, Qt.DashLine))
-            self.setAcceptedMouseButtons(Qt.NoButton)
-            self.setFlag(QGraphicsItem.ItemIsMovable, False)
-            self.setFlag(QGraphicsItem.ItemIsSelectable, False)
-            self.setZValue(1000)
-        else:
-            self.setPen(QPen(outline_color, 0))
-            self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-            self.setFlag(QGraphicsItem.ItemIsMovable, True)
-            self.setAcceptedMouseButtons(Qt.LeftButton)
-        self.setBrush(QBrush(body_color))
-
-        # Selection halo (cyan drop shadow)
-        from PySide6.QtWidgets import QGraphicsDropShadowEffect
-        if self.isSelected():
+        if self.isSelected() and not self.is_ghost:
+            # Cleanly apply cyan shadow
             effect = QGraphicsDropShadowEffect()
             effect.setBlurRadius(15)
             effect.setColor(QColor(0, 200, 255))
@@ -84,15 +75,14 @@ class DeviceItem(QGraphicsRectItem):
             self.setGraphicsEffect(effect)
         else:
             self.setGraphicsEffect(None)
+        self.setBrush(QBrush(body_color))
 
     def paint(self, painter, option, widget):
-        # Draw the device body
+        """Retains specialized drawing logic without trails."""
         super().paint(painter, option, widget)
-        # Draw selection halo if selected and not ghost
         if self.isSelected() and not self.is_ghost:
             rect = self.rect().adjusted(-4, -4, 4, 4)
-            halo_color = QColor(0, 180, 255, 100)
-            painter.setPen(QPen(halo_color, 4, Qt.SolidLine))
+            painter.setPen(QPen(QColor(0, 180, 255, 150), 3))
             painter.setBrush(Qt.NoBrush)
             painter.drawRect(rect)
 
