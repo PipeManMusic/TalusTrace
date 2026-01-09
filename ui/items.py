@@ -27,14 +27,14 @@ class DeviceItem(QGraphicsRectItem):
         super().__init__(parent)
         self.device = device
         self.is_ghost = is_ghost
-        
         width_mm = self.device.meta.get("width_mm", 40.0)
         height_mm = self.device.meta.get("height_mm", 30.0)
         self.setRect(-width_mm/2, -height_mm/2, width_mm, height_mm)
         self.setPos(self.device.x, self.device.y)
-        
+        self.setAcceptHoverEvents(True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)
+        self.setFlag(QGraphicsItem.ItemIsFocusable, True)
         self.update_visual_state()
-        
         if not self.is_ghost and hasattr(self.device, 'pins'):
             for pin in self.device.pins:
                 pin_item = PinItem(pin, self)

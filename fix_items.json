@@ -3,36 +3,27 @@
     "id": "PH5-CLN.1",
     "phase": "5",
     "category": "Architecture",
-    "task": "Refactor Context Menus: Move all Device/Wire right-click actions into ui_layout.yaml parsing logic.",
+    "task": "Refactor Context Menus to be YAML-driven per the Master Spec.",
     "status": "DONE",
     "test_file": "tests/test_ui_context_menu.py",
-    "ai_prompt": "Update ui/layout_manager.py to parse the 'context_menu' section from ui_layout.yaml. Modify HarnessCanvas.show_context_menu to dynamically build QMenus based on the item type using the registry."
+    "ai_prompt": "Update ui/layout_manager.py to parse a 'context_menu' section from ui_layout.yaml. Create a ContextMenuManager that builds QMenus based on these definitions and maps them to items in HarnessCanvas."
   },
   {
     "id": "PH5-CLN.2",
     "phase": "5",
-    "category": "Optimization",
-    "task": "Implement Geometry Cache: Store pre-calculated Helix/Bundle points in .cache/render/ as binary blobs.",
+    "category": "Robustness",
+    "task": "Implement hardcoded Fallback Defaults for all YAML resources.",
     "status": "DONE",
-    "test_file": "tests/test_ph5_3_1_spatial_hash_performance.py",
-    "ai_prompt": "Create infra/cache_manager.py using Python pickle to store and retrieve QPolygonF data for TwistedPair items. Update TwistedPair.get_geometry to check cache before calculating."
+    "test_file": "tests/test_resource_integrity.py",
+    "ai_prompt": "Create a resources/defaults.py file containing standard theme and layout data. Update ThemeManager and LayoutManager to use these defaults if file.load() fails."
   },
   {
     "id": "PH5-CLN.3",
     "phase": "5",
-    "category": "Robustness",
-    "task": "Implement Configuration Fallbacks: Ensure app uses internal hardcoded defaults if YAML files are missing or corrupt.",
-    "status": "DONE",
-    "test_file": "tests/test_resource_integrity.py",
-    "ai_prompt": "Update ui/layout_manager.py and ui/theme.py to wrap YAML loads in try-except blocks that return talustrace/resources/defaults.py values on failure."
-  },
-  {
-    "id": "PH5-CLN.4",
-    "phase": "5",
     "category": "UX",
-    "task": "Smart Cursor Implementation: Cursor icon must change based on hover (Hand for Device, Crosshair for Pin).",
-    "status": "DONE",
+    "task": "Smart Cursor Affordance: Change icon based on object hover.",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_ui_feedback.py",
-    "ai_prompt": "Modify HarnessCanvas.mouseMoveEvent to check the item under the cursor. If PinItem set CrosshairCursor; if DeviceItem set OpenHandCursor; otherwise set ArrowCursor."
+    "ai_prompt": "Modify HarnessCanvas.mouseMoveEvent to check the item at the cursor. Change cursor to OpenHand over Devices, Crosshair over Pins, and Arrow over empty space."
   }
 ]
