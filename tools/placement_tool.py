@@ -40,17 +40,14 @@ class PlacementTool(Tool):
 
     def on_mouse_move(self, event):
         # event: CanvasEvent
-        pos = getattr(event, 'pos_mm', None)
-        if pos is not None:
-            x = round(pos.x() / 25.0) * 25.0
-            y = round(pos.y() / 25.0) * 25.0
-            self.ghost_item.setPos(x, y)
+        pos = event.pos_mm
+        x = round(pos.x() / 25.0) * 25.0
+        y = round(pos.y() / 25.0) * 25.0
+        self.ghost_item.setPos(x, y)
 
     def on_mouse_press(self, event):
         # event: CanvasEvent
-        pos = getattr(event, 'pos_mm', None)
-        if pos is None:
-            return
+        pos = event.pos_mm
         x = round(pos.x() / 25.0) * 25.0
         y = round(pos.y() / 25.0) * 25.0
         from api.manager import APIManager

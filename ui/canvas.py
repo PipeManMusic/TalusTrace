@@ -19,18 +19,14 @@ class HarnessCanvas(QGraphicsView):
         self.active_tool = tool
 
     def mouseMoveEvent(self, event):
-        canvas_event = self._create_tool_event(event)
-        if hasattr(self, 'active_tool') and self.active_tool:
-            self.active_tool.on_mouse_move(canvas_event)
-        else:
-            super().mouseMoveEvent(event)
+        event_obj = self._create_tool_event(event)
+        APIManager.get_instance().input_system.handle_canvas_event(event_obj)
+        super().mouseMoveEvent(event)
 
     def mousePressEvent(self, event):
-        if hasattr(self, 'active_tool') and self.active_tool:
-            canvas_event = self._create_tool_event(event)
-            self.active_tool.on_mouse_press(canvas_event)
-        else:
-            super().mousePressEvent(event)
+        event_obj = self._create_tool_event(event)
+        APIManager.get_instance().input_system.handle_canvas_event(event_obj)
+        super().mousePressEvent(event)
 
     def _init_move_tool(self):
         from tools.move_tool import MoveTool

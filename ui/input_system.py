@@ -69,18 +69,16 @@ class InputSystem(QObject):
         """
         from api.manager import APIManager
         tool = APIManager.get_instance().tool_manager.active_tool
-        if not tool or not hasattr(event, 'original_event'):
+        if not tool:
             return
-        qt_event = event.original_event
-        if qt_event and hasattr(qt_event, 'type'):
-            etype = qt_event.type()
-            from PySide6.QtCore import QEvent
-            if etype == QEvent.MouseButtonPress:
-                tool.on_mouse_press(event)
-            elif etype == QEvent.MouseButtonRelease:
-                tool.on_mouse_release(event)
-            elif etype == QEvent.MouseMove:
-                tool.on_mouse_move(event)
-            elif etype == QEvent.MouseButtonDblClick:
-                tool.on_mouse_double_click(event)
+        from PySide6.QtCore import QEvent
+        etype = event.original_event.type()
+        if etype == QEvent.MouseMove:
+            tool.on_mouse_move(event)
+        elif etype == QEvent.MouseButtonPress:
+            tool.on_mouse_press(event)
+        elif etype == QEvent.MouseButtonRelease:
+            tool.on_mouse_release(event)
+        elif etype == QEvent.MouseButtonDblClick:
+            tool.on_mouse_double_click(event)
         # Optionally: handle wheel, context menu, etc.

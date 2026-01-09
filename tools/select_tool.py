@@ -114,11 +114,11 @@ class SelectTool(BaseTool):
 
     def on_mouse_press(self, event):
         # event: CanvasEvent
-        if hasattr(event, 'original_event') and event.original_event.button() == Qt.RightButton:
+        if event.original_event.button() == Qt.RightButton:
             self._show_context_menu(event)
             return
 
-        item = getattr(event, 'scene_item', None)
+        item = event.scene_item
 
         # Handle Pins: Select Parent Device
         if item and item.__class__.__name__ == 'PinItem':
@@ -240,7 +240,7 @@ class SelectTool(BaseTool):
     def on_mouse_move(self, event):
         # event: CanvasEvent
         if self.dragging and self.start_pos:
-            current_pos = getattr(event, 'pos_mm', None)
+            current_pos = event.pos_mm
             dx = current_pos.x() - self.start_pos.x()
             dy = current_pos.y() - self.start_pos.y()
             self.move_logic.update(dx, dy)
