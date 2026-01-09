@@ -43,11 +43,15 @@ class MoveTool:
 		api.context.undo_stack.push(cmd)
 
 	def on_mouse_move(self, event):
-		# Update the device model's coordinates in real time during drag
+		# Update the device model's coordinates in real time during drag, snapping to grid
 		if hasattr(event, 'pos_mm') and hasattr(event, 'scene_item') and hasattr(event.scene_item, 'device'):
 			dev = event.scene_item.device
-			dev.x = event.pos_mm.x()
-			dev.y = event.pos_mm.y()
+			grid_size = 25.0
+			import math
+			def snap(val):
+				return math.floor(val / grid_size) * grid_size
+			dev.x = snap(event.pos_mm.x())
+			dev.y = snap(event.pos_mm.y())
 	def __init__(self):
 		self.ghost_item = None
 		self._target = None
