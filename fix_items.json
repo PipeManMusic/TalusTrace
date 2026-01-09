@@ -1,29 +1,38 @@
 [
   {
-    "id": "PH5-CLN.1",
-    "phase": "5",
+    "id": "PH6-EVT.1",
+    "phase": "6",
     "category": "Architecture",
-    "task": "Refactor Context Menus to be YAML-driven per the Master Spec.",
-    "status": "DONE",
-    "test_file": "tests/test_ui_context_menu.py",
-    "ai_prompt": "Update ui/layout_manager.py to parse a 'context_menu' section from ui_layout.yaml. Create a ContextMenuManager that builds QMenus based on these definitions and maps them to items in HarnessCanvas."
-  },
-  {
-    "id": "PH5-CLN.2",
-    "phase": "5",
-    "category": "Robustness",
-    "task": "Implement hardcoded Fallback Defaults for all YAML resources.",
-    "status": "DONE",
-    "test_file": "tests/test_resource_integrity.py",
-    "ai_prompt": "Create a resources/defaults.py file containing standard theme and layout data. Update ThemeManager and LayoutManager to use these defaults if file.load() fails."
-  },
-  {
-    "id": "PH5-CLN.3",
-    "phase": "5",
-    "category": "UX",
-    "task": "Smart Cursor Affordance: Change icon based on object hover.",
+    "task": "Refactor InputSystem to act as a Central Event Dispatcher.",
     "status": "IN_PROGRESS",
-    "test_file": "tests/test_ui_feedback.py",
-    "ai_prompt": "Modify HarnessCanvas.mouseMoveEvent to check the item at the cursor. Change cursor to OpenHand over Devices, Crosshair over Pins, and Arrow over empty space."
+    "test_file": "tests/test_ui_input_orchestration.py",
+    "ai_prompt": "Update ui/input_system.py based on the Input Orchestration Specification. Create a method 'handle_canvas_event(event)' that retrieves the active tool from APIManager.tool_manager and calls the corresponding tool method (e.g., on_mouse_press) based on the type of the original Qt event."
+  },
+  {
+    "id": "PH6-EVT.2",
+    "phase": "6",
+    "category": "Architecture",
+    "task": "Decouple HarnessCanvas from Tool Logic via HAL.",
+    "status": "OPEN",
+    "test_file": "tests/test_canvas_decoupling.py",
+    "ai_prompt": "Refactor ui/canvas.py to follow the Hardware Abstraction Layer (HAL) spec. In mouse events, remove direct calls to active_tool and replace with 'input_system.handle_canvas_event(self._create_tool_event(event))'."
+  },
+  {
+    "id": "PH6-EVT.3",
+    "phase": "6",
+    "category": "Engineering",
+    "task": "Implement Real-Time Model Sync in Move and Wire Tools.",
+    "status": "OPEN",
+    "test_file": "tests/test_tool_realtime_sync.py",
+    "ai_prompt": "Update tools/move_tool.py and tools/wire_tool.py to comply with State Synchronization. In move_tool.py, update device.x and device.y attributes immediately on mouseMove so concurrent pin detection is accurate."
+  },
+  {
+    "id": "PH6-EVT.4",
+    "phase": "6",
+    "category": "Performance",
+    "task": "Implement MoveCommand Bundling for Undo Stack.",
+    "status": "OPEN",
+    "test_file": "tests/test_command_bundling.py",
+    "ai_prompt": "Implement Command Bundling in tools/move_tool.py. Create a MoveCommand that stores initial position on mousePress and finalizes on mouseRelease, ensuring high-frequency moves don't bloat the UndoStack."
   }
 ]

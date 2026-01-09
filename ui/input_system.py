@@ -61,3 +61,27 @@ class InputSystem(QObject):
                 return True
 
         return super().eventFilter(obj, event)
+
+    def handle_canvas_event(self, event):
+        """
+        Central event dispatcher for canvas events.
+        Dispatches to the active tool based on the type of the original Qt event.
+        """
+        from api.manager import APIManager
+        tool = APIManager.get_instance().tool_manager.active_tool
+        if not tool or not hasattr(event, 'original_event'):
+            return
+        qt_event = event.original_event
+        # Map Qt event type to tool method
+        if hasattr(qt_event, 'type'):
+            etype = qt_event.type()
+            from PySide6.QtCore import QEvent
+            if etype == QEvent.MouseButtonPress:
+                tool.on_mouse_press(event)
+            elif etype == QEvent.MouseButtonRelease:
+                tool.on_mouse_release(event)
+            elif etype == QEvent.MouseMove:
+                tool.on_mouse_move(event)
+            elif etype == QEvent.MouseButtonDblClick:
+                tool.on_mouse_double_click(event)
+        # Optionally: handle wheel, context menu, etc.

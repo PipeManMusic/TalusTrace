@@ -70,3 +70,6 @@ class UndoStack:
     @property
     def redo_stack(self):
         return list(self._redo_stack)
+
+    def __len__(self):
+        return len(self._undo_stack)

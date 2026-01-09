@@ -1,6 +1,8 @@
 from api.actions import register_action
 from api.manager import APIManager
-from PySide6.QtWidgets import QFileDialog
+from PySide6.QtWidgets import QFileDialog, QApplication
+from core.device import Device
+from core.wire import Wire
 
 # --- File Operations ---
 @register_action("file.new")
@@ -100,13 +102,12 @@ def edit_delete(context):
     print(f">> Deleted {count} items.")
 
 # --- Tools ---
-@register_action("tool.select_mode")
+@register_action("tool.select")
 def tool_select(context):
     APIManager.get_instance().tool_manager.set_tool("select")
 
-@register_action("tool.wire_mode")
+@register_action("tool.wire")
 def tool_wire(context):
-    # This was likely missing or commented out
     APIManager.get_instance().tool_manager.set_tool("wire")
 
 @register_action("tool.measure")

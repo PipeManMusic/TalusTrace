@@ -38,6 +38,7 @@ class DeviceItem(QGraphicsRectItem):
         if not self.is_ghost and hasattr(self.device, 'pins'):
             for pin in self.device.pins:
                 pin_item = PinItem(pin, self)
+                # Ensure pin_item.setPos(pin.x, pin.y) is only called once and not offset again.
                 pin_item.setPos(pin.x, pin.y) 
 
     def setSelected(self, selected):

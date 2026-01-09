@@ -15,6 +15,11 @@ class CanvasEvent:
 
 
 class HarnessCanvas(QGraphicsView):
+    def _init_move_tool(self):
+        from tools.move_tool import MoveTool
+        self._move_tool = MoveTool()
+        self._dragging_device = None
+        self._last_mouse_pos = None
 
     GRID_SIZE_MM = 25.0
 
@@ -44,8 +49,8 @@ class HarnessCanvas(QGraphicsView):
             menu.exec(self.mapToGlobal(pos))
 
     def contextMenuEvent(self, event):
-        # Use event.position().toPoint() for Qt6 compliance
-        self.show_context_menu(event.position().toPoint())
+        # Use event.pos() for QContextMenuEvent compatibility
+        self.show_context_menu(event.pos())
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -60,6 +65,9 @@ class HarnessCanvas(QGraphicsView):
         self.scene.setSceneRect(-50000, -50000, 100000, 100000)
         self.setBackgroundBrush(QBrush(QColor(THEME_FALLBACK["canvas_bg"])))
         self.scale(1.0, 1.0)
+
+        # MoveTool integration
+        self._init_move_tool()
 
         # Subscribe to 'view.zoom_to' event
         APIManager.get_instance().subscribe(self._on_zoom_to)
@@ -123,8 +131,10 @@ class HarnessCanvas(QGraphicsView):
         self.scene.addItem(item)
 
     def _create_tool_event(self, event: QMouseEvent):
-        scene_pos = self.mapToScene(event.pos())
+        pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+        scene_pos = self.mapToScene(pos)
         item = self.scene.itemAt(scene_pos, self.transform())
+        # Always pass scene=self.scene to ToolEvent
         return CanvasEvent(event, scene_pos, self.scene, item)
 
     def mousePressEvent(self, event):
@@ -134,28 +144,40 @@ class HarnessCanvas(QGraphicsView):
             return
 
         if event.button() == Qt.RightButton:
-            # Use event.position().toPoint() for Qt6 compliance
             self.show_context_menu(event.position().toPoint())
             return
 
-        tool = APIManager.get_instance().tool_manager.active_tool
-        if tool:
-            tool.on_mouse_press(self._create_tool_event(event))
-        else:
-            super().mousePressEvent(event)
+        pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
+        scene_pos = self.mapToScene(pos)
+        item = self.scene.itemAt(scene_pos, self.transform())
+        from ui.items import DeviceItem
+        if event.button() == Qt.LeftButton and isinstance(item, DeviceItem):
+            self._dragging_device = item
+            self._last_mouse_pos = scene_pos
+            self._move_tool.start(item.device, item)
+            return
+
+        # Central event dispatch
+        APIManager.get_instance().input_system.handle_canvas_event(self._create_tool_event(event))
 
     def mouseDoubleClickEvent(self, event):
         print(">> DEBUG: Double Click Detected in Canvas") # <--- DEBUG
-        tool = APIManager.get_instance().tool_manager.active_tool
-        if tool:
-            tool.on_mouse_double_click(self._create_tool_event(event))
+        APIManager.get_instance().input_system.handle_canvas_event(self._create_tool_event(event))
         super().mouseDoubleClickEvent(event)
 
     def mouseMoveEvent(self, event):
-        # PH5-CLN.3: Smart Cursor Affordance
         from ui.items import PinItem, DeviceItem
         pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
         scene_pos = self.mapToScene(pos)
+        # If dragging a device, use MoveTool
+        if self._dragging_device is not None and self._last_mouse_pos is not None:
+            dx = scene_pos.x() - self._last_mouse_pos.x()
+            dy = scene_pos.y() - self._last_mouse_pos.y()
+            self._move_tool.update(dx, dy)
+            self._last_mouse_pos = scene_pos
+            return
+
+        # PH5-CLN.3: Smart Cursor Affordance
         search_rect = QRectF(scene_pos.x() - 4, scene_pos.y() - 4, 8, 8)
         items = self.scene.items(search_rect, Qt.IntersectsItemShape, Qt.DescendingOrder, self.transform())
         if not items:
@@ -172,20 +194,25 @@ class HarnessCanvas(QGraphicsView):
                 break
         self.viewport().setCursor(new_cursor)
 
-        tool = APIManager.get_instance().tool_manager.active_tool
-        if tool:
-            tool.on_mouse_move(self._create_tool_event(event))
+        # Central event dispatch
+        APIManager.get_instance().input_system.handle_canvas_event(self._create_tool_event(event))
         super().mouseMoveEvent(event)
-
     def mouseReleaseEvent(self, event):
+        # Complete MoveTool drag if active
+        if self._dragging_device is not None:
+            self._move_tool.commit()
+            self._dragging_device = None
+            self._last_mouse_pos = None
+            return
+
+        # Handle middle mouse button drag mode
         if event.button() == Qt.MiddleButton:
             self.setDragMode(QGraphicsView.NoDrag)
             super().mouseReleaseEvent(event)
             return
 
-        tool = APIManager.get_instance().tool_manager.active_tool
-        if tool:
-            tool.on_mouse_release(self._create_tool_event(event))
+        # Central event dispatch
+        APIManager.get_instance().input_system.handle_canvas_event(self._create_tool_event(event))
         super().mouseReleaseEvent(event)
 
     def drawBackground(self, painter, rect):

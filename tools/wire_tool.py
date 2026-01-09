@@ -10,7 +10,30 @@ class WireToolState(Enum):
     DRAGGING = auto()
 
 class WireTool(BaseTool):
-    SNAP_DISTANCE_MM = 8.0 
+
+    def on_mouse_double_click(self, event):
+        # Allow adding elbow points to existing wires (BundleItem)
+        if isinstance(event.scene_item, BundleItem):
+            bundle = event.scene_item
+            # Insert elbow before the last node (keep end-pin connection)
+            if hasattr(bundle, 'path_nodes') and isinstance(bundle.path_nodes, list) and len(bundle.path_nodes) >= 2:
+                # Insert at -1 (before last)
+                new_point = (event.pos_mm.x(), event.pos_mm.y())
+                bundle.path_nodes.insert(-1, new_point)
+                # Rebuild the QPainterPath
+                qpath = bundle.path()
+                qpath = qpath.__class__()  # New QPainterPath
+                qpath.moveTo(*bundle.path_nodes[0])
+                for node in bundle.path_nodes[1:]:
+                    qpath.lineTo(*node)
+                bundle.setPath(qpath)
+                # Refresh compliance visuals if available
+                if hasattr(bundle, 'update_compliance_visuals'):
+                    bundle.update_compliance_visuals()
+                # Optionally, force a redraw
+                bundle.update()
+
+    SNAP_DISTANCE_MM = 8.0
 
     def __init__(self, context=None):
         self.state = WireToolState.IDLE

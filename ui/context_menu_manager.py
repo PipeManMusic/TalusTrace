@@ -1,5 +1,6 @@
 import yaml
-from PySide6.QtWidgets import QMenu, QAction
+from PySide6.QtWidgets import QMenu
+from PySide6.QtGui import QAction
 from api.actions import registry
 
 class ContextMenuManager:

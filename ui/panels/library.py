@@ -2,6 +2,10 @@ import yaml
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QLabel
 from PySide6.QtCore import Qt, QMimeData
 from PySide6.QtGui import QDrag, QPixmap, QPainter
+import os
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+PARTS_PATH = os.path.join(PROJECT_ROOT, 'resources', 'library', 'parts.yaml')
 
 class LibraryLoader:
     def __init__(self, library_path=None):
@@ -15,12 +19,12 @@ class LibraryLoader:
         except Exception:
             return {}
 
-    def get_items(self):
+    def get_items(self, path=None):
         """
         Test helper: Returns DICT of {id: part_data}.
         Must return a dict to satisfy test assertions looking for specific field values.
         """
-        data = self.load()
+        data = self.load(path)
         items = {}
 
         # 1. Handle Test Structure (ID is a Key in 'parts')
@@ -44,7 +48,7 @@ class LibraryLoader:
         return items
 
 class LibraryPanel(QWidget):
-    def __init__(self, library_path="resources/library/parts.yaml", parent=None):
+    def __init__(self, library_path=PARTS_PATH, parent=None):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(QLabel("Part Library"))
@@ -63,15 +67,28 @@ class LibraryPanel(QWidget):
         self._populate_tree(data)
         
     def _populate_tree(self, data):
-        categories = data.get("library", [])
-        for cat in categories:
-            cat_node = QTreeWidgetItem(self.tree)
-            cat_node.setText(0, cat.get("category", "Unknown"))
-            cat_node.setExpanded(True)
-            for part in cat.get("parts", []):
-                part_node = QTreeWidgetItem(cat_node)
-                part_node.setText(0, part.get("name", "Unnamed"))
+        items = self.loader.get_items()
+        # If items is empty, nothing to show
+        if not items:
+            return
+
+        # If items is in test structure: {id: part_data}
+        if all(isinstance(v, dict) and 'id' in v for v in items.values()):
+            for part_id, part in items.items():
+                part_node = QTreeWidgetItem(self.tree)
+                part_node.setText(0, part.get("name", part_id))
                 part_node.setData(0, Qt.UserRole, part)
+        else:
+            # Try to handle app structure: categories with lists of parts
+            for category, parts in items.items():
+                cat_node = QTreeWidgetItem(self.tree)
+                cat_node.setText(0, category)
+                cat_node.setExpanded(True)
+                if isinstance(parts, list):
+                    for part in parts:
+                        part_node = QTreeWidgetItem(cat_node)
+                        part_node.setText(0, part.get("name", "Unnamed"))
+                        part_node.setData(0, Qt.UserRole, part)
 
     def startDrag(self, actions):
         item = self.tree.currentItem()
