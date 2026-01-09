@@ -12,6 +12,7 @@ from ui.commands import CommandStack
 command_stack = CommandStack()  # Global stack for UI commands
 
 class MainWindow(QMainWindow):
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Talus Trace")
@@ -50,9 +51,25 @@ class MainWindow(QMainWindow):
         self.setStatusBar(QStatusBar(self))
         registry.action_triggered.connect(self._on_action_triggered)
 
+        # Show git hash on startup
+        self._show_git_hash()
+
+    def _show_git_hash(self):
+        import subprocess
+        try:
+            git_hash = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"], cwd=".").decode().strip()
+            self.statusBar().showMessage(f"Git: {git_hash}")
+        except Exception:
+            self.statusBar().showMessage("Git: unknown")
+
+    def show_coordinates(self, x, y):
+        self.statusBar().showMessage(f"Coordinates: ({x:.2f}, {y:.2f})")
+
+    def show_tool_hint(self, hint):
+        self.statusBar().showMessage(f"Hint: {hint}")
+
     def _on_action_triggered(self, action_id, context):
         self.statusBar().showMessage(f"Action Triggered: {action_id}")
-        
         # Toggle Panel Logic (Command Handler)
         if action_id == "view.toggle_props":
             if self.prop_dock.isVisible():

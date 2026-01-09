@@ -36,7 +36,7 @@
     "phase": "5",
     "category": "App Shell",
     "task": "Implement Global Keyboard Shortcuts (Ctrl+Z, Ctrl+S, Del) via InputSystem.",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_ui_input_shortcuts.py"
   },
   {
@@ -44,7 +44,7 @@
     "phase": "5",
     "category": "App Shell",
     "task": "Implement Status Bar Logic (Show coordinates, Tool Hints, Git Hash).",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_ui_feedback.py"
   },
   {
