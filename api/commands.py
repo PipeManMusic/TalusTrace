@@ -1,5 +1,6 @@
 from api.actions import register_action
 from api.manager import APIManager
+from PySide6.QtWidgets import QFileDialog
 
 # --- File Operations ---
 @register_action("file.new")
@@ -29,7 +30,46 @@ def edit_move(context):
 
 @register_action("edit.delete")
 def edit_delete(context):
-    print(">> COMMAND: Delete Selection executed.")
+    # 1. Get Selection
+    from core.selection import SelectionManager
+    selection = SelectionManager().selected_models
+    if not selection:
+        print(">> Delete: Nothing selected.")
+        return
+
+    api = APIManager.get_instance()
+    harness = api.context.harness
+    scene = None
+    
+    # Try to get scene from Active Window
+    window = QApplication.activeWindow()
+    if window and hasattr(window, 'canvas'):
+        scene = window.canvas.scene
+
+    count = 0
+    for model in list(selection): # Copy list to safely modify original
+        # A. Remove from Model
+        if isinstance(model, Device):
+            if model in harness.devices:
+                harness.devices.remove(model)
+                count += 1
+        elif isinstance(model, Wire):
+            if model in harness.wires:
+                harness.wires.remove(model)
+                count += 1
+        
+        # B. Remove from Scene (Visuals)
+        if scene:
+            # Find item linked to this model
+            # (Naive search; ideal is a map, but this works for Phase 5)
+            for item in scene.items():
+                if hasattr(item, 'device') and item.device == model:
+                    scene.removeItem(item)
+                    break
+    
+    # Clear Selection
+    SelectionManager().set_selection([])
+    print(f">> Deleted {count} items.")
 
 # --- Tools ---
 @register_action("tool.select_mode")

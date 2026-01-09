@@ -8,6 +8,12 @@ class BaseTool:
     def on_mouse_press(self, event):
         pass
 
+    def on_mouse_double_click(self, event):
+        pass
+    
+    def on_mouse_double_click(self, event):
+        pass
+
     def on_mouse_move(self, event):
         pass
 

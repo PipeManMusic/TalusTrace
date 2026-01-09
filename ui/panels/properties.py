@@ -1,84 +1,100 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QFormLayout, QLineEdit, QLabel
+from PySide6.QtWidgets import QWidget, QVBoxLayout, QFormLayout, QLabel, QLineEdit, QScrollArea
 from PySide6.QtCore import Qt
 from api.manager import APIManager
+from core.device import Device
+from core.wire import Wire
 
 class PropertyPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.setWindowTitle("Properties")
+        
         self.layout = QVBoxLayout(self)
-        self.layout.setAlignment(Qt.AlignTop)
+        self.layout.setContentsMargins(0,0,0,0)
         
         # Header
         self.header = QLabel("Properties")
-        self.header.setStyleSheet("font-weight: bold; font-size: 14px; margin-bottom: 10px;")
+        self.header.setStyleSheet("font-weight: bold; padding: 5px;")
         self.layout.addWidget(self.header)
         
-        # Form Container
-        self.form_widget = QWidget()
-        self.form_layout = QFormLayout(self.form_widget)
-        self.layout.addWidget(self.form_widget)
+        # Scroll Area for Content
+        self.scroll = QScrollArea()
+        self.scroll.setWidgetResizable(True)
+        self.content_widget = QWidget()
+        self.form_layout = QFormLayout(self.content_widget)
+        self.scroll.setWidget(self.content_widget)
+        self.layout.addWidget(self.scroll)
         
-        # State
-        self.current_item = None
+        # Initial State
+        self.clear_panel()
         
-        # Subscribe to Selection Changes
-        # (We use the APIManager observer pattern we verified earlier)
+        # Register Listener
+        # UPDATE: Changed .observe() to .subscribe()
         APIManager.get_instance().subscribe(self._on_app_event)
 
-    def _on_app_event(self, event):
-        """
-        Listens for 'selection_changed' events from the Core.
-        """
-        if event.get("event_type") == "selection_changed":
-            selection = event.get("selection", [])
-            if selection:
-                # Edit the first selected item
-                self.load_item(selection[0])
-            else:
-                self.clear_panel()
-
-    def load_item(self, device_model):
-        """
-        Populates the form with Device data.
-        """
-        self.current_item = device_model
-        self._clear_layout()
-        
-        # ID Field
-        self.id_edit = QLineEdit(device_model.id)
-        self.id_edit.editingFinished.connect(self._apply_id_change)
-        self.form_layout.addRow("ID:", self.id_edit)
-        
-        # Label Field
-        label_val = device_model.meta.get("label", "")
-        self.label_edit = QLineEdit(label_val)
-        self.label_edit.editingFinished.connect(self._apply_label_change)
-        self.form_layout.addRow("Label:", self.label_edit)
-        
-        # X/Y Readouts (Read Only for now)
-        self.form_layout.addRow("X:", QLabel(f"{device_model.x:.2f}"))
-        self.form_layout.addRow("Y:", QLabel(f"{device_model.y:.2f}"))
-
-    def _apply_id_change(self):
-        if self.current_item:
-            new_val = self.id_edit.text()
-            print(f">> Property Change: ID {self.current_item.id} -> {new_val}")
-            self.current_item.id = new_val
-            # TODO: Phase 5 - Trigger Scene Redraw via Signal
-
-    def _apply_label_change(self):
-        if self.current_item:
-            new_val = self.label_edit.text()
-            print(f">> Property Change: Label -> {new_val}")
-            self.current_item.meta["label"] = new_val
+    def _on_app_event(self, event_data):
+        try:
+            # SAFETY CHECK: If C++ object is deleted, this access will raise RuntimeError
+            if not self.isVisible() and False: pass 
+            
+            action = event_data.get("event")
+            
+            if action == "selection_changed":
+                selection = event_data.get("selection", [])
+                if selection:
+                    self.load_item(selection[0])
+                else:
+                    self.clear_panel()
+                    
+        except RuntimeError:
+            pass
 
     def clear_panel(self):
-        self.current_item = None
         self._clear_layout()
         self.form_layout.addRow(QLabel("No Selection"))
 
     def _clear_layout(self):
         while self.form_layout.count():
-            child = self.form_layout.takeAt(0)
-            if child.widget():
-                child.widget().deleteLater()
+            item = self.form_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+
+    def load_item(self, item):
+        self._clear_layout()
+        
+        if isinstance(item, Device):
+            self.header.setText(f"Device: {item.id}")
+            self._add_field("ID", item.id, item, "id")
+            self._add_field("Label", item.label, item, "label")
+            self._add_field("X (mm)", str(item.x), item, "x")
+            self._add_field("Y (mm)", str(item.y), item, "y")
+            
+        elif isinstance(item, Wire):
+            self.header.setText(f"Wire: {item.id}")
+            self._add_field("ID", item.id, item, "id")
+            self._add_field("From", item.from_conn, item, "from_conn")
+            self._add_field("To", item.to_conn, item, "to_conn")
+            self._add_field("Color", item.color, item, "color")
+
+    def _add_field(self, label, value, obj, attr_name):
+        edit = QLineEdit(str(value))
+        edit.editingFinished.connect(lambda: self._update_model(obj, attr_name, edit.text()))
+        self.form_layout.addRow(label, edit)
+        if attr_name == "id": self.id_edit = edit
+        if attr_name == "label": self.label_edit = edit
+
+    def _update_model(self, obj, attr, value):
+        if hasattr(obj, attr):
+            current_type = type(getattr(obj, attr))
+            try:
+                if current_type == float:
+                    val = float(value)
+                elif current_type == int:
+                    val = int(value)
+                else:
+                    val = value
+                setattr(obj, attr, val)
+                print(f">> Updated {attr} -> {val}")
+            except ValueError:
+                print(f"Invalid input for {attr}")

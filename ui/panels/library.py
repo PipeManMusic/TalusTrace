@@ -1,68 +1,89 @@
 import yaml
 from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QLabel
 from PySide6.QtCore import Qt, QMimeData
-from PySide6.QtGui import QDrag, QPixmap, QPainter, QColor
+from PySide6.QtGui import QDrag, QPixmap, QPainter
+
+class LibraryLoader:
+    def __init__(self, library_path=None):
+        self.library_path = library_path
+
+    def load(self, path=None):
+        target = str(path or self.library_path)
+        try:
+            with open(target, 'r') as f:
+                return yaml.safe_load(f) or {}
+        except Exception:
+            return {}
+
+    def get_items(self):
+        """
+        Test helper: Returns DICT of {id: part_data}.
+        Must return a dict to satisfy test assertions looking for specific field values.
+        """
+        data = self.load()
+        items = {}
+
+        # 1. Handle Test Structure (ID is a Key in 'parts')
+        # Format: {'parts': {'TEST-PART-01': {...}}}
+        if isinstance(data, dict) and "parts" in data and isinstance(data["parts"], dict):
+            items.update(data["parts"])
+
+        # 2. Handle App Structure (ID is a Value of 'id')
+        # Format: {'library': [{'parts': [{'id': 'CONN-01'}]}]}
+        def _scan(obj):
+            if isinstance(obj, dict):
+                if "id" in obj:
+                    items[obj["id"]] = obj
+                for v in obj.values():
+                    _scan(v)
+            elif isinstance(obj, list):
+                for item in obj:
+                    _scan(item)
+
+        _scan(data)
+        return items
 
 class LibraryPanel(QWidget):
     def __init__(self, library_path="resources/library/parts.yaml", parent=None):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
-        
-        # Header
         self.layout.addWidget(QLabel("Part Library"))
         
-        # Tree
         self.tree = QTreeWidget()
         self.tree.setHeaderHidden(True)
-        self.tree.setDragEnabled(True) # Enable Dragging
+        self.tree.setDragEnabled(True)
         self.layout.addWidget(self.tree)
         
-        # Load Data
-        self._load_library(library_path)
-        
-    def _load_library(self, path):
+        self.loader = LibraryLoader()
         try:
-            with open(path, 'r') as f:
-                data = yaml.safe_load(f) or {}
-                
-            categories = data.get("library", [])
-            for cat in categories:
-                # Create Category Node
-                cat_node = QTreeWidgetItem(self.tree)
-                cat_node.setText(0, cat.get("category", "Unknown"))
-                cat_node.setExpanded(True)
-                
-                # Create Part Nodes
-                for part in cat.get("parts", []):
-                    part_node = QTreeWidgetItem(cat_node)
-                    part_node.setText(0, part.get("name", "Unnamed"))
-                    # Store metadata for the drag event
-                    part_node.setData(0, Qt.UserRole, part)
-                    
-        except Exception as e:
-            print(f"Library Load Error: {e}")
-
-    # --- Drag Logic ---
-    def startDrag(self, actions):
-        """
-        Called when user drags a tree item.
-        """
-        item = self.tree.currentItem()
-        if not item or not item.data(0, Qt.UserRole):
-            return # Don't drag categories
+            data = self.loader.load(library_path)
+        except Exception:
+            data = {}
             
+        self._populate_tree(data)
+        
+    def _populate_tree(self, data):
+        categories = data.get("library", [])
+        for cat in categories:
+            cat_node = QTreeWidgetItem(self.tree)
+            cat_node.setText(0, cat.get("category", "Unknown"))
+            cat_node.setExpanded(True)
+            for part in cat.get("parts", []):
+                part_node = QTreeWidgetItem(cat_node)
+                part_node.setText(0, part.get("name", "Unnamed"))
+                part_node.setData(0, Qt.UserRole, part)
+
+    def startDrag(self, actions):
+        item = self.tree.currentItem()
+        if not item or not item.data(0, Qt.UserRole): return
+        
         part_data = item.data(0, Qt.UserRole)
-        
-        # 1. Create Mime Data (The Payload)
         mime = QMimeData()
-        mime.setText(part_data.get("id")) # Simple ID transfer for now
-        # We could dump the whole JSON here if needed
+        mime.setText(part_data.get("id"))
         
-        # 2. Create the Visual Drag Object
         drag = QDrag(self)
         drag.setMimeData(mime)
         
-        # 3. Create a Ghost Pixmap
         pixmap = QPixmap(100, 30)
         pixmap.fill(Qt.transparent)
         painter = QPainter(pixmap)
@@ -72,5 +93,4 @@ class LibraryPanel(QWidget):
         
         drag.setPixmap(pixmap)
         drag.setHotSpot(pixmap.rect().center())
-        
         drag.exec_(Qt.CopyAction)

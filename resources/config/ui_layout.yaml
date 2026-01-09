@@ -10,7 +10,9 @@ toolbar:
   - command: tool.measure
   - separator: true
   - command: view.zoom_extents
-  - command: view.toggle_props
+  - command: view.toggle_props  
+  - command: file.export_bom
+  - command: file.export_wirelist
 context_menu:
   device:
   - command: edit.move
@@ -23,5 +25,4 @@ context_menu:
   - separator: true
   - command: tool.measure
   - separator: true
-  - command: file.export_bom
-  - command: file.export_wirelist
+

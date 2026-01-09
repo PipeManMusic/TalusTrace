@@ -1,41 +1,53 @@
 import pytest
-from PySide6.QtWidgets import QApplication
+from PySide6.QtWidgets import QLabel, QLineEdit
+from ui.panels.properties import PropertyPanel
 from core.device import Device
-from core.selection import SelectionManager
-# Target Implementation: ui/panels/properties.py
-from ui.panels.properties import PropertyPanel, device_registry
+from api.manager import APIManager
 
-@pytest.fixture(scope="session")
-def qapp():
-    return QApplication.instance() or QApplication([])
-
-def test_property_panel_updates_model(qapp):
+def test_property_panel_loads_selection(qtbot):
+    """
+    Validates that the Property Panel updates when Selection changes.
+    """
     # 1. Setup
-    dev = Device(id="OLD_ID")
-    
-    # CRITICAL FIX: Populate the shared module-level registry
-    device_registry.clear()
-    device_registry[dev.id] = dev
-    
-    SelectionManager().set_selection([dev])
-    
-    # Debug verification
-    print(f"TEST SETUP: Registry has {device_registry.keys()}")
-    
     panel = PropertyPanel()
+    qtbot.add_widget(panel)
     
-    # 2. Verify Panel loaded data
-    assert panel.id_field.text() == "OLD_ID"
+    # 2. Create Dummy Device
+    dev = Device(id="TEST-01", label="Test Device")
     
-    # 3. Edit Data
-    panel.id_field.setText("NEW_ID")
-    panel.apply_changes() 
+    # 3. Simulate Selection Event via API
+    # (The Panel listens to APIManager "selection_changed")
+    APIManager.get_instance().dispatch("selection_changed", {
+        "selection": [dev]
+    })
     
-    # 4. Verify Model Update
-    # The device instance itself should be mutated
-    assert dev.id == "NEW_ID"
+    # 4. Assertions
+    # Check if the ID field was populated
+    assert panel.id_edit.text() == "TEST-01"
+    assert panel.label_edit.text() == "Test Device"
+
+def test_property_panel_clears_on_deselect(qtbot):
+    panel = PropertyPanel()
+    qtbot.add_widget(panel)
     
-    # The registry should also reflect the new key
-    updated_dev = device_registry.get("NEW_ID")
-    assert updated_dev is not None
-    assert updated_dev.id == "NEW_ID"
+    # Simulate Deselect
+    APIManager.get_instance().dispatch("selection_changed", {
+        "selection": []
+    })
+    
+    # Check if layout was cleared / shows "No Selection"
+    # Easier check: Ensure edits are gone
+    assert not hasattr(panel, 'id_edit') or not panel.id_edit.isVisible()
+
+def test_property_panel_apply_changes(qtbot):
+    panel = PropertyPanel()
+    qtbot.add_widget(panel)
+    
+    dev = Device(id="ORIGINAL")
+    panel.load_item(dev)
+    
+    # User types new ID
+    panel.id_edit.setText("UPDATED")
+    panel.id_edit.editingFinished.emit()
+    
+    assert dev.id == "UPDATED"

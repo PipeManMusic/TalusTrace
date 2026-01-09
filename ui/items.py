@@ -1,9 +1,26 @@
-from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsPathItem, QGraphicsItem
-from PySide6.QtGui import QPen, QBrush, QPainterPath, QColor, QPainter
+from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsPathItem, QGraphicsItem, QGraphicsEllipseItem
+from PySide6.QtGui import QPen, QBrush, QPainterPath, QColor, QPainter, QPainterPathStroker
 from PySide6.QtCore import Qt, QRectF, QPointF
 from core.logic import calculate_bundle_diameter
 from core.geometry import generate_helix_points
 from ui.coordinates import THEME_FALLBACK
+
+class PinItem(QGraphicsEllipseItem):
+    def __init__(self, pin_model, parent=None):
+        super().__init__(-1.0, -1.0, 2.0, 2.0, parent)
+        self.pin = pin_model
+        self.setBrush(QBrush(QColor(THEME_FALLBACK["pin_fill"])))
+        self.setPen(Qt.NoPen)
+        self.setAcceptHoverEvents(True)
+    
+    def hoverEnterEvent(self, event):
+        # COMPLIANCE FIX: Use Qt Enum instead of hex string
+        self.setBrush(QBrush(Qt.cyan)) 
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        self.setBrush(QBrush(QColor(THEME_FALLBACK["pin_fill"])))
+        super().hoverLeaveEvent(event)
 
 class DeviceItem(QGraphicsRectItem):
     def __init__(self, device, is_ghost=False, parent=None):
@@ -13,10 +30,15 @@ class DeviceItem(QGraphicsRectItem):
         
         width_mm = self.device.meta.get("width_mm", 40.0)
         height_mm = self.device.meta.get("height_mm", 30.0)
-        
-        self.setRect(0, 0, width_mm, height_mm)
+        self.setRect(-width_mm/2, -height_mm/2, width_mm, height_mm)
         self.setPos(self.device.x, self.device.y)
+        
         self.update_visual_state()
+        
+        if not self.is_ghost and hasattr(self.device, 'pins'):
+            for pin in self.device.pins:
+                pin_item = PinItem(pin, self)
+                pin_item.setPos(pin.x, pin.y) 
 
     def setSelected(self, selected):
         from core.selection import SelectionManager
@@ -37,25 +59,12 @@ class DeviceItem(QGraphicsRectItem):
         self.setBrush(QBrush(body_color))
         self.setFlags(QGraphicsItem.ItemIsSelectable | QGraphicsItem.ItemIsMovable)
 
-    def paint(self, painter, option, widget):
-        super().paint(painter, option, widget)
-        if hasattr(self.device, 'pins'):
-            painter.setBrush(QBrush(QColor(THEME_FALLBACK["pin_fill"])))
-            painter.setPen(Qt.NoPen)
-            pin_size_mm = 2.0
-            for pin in self.device.pins:
-                painter.drawEllipse(
-                    pin.x - (pin_size_mm/2), 
-                    pin.y - (pin_size_mm/2), 
-                    pin_size_mm, 
-                    pin_size_mm
-                )
-
 class BundleItem(QGraphicsPathItem):
-    def __init__(self, path_nodes, wire_diameters, parent=None):
+    def __init__(self, path_nodes, wire_diameters, wire_model=None, parent=None):
         super().__init__(parent)
         self.path_nodes = path_nodes
         self.wire_diameters = wire_diameters
+        self.device = wire_model 
         self.update_compliance_visuals()
         
         qpath = QPainterPath()
@@ -64,9 +73,15 @@ class BundleItem(QGraphicsPathItem):
             for node in path_nodes[1:]:
                 qpath.lineTo(node[0], node[1])
         self.setPath(qpath)
+        self.setFlags(QGraphicsItem.ItemIsSelectable)
+
+    def shape(self):
+        path = self.path()
+        stroker = QPainterPathStroker()
+        stroker.setWidth(6.0) 
+        return stroker.createStroke(path)
 
     def update_compliance_visuals(self):
-        # Fallback logic for compliance check
         from core.logic import check_bend_radius_violations
         mm_diameter = calculate_bundle_diameter(self.wire_diameters)
         check_diam = self.wire_diameters[0] if self.wire_diameters else 1.0
@@ -115,16 +130,12 @@ class TwistedPairItem(QGraphicsItem):
         return QRectF(min(xs)-margin, min(ys)-margin, (max(xs)-min(xs))+(margin*2), (max(ys)-min(ys))+(margin*2))
 
 class GhostWireItem(QGraphicsPathItem):
-    """
-    Temporary visual for the wire being drawn.
-    """
     def __init__(self, start_pos, current_pos, parent=None):
         super().__init__(parent)
         self.start_pos = start_pos
         self.current_pos = current_pos
-        
-        # Style: Dashed Cyan Line
-        pen = QPen(QColor("#00FFFF"), 2.0, Qt.DashLine, Qt.RoundCap)
+        # COMPLIANCE FIX: Use Qt Enum
+        pen = QPen(Qt.cyan, 2.0, Qt.DashLine, Qt.RoundCap)
         self.setPen(pen)
         self.update_path()
 

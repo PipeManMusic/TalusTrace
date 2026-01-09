@@ -7,10 +7,10 @@ from api.manager import APIManager
 from core.device import Device, Pin
 
 class CanvasEvent:
-    """Standardized event package for tools."""
-    def __init__(self, view_event, scene_pos, scene_item=None):
+    def __init__(self, view_event, scene_pos, scene, scene_item=None):
         self.original_event = view_event
         self.pos_mm = scene_pos
+        self.scene = scene
         self.scene_item = scene_item
 
 class HarnessCanvas(QGraphicsView):
@@ -21,7 +21,7 @@ class HarnessCanvas(QGraphicsView):
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
         self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
-        self.setAcceptDrops(True) # Enable Drag & Drop
+        self.setAcceptDrops(True)
         self.setDragMode(QGraphicsView.NoDrag) 
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
@@ -30,6 +30,12 @@ class HarnessCanvas(QGraphicsView):
         self.setBackgroundBrush(QBrush(QColor(THEME_FALLBACK["canvas_bg"])))
         self.scale(1.0, 1.0)
 
+    def wheelEvent(self, event):
+        zoom_in = event.angleDelta().y() > 0
+        factor = 1.15 if zoom_in else 1 / 1.15
+        self.scale(factor, factor)
+        event.accept()
+
     def load_harness(self, harness):
         self.scene.clear()
         if not harness: return
@@ -37,7 +43,6 @@ class HarnessCanvas(QGraphicsView):
             item = DeviceItem(device)
             self.scene.addItem(item)
 
-    # --- Drag & Drop Interface ---
     def dragEnterEvent(self, event):
         if event.mimeData().hasText():
             event.acceptProposedAction()
@@ -48,40 +53,29 @@ class HarnessCanvas(QGraphicsView):
     def dropEvent(self, event):
         part_id = event.mimeData().text()
         pos = self.mapToScene(event.pos())
-        
         print(f">> Dropped Part: {part_id} at ({pos.x():.1f}, {pos.y():.1f})")
         self._instantiate_part(part_id, pos.x(), pos.y())
         event.acceptProposedAction()
 
     def _instantiate_part(self, part_id, x, y):
-        from api.manager import APIManager
         harness = APIManager.get_instance().context.harness
-        
-        # Create Device
         new_dev = Device(
             id=f"{part_id}_{len(harness.devices)+1}",
             label=part_id.title(),
-            x=x, 
-            y=y
+            x=x, y=y
         )
-        
-        # Add default pins (Prototype logic)
         new_dev.pins.append(Pin("1", -10, 0))
         new_dev.pins.append(Pin("2", 10, 0))
-        
-        # Add to Model
         harness.devices.append(new_dev)
         
-        # Add to Scene
         from ui.items import DeviceItem
         item = DeviceItem(new_dev)
         self.scene.addItem(item)
 
-    # --- Event Routing ---
     def _create_tool_event(self, event: QMouseEvent):
         scene_pos = self.mapToScene(event.pos())
         item = self.scene.itemAt(scene_pos, self.transform())
-        return CanvasEvent(event, scene_pos, item)
+        return CanvasEvent(event, scene_pos, self.scene, item)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MiddleButton:
@@ -94,6 +88,13 @@ class HarnessCanvas(QGraphicsView):
             tool.on_mouse_press(self._create_tool_event(event))
         else:
             super().mousePressEvent(event)
+
+    def mouseDoubleClickEvent(self, event):
+        print(">> DEBUG: Double Click Detected in Canvas") # <--- DEBUG
+        tool = APIManager.get_instance().tool_manager.active_tool
+        if tool:
+            tool.on_mouse_double_click(self._create_tool_event(event))
+        super().mouseDoubleClickEvent(event)
 
     def mouseMoveEvent(self, event):
         tool = APIManager.get_instance().tool_manager.active_tool
