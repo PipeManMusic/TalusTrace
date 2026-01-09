@@ -3,6 +3,21 @@ from api.manager import APIManager
 from PySide6.QtWidgets import QFileDialog, QApplication
 from core.device import Device
 from core.wire import Wire
+from ui.dialogs.device_wizard import DeviceWizard
+
+# --- Device Wizard ---
+@register_action("device.create_wizard")
+def device_create_wizard(context):
+    # Show the DeviceWizard dialog
+    app = QApplication.instance()
+    parent = app.activeWindow() if app else None
+    wizard = DeviceWizard(parent)
+    wizard.exec()
+from api.actions import register_action
+from api.manager import APIManager
+from PySide6.QtWidgets import QFileDialog, QApplication
+from core.device import Device
+from core.wire import Wire
 
 # --- File Operations ---
 @register_action("file.new")

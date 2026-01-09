@@ -20,6 +20,8 @@ toolbar:
     - command: "tool.select"
     - command: "tool.wire"
     - command: "tool.move"
+    - separator: true
+    - command: "device.create_wizard"
 
 # PH5-CLN.1: Context Menu Definitions
 context_menu:
