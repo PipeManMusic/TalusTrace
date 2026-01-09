@@ -1,3 +1,15 @@
+# PH5-WIRE.2: Create Bundle Grouping
+def create_bundle_group(harness, wires):
+    # Generate a unique bundle ID (e.g., BUNDLE-1, BUNDLE-2, ...)
+    if not hasattr(harness, '_bundle_counter'):
+        harness._bundle_counter = 1
+    bundle_id = f"BUNDLE-{harness._bundle_counter}"
+    harness._bundle_counter += 1
+    for wire in wires:
+        if not hasattr(wire, 'meta') or wire.meta is None:
+            wire.meta = {}
+        wire.meta['bundle_group'] = bundle_id
+    return bundle_id
 # Minimal create_twisted_pair for test
 class DummyTwistedPair:
     def __init__(self, wires):
