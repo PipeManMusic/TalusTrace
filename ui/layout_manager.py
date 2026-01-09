@@ -42,7 +42,10 @@ class LayoutManager:
         from resources.defaults import DEFAULT_LAYOUT
         try:
             with open(path, 'r') as f:
-                return yaml.safe_load(f) or {}
+                data = yaml.safe_load(f)
+                if not data or not isinstance(data, dict):
+                    return DEFAULT_LAYOUT.copy()
+                return data
         except Exception:
             return DEFAULT_LAYOUT.copy()
 

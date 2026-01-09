@@ -16,7 +16,10 @@ class ThemeManager:
 		try:
 			with open(self.user_path, 'r') as f:
 				data = yaml.safe_load(f)
-				if "colors" in data:
+				if not data or not isinstance(data, dict) or "colors" not in data or not isinstance(data["colors"], dict):
+					self.colors = DEFAULT_THEME.copy()
+				else:
+					self.colors = DEFAULT_THEME.copy()
 					self.colors.update(data["colors"])
 		except Exception:
 			self.colors = DEFAULT_THEME.copy()
