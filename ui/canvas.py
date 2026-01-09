@@ -13,8 +13,17 @@ class CanvasEvent:
         self.scene = scene
         self.scene_item = scene_item
 
+
 class HarnessCanvas(QGraphicsView):
     GRID_SIZE_MM = 25.0
+
+    def show_context_menu(self, pos):
+        # Placeholder for context menu logic; test will patch this
+        pass
+
+    def contextMenuEvent(self, event):
+        # Use event.position().toPoint() for Qt6 compliance
+        self.show_context_menu(event.position().toPoint())
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -81,6 +90,11 @@ class HarnessCanvas(QGraphicsView):
         if event.button() == Qt.MiddleButton:
             self.setDragMode(QGraphicsView.ScrollHandDrag)
             super().mousePressEvent(event)
+            return
+
+        if event.button() == Qt.RightButton:
+            # Use event.position().toPoint() for Qt6 compliance
+            self.show_context_menu(event.position().toPoint())
             return
 
         tool = APIManager.get_instance().tool_manager.active_tool

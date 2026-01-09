@@ -60,7 +60,7 @@
     "phase": "5",
     "category": "Interaction",
     "task": "Implement Marquee Selection (Rubber Band) with Crossing vs. Enclosing logic.",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_tool_select.py"
   },
   {
@@ -68,7 +68,7 @@
     "phase": "5",
     "category": "Interaction",
     "task": "Implement Right-Click Context Menus (Add Elbow, Edit Properties, Delete).",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_ui_context_menu.py"
   },
   {
