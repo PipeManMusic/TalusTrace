@@ -76,7 +76,7 @@
     "phase": "5",
     "category": "Interaction",
     "task": "Implement Snapping Toolbar (Toggle, Grid Size Slider) and connect to MoveTool.",
-    "status": "IN_PROGRESS",
+    "status": "DONE",
     "test_file": "tests/test_core_snapping.py"
   },
   {
@@ -84,7 +84,7 @@
     "phase": "5",
     "category": "Device Mgmt",
     "task": "Implement 'Device Wizard' Dialog for creating custom parts.",
-    "status": "OPEN",
+    "status": "IN_PROGRESS",
     "test_file": "tests/test_ui_dialogs.py"
   },
   {
