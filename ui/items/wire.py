@@ -12,7 +12,6 @@ class BundleItem(SelectableItemMixin, QGraphicsPathItem):
         self.path_nodes = path_nodes
         self.wire_diameters = wire_diameters
         
-        # Draw Path
         qpath = QPainterPath()
         if path_nodes:
             qpath.moveTo(path_nodes[0][0], path_nodes[0][1])
@@ -20,13 +19,10 @@ class BundleItem(SelectableItemMixin, QGraphicsPathItem):
                 qpath.lineTo(node[0], node[1])
         self.setPath(qpath)
 
-        # Initialize Mixin (This connects the wire to SelectionManager!)
         self.init_mixin(wire_model, is_ghost=False)
 
     def _apply_style(self):
-        """Compliance-aware styling."""
         from core.logic import check_bend_radius_violations
-        
         mm_diameter = calculate_bundle_diameter(self.wire_diameters)
         check_diam = self.wire_diameters[0] if self.wire_diameters else 1.0
         
@@ -38,14 +34,12 @@ class BundleItem(SelectableItemMixin, QGraphicsPathItem):
         self.setPen(QPen(color, mm_diameter, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
 
     def shape(self):
-        """Expand click area for easier selection."""
         stroker = QPainterPathStroker()
         stroker.setWidth(6.0) 
         return stroker.createStroke(self.path())
 
     def paint(self, painter, option, widget):
         super().paint(painter, option, widget)
-        # Draw Grips when selected
         if self.isSelected() and self.path_nodes:
             painter.setBrush(QBrush(QColor(0, 200, 255)))
             painter.setPen(Qt.NoPen)
@@ -53,9 +47,6 @@ class BundleItem(SelectableItemMixin, QGraphicsPathItem):
                 painter.drawEllipse(QPointF(pt[0], pt[1]), 2.0, 2.0)
 
 class TwistedPairItem(QGraphicsItem):
-    # (This item is purely visual and usually not selectable directly in the same way, 
-    # but if needed, you can add SelectableItemMixin here too. 
-    # For now, I'll keep your existing LOD logic.)
     def __init__(self, path_nodes, gauge_mm=0.65, parent=None):
         super().__init__(parent)
         self.path_nodes = path_nodes
@@ -64,7 +55,12 @@ class TwistedPairItem(QGraphicsItem):
 
     def _calculate_geometry(self):
         import hashlib, numpy as np
-        from infra.cache_manager import CacheManager
+        try:
+            from infra.cache_manager import CacheManager
+        except ModuleNotFoundError:
+            import sys, os
+            sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+            from infra.cache_manager import CacheManager
         
         cache = CacheManager()
         arr = np.array(self.path_nodes, dtype=np.float32)
@@ -76,6 +72,10 @@ class TwistedPairItem(QGraphicsItem):
         result = generate_helix_points(self.path_nodes, pitch=10.0, amplitude=1.5, num_points=200)
         cache.save(key, result)
         return result
+
+    # RESTORED FEATURE
+    def determine_lod(self, view_scale: float) -> str:
+        return "HELIX" if view_scale >= 0.5 else "HATCH"
 
     def boundingRect(self):
         if not self.path_nodes: return QRectF()
@@ -90,13 +90,13 @@ class TwistedPairItem(QGraphicsItem):
         pen_b = QPen(QColor(THEME_FALLBACK["wire_b"]), self.gauge_mm, Qt.SolidLine, Qt.RoundCap)
         
         scale = painter.transform().m11()
-        if scale >= 0.5: # Helix LOD
+        if self.determine_lod(scale) == "HELIX":
             for helix, pen in [(self.helix_a, pen_a), (self.helix_b, pen_b)]:
                 painter.setPen(pen)
                 path = QPainterPath()
                 if helix:
-                    path.moveTo(*helix[0])
-                    for pt in helix[1:]: path.lineTo(*pt)
+                    path.moveTo(helix[0][0], helix[0][1])
+                    for pt in helix[1:]: path.lineTo(pt[0], pt[1])
                 painter.drawPath(path)
 
 class GhostWireItem(QGraphicsPathItem):

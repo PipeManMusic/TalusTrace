@@ -9,53 +9,45 @@ class InputSystem(QObject):
     def __init__(self, config_path: str = "resources/config/actions.yaml"):
         super().__init__()
         self.key_map = {}
-        self._shortcuts = self.key_map
         self._load_config(config_path)
 
     def install(self):
         app = QApplication.instance()
-        if app:
-            app.installEventFilter(self)
+        if app: app.installEventFilter(self)
 
     def _load_config(self, path: str):
-        if not Path(path).exists():
-            return
+        if not Path(path).exists(): return
         try:
             with open(path, 'r') as f:
                 data = yaml.safe_load(f)
                 if not data: return
                 for cmd in data.get("commands", []):
-                    aid = cmd.get('id')
                     if "default_key" in cmd:
-                        seq = QKeySequence(cmd["default_key"]).toString()
-                        self.key_map[seq] = aid
+                        self.register_shortcut(cmd["default_key"], cmd["id"])
         except Exception as e:
             print(f"Failed to load keymap: {e}")
 
+    # RESTORED FEATURE
+    def register_shortcut(self, key_seq, action_id):
+        seq = QKeySequence(key_seq).toString()
+        self.key_map[seq] = action_id
+
     def eventFilter(self, obj: QObject, event: QEvent) -> bool:
         if event.type() == QEvent.KeyPress:
-            focus_widget = QApplication.focusWidget()
-            if isinstance(focus_widget, (QLineEdit, QTextEdit)):
+            if isinstance(QApplication.focusWidget(), (QLineEdit, QTextEdit)):
                 return False 
-            sequence = QKeySequence(event.keyCombination()).toString()
-            if sequence in self.key_map:
-                registry.execute(self.key_map[sequence])
+            seq = QKeySequence(event.keyCombination()).toString()
+            if seq in self.key_map:
+                registry.execute(self.key_map[seq])
                 return True
         return super().eventFilter(obj, event)
 
     def handle_canvas_event(self, event):
-        """Central dispatcher that routes CanvasEvents to the active tool."""
         from api.manager import APIManager
         tool = APIManager.get_instance().tool_manager.active_tool
-        if not tool or not hasattr(event, 'original_event'):
-            return
-        
-        etype = event.original_event.type()
-        if etype == QEvent.MouseMove:
-            tool.on_mouse_move(event)
-        elif etype == QEvent.MouseButtonPress:
-            tool.on_mouse_press(event)
-        elif etype == QEvent.MouseButtonRelease:
-            tool.on_mouse_release(event)
-        elif etype == QEvent.MouseButtonDblClick:
-            tool.on_mouse_double_click(event)
+        if tool and hasattr(event, 'original_event'):
+            etype = event.original_event.type()
+            if etype == QEvent.MouseMove: tool.on_mouse_move(event)
+            elif etype == QEvent.MouseButtonPress: tool.on_mouse_press(event)
+            elif etype == QEvent.MouseButtonRelease: tool.on_mouse_release(event)
+            elif etype == QEvent.MouseButtonDblClick: getattr(tool, 'on_mouse_double_click', lambda e: None)(event)
