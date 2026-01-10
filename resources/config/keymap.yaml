@@ -1,0 +1,11 @@
+# config/keymap.yaml
+global:
+  "Ctrl+N": "file.new"
+  "Ctrl+O": "file.open"
+  "Ctrl+S": "file.save"
+  "Ctrl+Q": "file.exit"
+  "Ctrl+Z": "edit.undo"
+  "Ctrl+Y": "edit.redo"
+  "Delete": "edit.delete"
+  "R": "edit.rotate_cw"       # Single key shortcut for rotation
+  "Ctrl+R": "edit.rotate_cw"  # Alternative standard shortcut

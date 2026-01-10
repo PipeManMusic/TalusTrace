@@ -7,16 +7,44 @@ menubar:
       - command: "file.save"
       - separator: true
       - command: "file.exit"
+
   - label: "Edit"
     items:
-      - command: "edit.undo"
-      - command: "edit.redo"
+      - label: "Undo"
+        command: "edit.undo"
+      - label: "Redo"
+        command: "edit.redo"
+      - separator: true
+      - label: "Rotate 90° CW"    # New Menu Item
+        command: "edit.rotate_cw"
+      - label: "Delete"
+        command: "edit.delete"
 
+  - label: "Tools"
+    items:
+      - label: "Select Mode"
+        command: "tool.select"
+      - label: "Place Device (Generic)"
+        command: "tool.add_generic_device"
+      - label: "Device Wizard..."
+        command: "device.create_wizard"
+      - separator: true
+      - label: "Wire Mode"
+        command: "tool.wire"
+
+  - label: "View"  # NEW SECTION
+    items:
+      - label: "Toggle Project Browser"
+        command: "view.toggle_project_browser"
+      - label: "Toggle Property Panel"
+        command: "view.toggle_property_panel"
+      - separator: true
+      - label: "Reset Layout"
+        command: "view.reset_layout"
+        
 toolbar:
   visible: true
   items:
-    - command: "file.save"
-    - separator: true
     - command: "tool.select"
     - command: "tool.wire"
     - command: "tool.move"

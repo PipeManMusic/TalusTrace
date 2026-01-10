@@ -1,0 +1,118 @@
+from PySide6.QtWidgets import QGraphicsPathItem, QGraphicsItem
+from PySide6.QtGui import QPen, QBrush, QColor, QPainterPath, QPainter, QPainterPathStroker
+from PySide6.QtCore import Qt, QRectF, QPointF
+from core.logic import calculate_bundle_diameter
+from core.geometry import generate_helix_points
+from ui.coordinates import THEME_FALLBACK
+from ui.items.base import SelectableItemMixin
+
+class BundleItem(SelectableItemMixin, QGraphicsPathItem):
+    def __init__(self, path_nodes, wire_diameters, wire_model=None, parent=None):
+        QGraphicsPathItem.__init__(self, parent)
+        self.path_nodes = path_nodes
+        self.wire_diameters = wire_diameters
+        
+        # Draw Path
+        qpath = QPainterPath()
+        if path_nodes:
+            qpath.moveTo(path_nodes[0][0], path_nodes[0][1])
+            for node in path_nodes[1:]:
+                qpath.lineTo(node[0], node[1])
+        self.setPath(qpath)
+
+        # Initialize Mixin (This connects the wire to SelectionManager!)
+        self.init_mixin(wire_model, is_ghost=False)
+
+    def _apply_style(self):
+        """Compliance-aware styling."""
+        from core.logic import check_bend_radius_violations
+        
+        mm_diameter = calculate_bundle_diameter(self.wire_diameters)
+        check_diam = self.wire_diameters[0] if self.wire_diameters else 1.0
+        
+        if check_bend_radius_violations(self.path_nodes, check_diam):
+            color = QColor(THEME_FALLBACK["bundle_violation"])
+        else:
+            color = QColor(THEME_FALLBACK["bundle_standard"])
+            
+        self.setPen(QPen(color, mm_diameter, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+
+    def shape(self):
+        """Expand click area for easier selection."""
+        stroker = QPainterPathStroker()
+        stroker.setWidth(6.0) 
+        return stroker.createStroke(self.path())
+
+    def paint(self, painter, option, widget):
+        super().paint(painter, option, widget)
+        # Draw Grips when selected
+        if self.isSelected() and self.path_nodes:
+            painter.setBrush(QBrush(QColor(0, 200, 255)))
+            painter.setPen(Qt.NoPen)
+            for pt in self.path_nodes:
+                painter.drawEllipse(QPointF(pt[0], pt[1]), 2.0, 2.0)
+
+class TwistedPairItem(QGraphicsItem):
+    # (This item is purely visual and usually not selectable directly in the same way, 
+    # but if needed, you can add SelectableItemMixin here too. 
+    # For now, I'll keep your existing LOD logic.)
+    def __init__(self, path_nodes, gauge_mm=0.65, parent=None):
+        super().__init__(parent)
+        self.path_nodes = path_nodes
+        self.gauge_mm = gauge_mm
+        self.helix_a, self.helix_b = self._calculate_geometry()
+
+    def _calculate_geometry(self):
+        import hashlib, numpy as np
+        from infra.cache_manager import CacheManager
+        
+        cache = CacheManager()
+        arr = np.array(self.path_nodes, dtype=np.float32)
+        key = hashlib.sha1(arr.tobytes()).hexdigest()
+        
+        cached = cache.load(key)
+        if cached: return cached
+        
+        result = generate_helix_points(self.path_nodes, pitch=10.0, amplitude=1.5, num_points=200)
+        cache.save(key, result)
+        return result
+
+    def boundingRect(self):
+        if not self.path_nodes: return QRectF()
+        xs = [p[0] for p in self.path_nodes]
+        ys = [p[1] for p in self.path_nodes]
+        margin = 5.0
+        return QRectF(min(xs)-margin, min(ys)-margin, (max(xs)-min(xs))+margin*2, (max(ys)-min(ys))+margin*2)
+
+    def paint(self, painter, option, widget):
+        painter.setRenderHint(QPainter.Antialiasing)
+        pen_a = QPen(QColor(THEME_FALLBACK["wire_a"]), self.gauge_mm, Qt.SolidLine, Qt.RoundCap)
+        pen_b = QPen(QColor(THEME_FALLBACK["wire_b"]), self.gauge_mm, Qt.SolidLine, Qt.RoundCap)
+        
+        scale = painter.transform().m11()
+        if scale >= 0.5: # Helix LOD
+            for helix, pen in [(self.helix_a, pen_a), (self.helix_b, pen_b)]:
+                painter.setPen(pen)
+                path = QPainterPath()
+                if helix:
+                    path.moveTo(*helix[0])
+                    for pt in helix[1:]: path.lineTo(*pt)
+                painter.drawPath(path)
+
+class GhostWireItem(QGraphicsPathItem):
+    def __init__(self, start_pos, current_pos, parent=None):
+        super().__init__(parent)
+        self.start_pos = start_pos
+        self.current_pos = current_pos
+        self.setPen(QPen(Qt.cyan, 2.0, Qt.DashLine, Qt.RoundCap))
+        self.update_path()
+
+    def update_target(self, new_pos):
+        self.current_pos = new_pos
+        self.update_path()
+
+    def update_path(self):
+        path = QPainterPath()
+        path.moveTo(self.start_pos)
+        path.lineTo(self.current_pos)
+        self.setPath(path)

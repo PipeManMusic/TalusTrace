@@ -109,6 +109,14 @@ class MainWindow(QMainWindow):
         # Wire undo stack to canvas refresh (testable)
         self.subscribe_undo_stack()
 
+        self.browser_dock = QDockWidget("Project Browser", self)
+        self.browser_dock.setObjectName("ProjectBrowserDock") # <--- REQUIRED
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.browser_dock)
+
+        self.property_dock = QDockWidget("Properties", self)
+        self.property_dock.setObjectName("PropertyPanelDock") # <--- REQUIRED
+        self.addDockWidget(Qt.RightDockWidgetArea, self.property_dock)
+
     def _on_action_triggered(self, action_id, context):
         self.statusBar().showMessage(f"Action Triggered: {action_id}")
         # Toggle Panel Logic (Command Handler)
