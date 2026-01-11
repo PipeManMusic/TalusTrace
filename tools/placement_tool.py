@@ -16,6 +16,7 @@ class PlacementTool(Tool):
         from api.manager import APIManager
         self.api = APIManager.get_instance()
         
+        # Ensure we have a valid canvas reference
         if not self.canvas:
             if hasattr(self.api, 'main_window'):
                 self.canvas = self.api.main_window.canvas
@@ -25,11 +26,13 @@ class PlacementTool(Tool):
         self.canvas.setFocus()
         self.canvas.viewport().setMouseTracking(True)
         
+        # 1. Get accurate initial position from the Mouse Event if possible,
+        # otherwise rely on current cursor position mapped to scene.
         from PySide6.QtGui import QCursor
         view_pos = self.canvas.mapFromGlobal(QCursor.pos())
         scene_pos = self.canvas.mapToScene(view_pos)
         
-        # FIX: Use Transformer Snapping
+        # 2. Snap immediately
         x = self.api.transformer.snap_to_grid(scene_pos.x())
         y = self.api.transformer.snap_to_grid(scene_pos.y())
         
@@ -43,9 +46,14 @@ class PlacementTool(Tool):
     def on_mouse_move(self, event):
         if not self.ghost_item: return
         try:
-            # FIX: Use Transformer Snapping
-            x = self.api.transformer.snap_to_grid(event.pos_mm.x())
-            y = self.api.transformer.snap_to_grid(event.pos_mm.y())
+            # event.pos_mm is the SCENE position (in pixels)
+            raw_x = event.pos_mm.x()
+            raw_y = event.pos_mm.y()
+            
+            # Snap to the calculated grid
+            x = self.api.transformer.snap_to_grid(raw_x)
+            y = self.api.transformer.snap_to_grid(raw_y)
+            
             self.ghost_item.setPos(x, y)
         except:
             self.ghost_item = None
@@ -53,7 +61,7 @@ class PlacementTool(Tool):
     def on_mouse_press(self, event):
         if event.original_event.button() != Qt.LeftButton: return
 
-        # FIX: Use Transformer Snapping
+        # Snap the final click location
         x = self.api.transformer.snap_to_grid(event.pos_mm.x())
         y = self.api.transformer.snap_to_grid(event.pos_mm.y())
         
@@ -67,6 +75,7 @@ class PlacementTool(Tool):
         cmd = AddDeviceCommand(new_device)
         self.api.context.undo_stack.push(cmd)
         
+        # Switch back to Select Tool after placement
         self.api.tool_manager.set_tool("select")
 
     def on_mouse_release(self, event): pass

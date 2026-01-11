@@ -105,7 +105,7 @@ class HarnessCanvas(QGraphicsView):
     def drawBackground(self, painter, rect):
         super().drawBackground(painter, rect)
         
-        # FIX: Use calculated grid spacing (float) instead of int(25)
+        # FIX: Use calculated grid spacing (float) from Transformer
         transformer = self.api.transformer
         grid_spacing = transformer.mm_to_px(transformer.grid_size_mm)
         

@@ -3,6 +3,7 @@ from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 from ui.coordinates import THEME_FALLBACK
 from ui.items.base import SelectableItemMixin
+from api.manager import APIManager  # <--- Needed for Unit Conversion
 
 class PinItem(QGraphicsEllipseItem):
     def __init__(self, pin_model, parent=None):
@@ -24,9 +25,22 @@ class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
     def __init__(self, device, is_ghost=False, parent=None):
         QGraphicsRectItem.__init__(self, parent)
         
+        # 1. Get Transformer
+        transformer = APIManager.get_instance().transformer
+        
+        # 2. Convert Dimensions (MM -> Pixels)
         width_mm = device.meta.get("width_mm", 40.0)
         height_mm = device.meta.get("height_mm", 30.0)
-        self.setRect(-width_mm/2, -height_mm/2, width_mm, height_mm)
+        
+        width_px = transformer.mm_to_px(width_mm)
+        height_px = transformer.mm_to_px(height_mm)
+        
+        # 3. Set Origin to Top-Left (0,0) for corner snapping
+        self.setRect(0, 0, width_px, height_px)
+        
+        # 4. Set Pivot Point to Center (for Rotation)
+        self.setTransformOriginPoint(width_px / 2, height_px / 2)
+        
         self.setPos(device.x, device.y)
         
         rotation = getattr(device, 'rotation', 0.0)
@@ -37,9 +51,12 @@ class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
         if not self.is_ghost and hasattr(device, 'pins'):
             for pin in device.pins:
                 pin_item = PinItem(pin, self)
-                pin_item.setPos(pin.x, pin.y)
+                # Ensure pin positions are also converted if stored in MM
+                # (Assuming pin.x/y are relative MM from top-left)
+                px = transformer.mm_to_px(pin.x)
+                py = transformer.mm_to_px(pin.y)
+                pin_item.setPos(px, py)
 
-    # FIX: Restore backward compatibility for tests accessing .device
     @property
     def device(self):
         return self.model
@@ -49,7 +66,7 @@ class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
         self.model = value
 
     def boundingRect(self):
-        return super().boundingRect().adjusted(-25, -25, 25, 25)
+        return super().boundingRect().adjusted(-5, -5, 5, 5)
 
     def _apply_style(self):
         body_color = QColor(THEME_FALLBACK["device_body"])
@@ -66,7 +83,7 @@ class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
     def paint(self, painter, option, widget):
         super().paint(painter, option, widget)
         if self.isSelected() and not self.is_ghost:
-            rect = self.rect().adjusted(-4, -4, 4, 4)
-            painter.setPen(QPen(QColor(0, 180, 255, 100), 4, Qt.SolidLine))
+            rect = self.rect().adjusted(-2, -2, 2, 2)
+            painter.setPen(QPen(QColor(0, 180, 255, 100), 2, Qt.SolidLine))
             painter.setBrush(Qt.NoBrush)
             painter.drawRect(rect)

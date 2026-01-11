@@ -40,6 +40,7 @@ class MoveTool:
     def start(self, target=None, selected_item=None, click_pos=None):
         if target:
             self._target = target
+            # Clone state for ghost
             self.ghost_item = type(target)(**target.model_dump())
             self.selected_item = selected_item
             
