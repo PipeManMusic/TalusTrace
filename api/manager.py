@@ -1,6 +1,8 @@
 from infra.context import ProjectContext
 from api.tool_manager import ToolManager
 from core.library_manager import LibraryManager
+from ui.input_system import InputSystem
+from ui.coordinates import CoordinateTransformer # <--- NEW
 
 class APIManager:
     _instance = None
@@ -16,15 +18,25 @@ class APIManager:
             raise Exception("This class is a singleton!")
         
         self.context = ProjectContext()
+        self.library = LibraryManager()
+        self.transformer = CoordinateTransformer() # <--- SINGLE SOURCE OF TRUTH
         self.tool_manager = ToolManager()
-        self.library = LibraryManager() # <--- NEW: Centralized Library
         
-        self._subscribers = {}
+        # Register Tools
+        from tools.select_tool import SelectTool
+        from tools.wire_tool import WireTool
+        from tools.placement_tool import PlacementTool
+        # Register MoveTool (Lazy loaded or explicit)
+        from tools.move_tool import MoveTool 
         
-        # Lazy load InputSystem
-        from ui.input_system import InputSystem
+        self.tool_manager.register_tool("select", SelectTool())
+        self.tool_manager.register_tool("wire", WireTool())
+        self.tool_manager.register_tool("placement", PlacementTool())
+        self.tool_manager.register_tool("move", MoveTool())
+        
         self.input_system = InputSystem()
-        self.input_system.install()
+        self._subscribers = {}
+        self.main_window = None
 
     def subscribe(self, event_type, callback):
         if event_type not in self._subscribers:
@@ -32,10 +44,13 @@ class APIManager:
         if callback not in self._subscribers[event_type]:
             self._subscribers[event_type].append(callback)
 
-    def dispatch(self, event_type, data):
+    def dispatch(self, event_type, data=None):
+        if data is None: data = {}
         if event_type in self._subscribers:
-            for cb in self._subscribers[event_type]:
+            for cb in list(self._subscribers[event_type]):
                 try:
                     cb(data)
+                except RuntimeError:
+                    pass 
                 except Exception as e:
                     print(f"Error dispatching '{event_type}': {e}")

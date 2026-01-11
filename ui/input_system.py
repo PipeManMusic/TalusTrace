@@ -1,53 +1,57 @@
-import yaml
-from pathlib import Path
 from PySide6.QtCore import QObject, QEvent, Qt
-from PySide6.QtGui import QKeySequence
-from PySide6.QtWidgets import QApplication, QLineEdit, QTextEdit
-from api.actions import registry
 
 class InputSystem(QObject):
-    def __init__(self, config_path: str = "resources/config/actions.yaml"):
+    def __init__(self):
         super().__init__()
-        self.key_map = {}
-        self._load_config(config_path)
+        self.canvas = None
+        # REMOVED: self._api = APIManager.get_instance() 
+        # This was causing the infinite recursion loop.
 
-    def install(self):
-        app = QApplication.instance()
-        if app: app.installEventFilter(self)
+    @property
+    def api(self):
+        """
+        Lazy load APIManager. 
+        This ensures we don't try to get the instance before it's fully initialized.
+        """
+        from api.manager import APIManager
+        return APIManager.get_instance()
 
-    def _load_config(self, path: str):
-        if not Path(path).exists(): return
-        try:
-            with open(path, 'r') as f:
-                data = yaml.safe_load(f)
-                if not data: return
-                for cmd in data.get("commands", []):
-                    if "default_key" in cmd:
-                        self.register_shortcut(cmd["default_key"], cmd["id"])
-        except Exception as e:
-            print(f"Failed to load keymap: {e}")
+    def install(self, canvas):
+        """
+        Registers the canvas with the input system.
+        - Mouse events are forwarded explicitly by the Canvas.
+        - This method installs an event filter for Keyboard events.
+        """
+        self.canvas = canvas
+        if self.canvas:
+            self.canvas.installEventFilter(self)
 
-    # RESTORED FEATURE
-    def register_shortcut(self, key_seq, action_id):
-        seq = QKeySequence(key_seq).toString()
-        self.key_map[seq] = action_id
-
-    def eventFilter(self, obj: QObject, event: QEvent) -> bool:
+    def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyPress:
-            if isinstance(QApplication.focusWidget(), (QLineEdit, QTextEdit)):
-                return False 
-            seq = QKeySequence(event.keyCombination()).toString()
-            if seq in self.key_map:
-                registry.execute(self.key_map[seq])
-                return True
+            return self._handle_key(event)
         return super().eventFilter(obj, event)
 
+    def _handle_key(self, event):
+        # NOW SAFE: We access self.api only when a key is actually pressed
+        tool = self.api.tool_manager.active_tool
+        if tool and hasattr(tool, 'on_key_press'):
+            tool.on_key_press(event)
+            return True
+        return False
+
     def handle_canvas_event(self, event):
-        from api.manager import APIManager
-        tool = APIManager.get_instance().tool_manager.active_tool
-        if tool and hasattr(event, 'original_event'):
-            etype = event.original_event.type()
-            if etype == QEvent.MouseMove: tool.on_mouse_move(event)
-            elif etype == QEvent.MouseButtonPress: tool.on_mouse_press(event)
-            elif etype == QEvent.MouseButtonRelease: tool.on_mouse_release(event)
-            elif etype == QEvent.MouseButtonDblClick: getattr(tool, 'on_mouse_double_click', lambda e: None)(event)
+        # NOW SAFE: We access self.api only when a mouse event happens
+        tool = self.api.tool_manager.active_tool
+        if not tool: return
+
+        etype = event.original_event.type()
+        
+        if etype == QEvent.MouseButtonPress:
+            if hasattr(tool, 'on_mouse_press'):
+                tool.on_mouse_press(event)
+        elif etype == QEvent.MouseButtonRelease:
+            if hasattr(tool, 'on_mouse_release'):
+                tool.on_mouse_release(event)
+        elif etype == QEvent.MouseMove:
+            if hasattr(tool, 'on_mouse_move'):
+                tool.on_mouse_move(event)

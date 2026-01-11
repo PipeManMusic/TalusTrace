@@ -11,6 +11,7 @@ class PropertyPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Properties")
+        self.current_item_id = None # Track what we are looking at
         
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0,0,0,0)
@@ -24,8 +25,10 @@ class PropertyPanel(QWidget):
         
         self.clear_panel()
         
-        # FIX: Correct 2-argument subscription
-        APIManager.get_instance().subscribe("selection_changed", self._on_selection_changed)
+        # FIX: Subscribe to model changes so Undo/Redo updates values
+        api = APIManager.get_instance()
+        api.subscribe("selection_changed", self._on_selection_changed)
+        api.subscribe("model_changed", self._on_model_changed) # <--- CRITICAL FIX
 
     def _on_selection_changed(self, data):
         try:
@@ -37,9 +40,23 @@ class PropertyPanel(QWidget):
                 self.clear_panel()
         except RuntimeError: pass
 
+    def _on_model_changed(self, data):
+        """Refreshes the panel if the currently viewed item was modified."""
+        if not self.isVisible() or not self.current_item_id: return
+        
+        # If we are looking at an item, simply reload it from the selection source of truth
+        # or find it in the harness. For simplicity, we re-trigger a selection refresh if applicable,
+        # or just reload the current object if we have a reference.
+        
+        # A robust way: check if the modified item IS the current item
+        modified_item = data.get("item")
+        if modified_item and hasattr(modified_item, "id") and modified_item.id == self.current_item_id:
+             self.load_item(modified_item)
+
     def clear_panel(self):
         self._clear_layout()
         self.form_layout.addRow(QLabel("No Selection"))
+        self.current_item_id = None
 
     def _clear_layout(self):
         while self.form_layout.count():
@@ -49,6 +66,7 @@ class PropertyPanel(QWidget):
 
     def load_item(self, item):
         self._clear_layout()
+        self.current_item_id = getattr(item, "id", None)
         
         if isinstance(item, Device):
             self._add_header(f"Device: {item.id}")
@@ -56,7 +74,6 @@ class PropertyPanel(QWidget):
             self._add_spin("X", item, "x")
             self._add_spin("Y", item, "y")
             
-            # FIX: The loop that was missing
             if hasattr(item, "meta") and item.meta:
                 self._add_header("Parameters")
                 for key, val in item.meta.items():

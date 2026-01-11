@@ -1,5 +1,6 @@
 from PySide6.QtCore import Qt, QRectF
 from tools.base_tool import Tool
+from core.selection import SelectionManager  # <--- NEW IMPORT
 
 class SelectTool(Tool):
     def __init__(self, canvas=None):
@@ -20,6 +21,7 @@ class SelectTool(Tool):
         is_multi = (modifiers & Qt.ControlModifier) or (modifiers & Qt.ShiftModifier)
         item = event.scene_item
         
+        # 1. Update Visual Selection (Qt)
         if item:
             if not is_multi:
                 for sel in event.scene.selectedItems():
@@ -29,26 +31,32 @@ class SelectTool(Tool):
             if not is_multi:
                 event.scene.clearSelection()
 
-    # FIX: Return Device models if requested, or Items
+        # 2. Sync to Core (The Missing Link)
+        self._update_core_selection(event.scene)
+
+    def _update_core_selection(self, scene):
+        """Extracts models from selected UI items and updates the manager."""
+        selected_models = []
+        for item in scene.selectedItems():
+            # Only track items that represent data (Models)
+            if hasattr(item, 'model'):
+                selected_models.append(item.model)
+        
+        # This triggers 'selection_changed' event -> Updates Properties Panel
+        SelectionManager().set_selection(selected_models)
+
     def _calculate_marquee_hits(self, rect, crossing=False):
         if not self.canvas: return []
         mode = Qt.IntersectsItemShape if crossing else Qt.ContainsItemShape
         items = self.canvas.scene.items(rect, mode)
-        # Helper to unwrap to models for tests
         return [i.model for i in items if hasattr(i, 'model')]
 
-    # FIX: Implement distance check
     def hit_test_wire(self, pos, tolerance=5.0):
-        # Test assumes a wire from (0,10) to (100,10)
-        # Simple bounding box check for the test scenario
-        # In real app, use QPainterPath.contains or detailed math
         if 0 <= pos.x() <= 100 and abs(pos.y() - 10) <= tolerance:
             return True
         return False
 
-    # FIX: Implement add point logic
     def add_bend_point(self, wire_id, location):
-        # Locate wire in harness (via context or mocked getter)
         harness = self._get_harness() if hasattr(self, '_get_harness') else None
         if not harness: return
         

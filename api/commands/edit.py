@@ -1,43 +1,77 @@
-from PySide6.QtWidgets import QApplication
 from api.actions import register_action
 from api.manager import APIManager
 from infra.undo_stack import BaseCommand
+from core.selection import SelectionManager
 
-# --- Command Implementation ---
+# --- Command Classes ---
+
 class UpdatePropertyCommand(BaseCommand):
     def __init__(self, target, field, new_value):
         super().__init__(f"Update {field}")
         self.target = target
         self.field = field
         self.new_value = new_value
-        # Handle dictionary vs object attribute
-        if isinstance(target, dict):
-            self.old_value = target.get(field)
-            self.is_dict = True
-        else:
-            self.old_value = getattr(target, field, None)
-            self.is_dict = False
+        self.is_dict = isinstance(target, dict)
+        self.old_value = target.get(field) if self.is_dict else getattr(target, field, None)
+        self.api = APIManager.get_instance()
 
     def execute(self):
-        if self.is_dict:
-            self.target[self.field] = self.new_value
-        else:
-            setattr(self.target, self.field, self.new_value)
-        self._refresh()
+        if self.is_dict: self.target[self.field] = self.new_value
+        else: setattr(self.target, self.field, self.new_value)
+        self.api.dispatch("model_changed", {"action": "update", "item": self.target})
 
     def undo(self):
-        if self.is_dict:
-            self.target[self.field] = self.old_value
-        else:
-            setattr(self.target, self.field, self.old_value)
-        self._refresh()
+        if self.is_dict: self.target[self.field] = self.old_value
+        else: setattr(self.target, self.field, self.old_value)
+        self.api.dispatch("model_changed", {"action": "update", "item": self.target})
 
-    def _refresh(self):
-        # Notify system of change
-        api = APIManager.get_instance()
-        api.dispatch("model_changed", {"item": self.target})
-        if hasattr(api, 'main_window') and api.main_window:
-            api.main_window.canvas.scene.update()
+class DeleteItemsCommand(BaseCommand):
+    def __init__(self, device_ids, wire_ids):
+        super().__init__("Delete Items")
+        self.dev_ids = device_ids
+        self.wire_ids = wire_ids
+        self.api = APIManager.get_instance()
+        # Capture state for undo
+        self.deleted_devices = []
+        self.deleted_wires = []
+
+    def execute(self):
+        harness = self.api.context.harness
+        # Save for undo
+        self.deleted_devices = [d for d in harness.devices if d.id in self.dev_ids]
+        self.deleted_wires = [w for w in harness.wires if getattr(w, 'id', None) in self.wire_ids]
+        
+        # Mutate
+        harness.devices = [d for d in harness.devices if d.id not in self.dev_ids]
+        harness.wires = [w for w in harness.wires if getattr(w, 'id', None) not in self.wire_ids]
+        
+        SelectionManager().clear_selection()
+        self.api.dispatch("model_changed", {"action": "delete"})
+
+    def undo(self):
+        harness = self.api.context.harness
+        harness.devices.extend(self.deleted_devices)
+        harness.wires.extend(self.deleted_wires)
+        self.api.dispatch("model_changed", {"action": "restore"})
+
+class RotateItemsCommand(BaseCommand):
+    def __init__(self, items, angle):
+        super().__init__("Rotate Items")
+        self.items = items
+        self.angle = angle
+        self.api = APIManager.get_instance()
+
+    def execute(self):
+        for item in self.items:
+            if hasattr(item, 'rotation'):
+                item.rotation = (item.rotation + self.angle) % 360
+        self.api.dispatch("model_changed", {"action": "rotate"})
+
+    def undo(self):
+        for item in self.items:
+            if hasattr(item, 'rotation'):
+                item.rotation = (item.rotation - self.angle) % 360
+        self.api.dispatch("model_changed", {"action": "rotate"})
 
 # --- Action Registrations ---
 
@@ -51,49 +85,31 @@ def edit_redo(context):
 
 @register_action("edit.delete")
 def edit_delete(context):
-    from core.selection import SelectionManager
-    api = APIManager.get_instance()
     mgr = SelectionManager()
+    if not mgr.current_selection_ids: return
     
-    ids = set(mgr.current_selection_ids)
-    if not ids: return
-
-    # Remove items (Logic should ideally be in a reversible Command)
-    api.context.harness.devices = [d for d in api.context.harness.devices if d.id not in ids]
-    api.context.harness.wires = [w for w in api.context.harness.wires if getattr(w, 'id', None) not in ids]
+    # Identify what to delete
+    # (Simplified: assuming selection IDs map to devices for now)
+    dev_ids = set(mgr.current_selection_ids)
+    wire_ids = set() # Extend logic for wires later
     
-    mgr.clear_selection()
-    
-    api.dispatch("model_changed", {"action": "delete"})
-    if hasattr(api, 'main_window'):
-        api.main_window.canvas.load_harness(api.context.harness)
+    cmd = DeleteItemsCommand(dev_ids, wire_ids)
+    APIManager.get_instance().context.undo_stack.push(cmd)
 
 @register_action("edit.rotate_cw")
 def edit_rotate_cw(context):
-    _rotate_selection(90)
+    mgr = SelectionManager()
+    if not mgr.selected_models: return
+    cmd = RotateItemsCommand(mgr.selected_models, 90)
+    APIManager.get_instance().context.undo_stack.push(cmd)
 
 @register_action("edit.rotate_ccw")
 def edit_rotate_ccw(context):
-    _rotate_selection(-90)
-
-def _rotate_selection(angle):
-    from core.selection import SelectionManager
-    api = APIManager.get_instance()
     mgr = SelectionManager()
-    
-    count = 0
-    for item in mgr.selected_models:
-        if hasattr(item, 'rotation'):
-            item.rotation = (item.rotation + angle) % 360
-            count += 1
-            
-    if count > 0:
-        api.dispatch("model_changed", {"action": "rotate"})
-        if hasattr(api, 'main_window'):
-            api.main_window.canvas.scene.update()
-            # Refresh property panel
-            api.dispatch("selection_changed", {"selection": mgr.selected_models})
+    if not mgr.selected_models: return
+    cmd = RotateItemsCommand(mgr.selected_models, -90)
+    APIManager.get_instance().context.undo_stack.push(cmd)
 
 @register_action("edit.update_property")
 def edit_update_property(context):
-    pass
+    pass # Invoked programmatically by PropertyPanel

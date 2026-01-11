@@ -16,11 +16,13 @@ class ProjectBrowser(QWidget):
         
         # Subscribe to updates
         self.api.subscribe("selection_changed", self.on_selection_changed)
-        # In a real app, you'd subscribe to "model_changed" too
+        # CRITICAL: Listen for model changes (renaming a label needs to trigger a refresh)
+        self.api.subscribe("model_changed", self.refresh)
         
         self.refresh()
 
-    def refresh(self):
+    def refresh(self, data=None):
+        """Rebuilds the tree view from the Core Model."""
         self.tree.clear()
         harness = self.api.context.harness
         if not harness: return
@@ -29,8 +31,11 @@ class ProjectBrowser(QWidget):
         dev_group = QTreeWidgetItem(self.tree, ["Devices"])
         dev_group.setExpanded(True)
         for dev in harness.devices:
-            item = QTreeWidgetItem(dev_group, [dev.id])
-            item.setData(0, 100, dev.id) # Store ID
+            # LOGIC: Show "ID (Label)" if label exists, else "ID"
+            display_text = f"{dev.id} ({dev.label})" if dev.label else dev.id
+            
+            item = QTreeWidgetItem(dev_group, [display_text])
+            item.setData(0, 100, dev.id) # Store ID in data column 0, role 100
             
         # Wires Group
         wire_group = QTreeWidgetItem(self.tree, ["Wires"])
@@ -41,6 +46,7 @@ class ProjectBrowser(QWidget):
             item.setData(0, 100, getattr(wire, 'id', ''))
 
     def on_selection_changed(self, data):
-        # Simple refresh for now to reflect changes
-        # A robust implementation would just highlight the row
+        # In a full implementation, we would just highlight the row here
+        # instead of rebuilding, but rebuilding ensures labels are up to date
+        # if the selection change was triggered by a property edit.
         self.refresh()

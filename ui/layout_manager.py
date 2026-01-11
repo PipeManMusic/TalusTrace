@@ -12,7 +12,6 @@ class LayoutManager:
         self.actions_map = self._load_actions_map(actions_path)
 
     def _load_yaml(self, path):
-        # Fallback if file missing
         default = {}
         try:
             if not Path(path).exists(): return default
@@ -48,6 +47,8 @@ class LayoutManager:
 
         toolbar = QToolBar(parent)
         toolbar.setWindowTitle("Main Toolbar")
+        # FIX: Set ObjectName for persistence
+        toolbar.setObjectName("MainToolbar") 
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
 
         if not toolbar_cfg.get('visible', True):
@@ -63,9 +64,7 @@ class LayoutManager:
         return toolbar
 
     def _add_action_to_container(self, container, cmd_id, override_meta=None):
-        """Helper to create QAction and add to Menu or Toolbar."""
         meta = self.actions_map.get(cmd_id, {})
-        # Merge overrides (e.g. custom label in layout.yaml)
         if override_meta:
             meta = {**meta, **override_meta}
             
@@ -73,15 +72,12 @@ class LayoutManager:
         action = QAction(label, container)
         action.setData(cmd_id)
 
-        # Icon Handling
         icon_name = meta.get('icon')
         if icon_name:
-            # Check standard icons first
             from PySide6.QtWidgets import QStyle, QApplication
             if hasattr(QStyle, icon_name):
                 action.setIcon(QApplication.style().standardIcon(getattr(QStyle, icon_name)))
             else:
-                # Then check file path
                 icon_path = Path("resources/icons") / icon_name
                 if icon_path.exists():
                     action.setIcon(QIcon(str(icon_path)))
@@ -92,6 +88,5 @@ class LayoutManager:
         if 'default_key' in meta:
             action.setShortcut(meta['default_key'])
 
-        # BINDING: Connect YAML command ID to API Registry
         action.triggered.connect(lambda checked=False, cid=cmd_id: registry.execute(cid))
         container.addAction(action)

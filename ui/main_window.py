@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QMainWindow, QStatusBar, QDockWidget
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSettings
 from ui.canvas import HarnessCanvas
 from ui.input_system import InputSystem
 from ui.layout_manager import LayoutManager
@@ -13,6 +13,7 @@ class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Talus Trace")
+        # Default size, overridden by settings if they exist
         self.resize(1400, 900)
 
         # 1. API & Core
@@ -25,26 +26,29 @@ class MainWindow(QMainWindow):
 
         # 3. Input & Layout
         self.input_system = InputSystem()
-        self.input_system.install()
-        
-        # Use LayoutManager to read YAML and build Menus/Toolbars
         self.layout_manager = LayoutManager()
         self.setMenuBar(self.layout_manager.create_menubar(self))
         self.addToolBar(self.layout_manager.create_toolbar(self))
+        
+        # Install Input Filter
+        api.input_system.install(self.canvas)
 
-        # 4. Docks
+        # 4. Docks (Must be created before restoring state)
         self._create_docks()
         
         # 5. Status
         self.setStatusBar(QStatusBar(self))
         self._show_git_hash()
         
+        # 6. Load Previous State (Geometry & Docks)
+        self.restore_settings()
+        
         registry.action_triggered.connect(self._on_action)
 
     def _create_docks(self):
         # Left: Browser & Library
         self.dock_browser = QDockWidget("Project", self)
-        self.dock_browser.setObjectName("ProjectBrowserDock")
+        self.dock_browser.setObjectName("ProjectBrowserDock") # Crucial for saveState
         self.dock_browser.setWidget(ProjectBrowser())
         self.addDockWidget(Qt.LeftDockWidgetArea, self.dock_browser)
 
@@ -61,10 +65,26 @@ class MainWindow(QMainWindow):
         self.dock_props.setWidget(PropertyPanel())
         self.addDockWidget(Qt.RightDockWidgetArea, self.dock_props)
 
+    def closeEvent(self, event):
+        # Save Geometry and State on exit
+        self.save_settings()
+        super().closeEvent(event)
+
+    def save_settings(self):
+        settings = QSettings()
+        settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("windowState", self.saveState())
+
+    def restore_settings(self):
+        settings = QSettings()
+        if settings.value("geometry"):
+            self.restoreGeometry(settings.value("geometry"))
+        if settings.value("windowState"):
+            self.restoreState(settings.value("windowState"))
+
     def _on_action(self, action_id, context):
         self.statusBar().showMessage(f"Action: {action_id}")
         
-        # FIX: Handle View Toggles based on YAML command IDs
         if action_id == "view.toggle_library":
             self.dock_library.setVisible(not self.dock_library.isVisible())
         elif action_id == "view.toggle_project_browser":
@@ -72,9 +92,17 @@ class MainWindow(QMainWindow):
         elif action_id == "view.toggle_property_panel":
             self.dock_props.setVisible(not self.dock_props.isVisible())
         elif action_id == "view.reset_layout":
-            self.dock_browser.show()
-            self.dock_library.show()
-            self.dock_props.show()
+            self._reset_layout_defaults()
+
+    def _reset_layout_defaults(self):
+        """Factory reset for UI layout."""
+        self.dock_browser.setVisible(True)
+        self.dock_library.setVisible(True)
+        self.dock_props.setVisible(True)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock_browser)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.dock_library)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.dock_props)
+        self.tabifyDockWidget(self.dock_browser, self.dock_library)
 
     def _show_git_hash(self):
         try:
@@ -82,5 +110,3 @@ class MainWindow(QMainWindow):
             h = subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode().strip()
             self.statusBar().showMessage(f"Git: {h}")
         except: pass
-
-    def closeEvent(self, e): super().closeEvent(e)

@@ -1,5 +1,5 @@
 from tools.base_tool import Tool
-from api.manager import APIManager
+# REMOVED: from api.manager import APIManager (Circular Dependency)
 
 class WireTool(Tool):
     def __init__(self):
@@ -8,6 +8,9 @@ class WireTool(Tool):
 
     def start(self):
         print(">> WireTool Activated")
+        # LAZY LOAD: Safe because Manager is fully initialized by now
+        from api.manager import APIManager
+        
         api = APIManager.get_instance()
         if hasattr(api, 'main_window'):
             from PySide6.QtCore import Qt
@@ -25,7 +28,11 @@ class WireTool(Tool):
     def deactivate(self):
         print(">> WireTool Deactivated")
         self.active_wire = None
+        
+        # LAZY LOAD
+        from api.manager import APIManager
         api = APIManager.get_instance()
+        
         if hasattr(api, 'main_window'):
             from PySide6.QtCore import Qt
             api.main_window.canvas.setCursor(Qt.ArrowCursor)
