@@ -1,35 +1,55 @@
 import math
+import os
+import yaml
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QMenu
 from PySide6.QtGui import QPainter, QColor, QBrush, QPen, QMouseEvent, QAction
 from PySide6.QtCore import Qt, QLineF, QPointF
-from ui.coordinates import THEME_FALLBACK
 from api.manager import APIManager
 from api.actions import registry
-import yaml
-import os
+from ui.theme import ThemeManager
 
 class CanvasEvent:
-    def __init__(self, view_event, scene_pos, pos_mm, scene, scene_item=None):
+    def __init__(self, view_event, scene_pos, scene):
         self.original_event = view_event
-        self.scene_pos = scene_pos # Pixels (Use for Visuals/HitTest)
-        self.pos_mm = pos_mm       # Millimeters (Use for Model Data)
+        self.scene_pos = scene_pos 
+        # In World Space architecture, scene coordinates ARE physical coordinates (mm)
+        self.pos_mm = scene_pos 
         self.scene = scene
-        self.scene_item = scene_item
+        self.scene_item = scene.itemAt(scene_pos, QGraphicsView().transform())
 
 class HarnessCanvas(QGraphicsView):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.api = APIManager.get_instance()
+        self.theme = ThemeManager() # UI owns the visuals
         
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
+        
+        # --- ARCHITECTURE FIX: VIEW SCALING ---
+        # 1. Get Monitor Calibration from Settings (Physics)
+        # Default to 96 DPI if settings not loaded yet
+        dpi = getattr(self.api.settings, 'pixels_per_inch', 96.0)
+        
+        # 2. Calculate Scale: (DPI pixels / 1 inch) * (1 inch / 25.4 mm)
+        self.pixels_per_mm = dpi / 25.4
+        
+        # 3. Scale the View so 1.0 unit in Scene = 1.0 mm on Screen
+        self.scale(self.pixels_per_mm, self.pixels_per_mm)
+        
+        # Standard Setup
         self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.setMouseTracking(True)
         self.viewport().setMouseTracking(True)
+        
+        # Scene is effectively infinite MM
         self.scene.setSceneRect(-50000, -50000, 100000, 100000)
-        self.setBackgroundBrush(QBrush(QColor(THEME_FALLBACK["canvas_bg"])))
+        
+        # Set Background from Theme
+        bg_color = self.theme.get_color("canvas_bg")
+        self.setBackgroundBrush(QBrush(bg_color))
         
         self.context_menu_config = self._load_context_menu_config()
         self.api.subscribe("model_changed", self.refresh)
@@ -73,17 +93,9 @@ class HarnessCanvas(QGraphicsView):
 
     def _create_tool_event(self, event: QMouseEvent):
         pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
-        scene_pos = self.mapToScene(pos) # Pixels
-        
-        # Calculate Real Millimeters
-        t = self.api.transformer
-        mm_x = t.px_to_mm(scene_pos.x())
-        mm_y = t.px_to_mm(scene_pos.y())
-        pos_mm = QPointF(mm_x, mm_y)
-        
-        item = self.scene.itemAt(scene_pos, self.transform())
-        
-        return CanvasEvent(event, scene_pos, pos_mm, self.scene, item)
+        # mapToScene handles the scaling (Pixels -> MM) automatically
+        scene_pos = self.mapToScene(pos) 
+        return CanvasEvent(event, scene_pos, self.scene)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MiddleButton:
@@ -121,28 +133,34 @@ class HarnessCanvas(QGraphicsView):
     def drawBackground(self, painter, rect):
         super().drawBackground(painter, rect)
         
-        transformer = self.api.transformer
-        grid_spacing = transformer.mm_to_px(transformer.grid_size_mm)
+        # 1. Ask API for physics (Grid Size in MM)
+        # This is the "Dumb UI" part: it doesn't know 5.0 is the value, it just asks.
+        grid_mm = 5.0
+        if hasattr(self.api, 'settings'):
+            grid_mm = self.api.settings.grid_size_mm
+            
+        if grid_mm <= 0: grid_mm = 5.0
         
-        if grid_spacing < 2.0: grid_spacing = 25.0
-
-        grid_pen = QPen(QColor(THEME_FALLBACK["grid_color"]))
-        grid_pen.setWidth(0)
+        # 2. Ask Theme for paint (Color)
+        color = self.theme.get_color("grid_color")
+        grid_pen = QPen(color)
+        grid_pen.setWidth(0) # Cosmetic pen (always 1px wide regardless of zoom)
         painter.setPen(grid_pen)
         
-        left = math.floor(rect.left() / grid_spacing) * grid_spacing
-        top = math.floor(rect.top() / grid_spacing) * grid_spacing
+        # 3. Draw Grid Lines
+        left = math.floor(rect.left() / grid_mm) * grid_mm
+        top = math.floor(rect.top() / grid_mm) * grid_mm
         
         lines = []
         x = left
         while x < rect.right():
             lines.append(QLineF(x, rect.top(), x, rect.bottom()))
-            x += grid_spacing
+            x += grid_mm
             
         y = top
         while y < rect.bottom():
              lines.append(QLineF(rect.left(), y, rect.right(), y))
-             y += grid_spacing
+             y += grid_mm
              
         painter.drawLines(lines)
     

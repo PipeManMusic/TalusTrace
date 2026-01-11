@@ -25,19 +25,9 @@ class PlacementTool(Tool):
         self.canvas.setFocus()
         self.canvas.viewport().setMouseTracking(True)
         
-        from PySide6.QtGui import QCursor
-        view_pos = self.canvas.mapFromGlobal(QCursor.pos())
-        scene_pos = self.canvas.mapToScene(view_pos)
-        
-        # FIXED: Initial conversion Px -> MM -> Snap
-        x_mm = self.api.transformer.px_to_mm(scene_pos.x())
-        y_mm = self.api.transformer.px_to_mm(scene_pos.y())
-        
-        x = self.api.transformer.snap_mm(x_mm)
-        y = self.api.transformer.snap_mm(y_mm)
-        
+        # Initialize Ghost at (0,0) - logic will update position on first move
         meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
-        ghost_model = Device(id="GHOST", x=x, y=y, meta=meta_defaults)
+        ghost_model = Device(id="GHOST", x=0, y=0, meta=meta_defaults)
         
         self.ghost_item = DeviceItem(ghost_model, is_ghost=True)
         self.ghost_item.setZValue(2000) 
@@ -46,31 +36,35 @@ class PlacementTool(Tool):
     def on_mouse_move(self, event):
         if not self.ghost_item: return
         try:
-            # FIXED: event.pos_mm is now actually Millimeters
-            # Snap to MM grid
-            x = self.api.transformer.snap_mm(event.pos_mm.x())
-            y = self.api.transformer.snap_mm(event.pos_mm.y())
+            # 1. Get Raw Position from Scene (already in MM)
+            raw_x = event.scene_pos.x()
+            raw_y = event.scene_pos.y()
             
-            # Update visual position (Convert Back to Pixels for View)
-            px = self.api.transformer.mm_to_px(x)
-            py = self.api.transformer.mm_to_px(y)
+            # 2. Ask API to apply Constraints (Snap to Grid)
+            # This works regardless of what the grid size currently is
+            x = self.api.settings.snap(raw_x)
+            y = self.api.settings.snap(raw_y)
             
-            self.ghost_item.setPos(px, py)
+            self.ghost_item.setPos(x, y)
         except:
             self.ghost_item = None
 
     def on_mouse_press(self, event):
         if event.original_event.button() != Qt.LeftButton: return
 
-        # FIXED: Use MM for Model Storage
-        x = self.api.transformer.snap_mm(event.pos_mm.x())
-        y = self.api.transformer.snap_mm(event.pos_mm.y())
+        # 1. Get Snap Coordinates
+        raw_x = event.scene_pos.x()
+        raw_y = event.scene_pos.y()
+        
+        x = self.api.settings.snap(raw_x)
+        y = self.api.settings.snap(raw_y)
         
         from api.commands.device import AddDeviceCommand
         
         dev_id = f"DEV_{str(uuid.uuid4())[:8]}"
         meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
         
+        # Model stores MM directly
         new_device = Device(id=dev_id, x=x, y=y, meta=meta_defaults)
         
         cmd = AddDeviceCommand(new_device)

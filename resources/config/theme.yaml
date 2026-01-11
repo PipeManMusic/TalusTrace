@@ -1,4 +1,3 @@
-# resources/config/theme.yaml
 colors:
   canvas_bg: "#23272e"
   grid_color: "#3a3f4b"
@@ -7,3 +6,5 @@ colors:
   pin_fill: "#e0e0e0"
   bundle_standard: "#8ecae6"
   bundle_violation: "#ffb703"
+  wire_a: "#0000FF"
+  wire_b: "#FFA500"

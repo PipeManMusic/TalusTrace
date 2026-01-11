@@ -3,27 +3,21 @@ from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 from ui.coordinates import THEME_FALLBACK
 from ui.items.base import SelectableItemMixin
-from api.manager import APIManager
-from ui.items.pin import PinItem # <--- FIXED IMPORT
+from ui.items.pin import PinItem
 
 class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
     def __init__(self, device, is_ghost=False, parent=None):
         QGraphicsRectItem.__init__(self, parent)
         
-        transformer = APIManager.get_instance().transformer
-        
+        # ARCHITECTURE UPDATE: Use MM dimensions directly
         width_mm = device.meta.get("width_mm", 40.0)
         height_mm = device.meta.get("height_mm", 30.0)
         
-        width_px = transformer.mm_to_px(width_mm)
-        height_px = transformer.mm_to_px(height_mm)
+        self.setRect(0, 0, width_mm, height_mm)
+        self.setTransformOriginPoint(width_mm / 2, height_mm / 2)
         
-        self.setRect(0, 0, width_px, height_px)
-        self.setTransformOriginPoint(width_px / 2, height_px / 2)
-        
-        px = transformer.mm_to_px(device.x)
-        py = transformer.mm_to_px(device.y)
-        self.setPos(px, py)
+        # No conversion needed. Model x/y is MM. Scene is MM.
+        self.setPos(device.x, device.y)
         
         rotation = getattr(device, 'rotation', 0.0)
         self.setRotation(rotation)
@@ -33,9 +27,8 @@ class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
         if not self.is_ghost and hasattr(device, 'pins'):
             for pin in device.pins:
                 pin_item = PinItem(pin, self)
-                pin_px = transformer.mm_to_px(pin.x)
-                pin_py = transformer.mm_to_px(pin.y)
-                pin_item.setPos(pin_px, pin_py)
+                # Pin positions in model are relative MM. Use directly.
+                pin_item.setPos(pin.x, pin.y)
 
     @property
     def device(self):
@@ -46,24 +39,30 @@ class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
         self.model = value
 
     def boundingRect(self):
-        return super().boundingRect().adjusted(-5, -5, 5, 5)
+        # Adjust slightly for selection halo
+        return super().boundingRect().adjusted(-2, -2, 2, 2)
 
     def _apply_style(self):
         body_color = QColor(THEME_FALLBACK["device_body"])
         outline_color = QColor(THEME_FALLBACK["device_outline"])
+        
+        # Cosmetic Pen (Width 0) ensures it draws nicely at any zoom level
+        pen_style = Qt.DashLine if self.is_ghost else Qt.SolidLine
+        pen = QPen(outline_color, 0, pen_style)
+        pen.setCosmetic(True)
 
         if self.is_ghost:
             body_color.setAlpha(100)
-            self.setPen(QPen(outline_color, 1, Qt.DashLine))
-        else:
-            self.setPen(QPen(outline_color, 0))
-            
+
+        self.setPen(pen)
         self.setBrush(QBrush(body_color))
 
     def paint(self, painter, option, widget):
         super().paint(painter, option, widget)
         if self.isSelected() and not self.is_ghost:
-            rect = self.rect().adjusted(-2, -2, 2, 2)
-            painter.setPen(QPen(QColor(0, 180, 255, 100), 2, Qt.SolidLine))
+            rect = self.rect().adjusted(-1, -1, 1, 1)
+            pen = QPen(QColor(0, 180, 255, 150), 0, Qt.SolidLine)
+            pen.setCosmetic(True)
+            painter.setPen(pen)
             painter.setBrush(Qt.NoBrush)
             painter.drawRect(rect)

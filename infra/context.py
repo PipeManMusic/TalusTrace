@@ -1,16 +1,21 @@
 import yaml
 from pathlib import Path
-# FIX: Import directly from core
 from core.harness import Harness
+# FIXED: Import Observer
+from infra.observer import Observer 
 
-class ProjectContext:
+class Context:
     def __init__(self, harness: Harness = None):
         self.harness = harness or Harness(meta={"name": "New Harness", "trunk_length_mm": 1000})
         self.current_file = None
         self.dirty = False
+        
+        # FIXED: Initialize the Observer
+        self.observer = Observer()
+        
+        # Initialize Undo Stack
         from infra.undo_stack import UndoStack
         self.undo_stack = UndoStack()
-
 
     @property
     def is_dirty(self):
@@ -26,6 +31,8 @@ class ProjectContext:
         self.current_file = None
         self.dirty = False
         self.undo_stack.clear()
+        # Notify UI of reset
+        self.observer.dispatch("model_changed", {"action": "new_project"})
 
     def mark_dirty(self):
         self.dirty = True
@@ -44,6 +51,7 @@ class ProjectContext:
         self.harness = Harness.model_validate(data)
         self.current_file = path
         self.dirty = False
+        self.observer.dispatch("model_changed", {"action": "load"})
 
     def save_as(self, path: Path):
         """

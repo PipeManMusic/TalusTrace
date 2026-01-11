@@ -1,37 +1,30 @@
-
-
 import yaml
-from pathlib import Path
+import os
 from PySide6.QtGui import QColor
 
 class ThemeManager:
-	def __init__(self, user_path=None):
-		self.user_path = Path(user_path) if user_path else None
-		self.colors = {"canvas_bg": "#2E2E2E"}
-		if self.user_path and self.user_path.exists():
-			self._load_user_theme()
+    def __init__(self):
+        self.colors = {}
+        self._defaults = {
+            "canvas_bg": "#23272e",
+            "grid_color": "#3a3f4b",
+            "device_body": "#4e5d6c",
+            "device_outline": "#bfc9d1",
+            "pin_fill": "#e0e0e0",
+            "bundle_standard": "#8ecae6",
+            "bundle_violation": "#ffb703"
+        }
+        self._load()
 
-	def _load_user_theme(self):
-		from resources.defaults import DEFAULT_THEME
-		try:
-			with open(self.user_path, 'r') as f:
-				data = yaml.safe_load(f)
-				if not data or not isinstance(data, dict) or "colors" not in data or not isinstance(data["colors"], dict):
-					self.colors = DEFAULT_THEME.copy()
-				else:
-					self.colors = DEFAULT_THEME.copy()
-					self.colors.update(data["colors"])
-		except Exception:
-			self.colors = DEFAULT_THEME.copy()
+    def _load(self):
+        path = "resources/config/theme.yaml"
+        if not os.path.exists(path): return
+        try:
+            with open(path, 'r') as f:
+                data = yaml.safe_load(f) or {}
+                self.colors = data.get("colors", {})
+        except: pass
 
-	def get_color(self, key):
-		return self.colors.get(key, "#2E2E2E")
-
-	def set_color_override(self, key, value):
-		self.colors[key] = value
-
-	def save_user_theme(self):
-		if not self.user_path:
-			raise ValueError("No user_path specified for ThemeManager")
-		with open(self.user_path, 'w') as f:
-			yaml.safe_dump({"colors": self.colors}, f)
+    def get_color(self, name):
+        hex_code = self.colors.get(name, self._defaults.get(name, "#FF00FF"))
+        return QColor(hex_code)

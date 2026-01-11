@@ -5,18 +5,15 @@ from ui.coordinates import THEME_FALLBACK
 
 class PinItem(QGraphicsEllipseItem):
     def __init__(self, pin_model, parent=None):
-        # Visual: Small dot (radius 1.0 -> 2px diam)
-        super().__init__(-1.0, -1.0, 2.0, 2.0, parent)
+        # Visual: 1.0mm Diameter Circle
+        super().__init__(-0.5, -0.5, 1.0, 1.0, parent)
         self.pin = pin_model
         
-        # Style
         color = THEME_FALLBACK.get("pin_fill", "#FFFFFF")
         self.setBrush(QBrush(QColor(color)))
         self.setPen(Qt.NoPen)
         
-        # Interaction
         self.setAcceptHoverEvents(True)
-        # Critical: Ensure this item catches clicks before the parent device does
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
     
     def hoverEnterEvent(self, event):
@@ -41,11 +38,7 @@ class PinItem(QGraphicsEllipseItem):
         return super().itemChange(change, value)
 
     def shape(self):
-        """
-        Defines the 'Hit Box' for mouse clicks.
-        We make this 12x12 (radius 6) so it's easy to grab,
-        even though the visual dot is only 2x2.
-        """
+        # Hit Box: 3mm Diameter
         path = QPainterPath()
-        path.addEllipse(-6, -6, 12, 12)
+        path.addEllipse(-1.5, -1.5, 3.0, 3.0)
         return path
