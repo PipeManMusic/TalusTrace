@@ -1,25 +1,10 @@
-from PySide6.QtWidgets import QGraphicsRectItem, QGraphicsEllipseItem
+from PySide6.QtWidgets import QGraphicsRectItem
 from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 from ui.coordinates import THEME_FALLBACK
 from ui.items.base import SelectableItemMixin
 from api.manager import APIManager
-
-class PinItem(QGraphicsEllipseItem):
-    def __init__(self, pin_model, parent=None):
-        super().__init__(-1.0, -1.0, 2.0, 2.0, parent)
-        self.pin = pin_model
-        self.setBrush(QBrush(QColor(THEME_FALLBACK["pin_fill"])))
-        self.setPen(Qt.NoPen)
-        self.setAcceptHoverEvents(True)
-    
-    def hoverEnterEvent(self, event):
-        self.setBrush(QBrush(Qt.cyan)) 
-        super().hoverEnterEvent(event)
-
-    def hoverLeaveEvent(self, event):
-        self.setBrush(QBrush(QColor(THEME_FALLBACK["pin_fill"])))
-        super().hoverLeaveEvent(event)
+from ui.items.pin import PinItem # <--- FIXED IMPORT
 
 class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
     def __init__(self, device, is_ghost=False, parent=None):
@@ -36,8 +21,6 @@ class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
         self.setRect(0, 0, width_px, height_px)
         self.setTransformOriginPoint(width_px / 2, height_px / 2)
         
-        # FIXED: Convert Model Position (MM) to View Position (Pixels)
-        # This prevents the "microscopic/disappearing device" issue.
         px = transformer.mm_to_px(device.x)
         py = transformer.mm_to_px(device.y)
         self.setPos(px, py)
@@ -50,7 +33,6 @@ class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
         if not self.is_ghost and hasattr(device, 'pins'):
             for pin in device.pins:
                 pin_item = PinItem(pin, self)
-                # Pins are already relative MM, just convert to pixels
                 pin_px = transformer.mm_to_px(pin.x)
                 pin_py = transformer.mm_to_px(pin.y)
                 pin_item.setPos(pin_px, pin_py)

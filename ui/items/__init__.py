@@ -1,3 +1,4 @@
-from .device import DeviceItem, PinItem
-from .wire import BundleItem, TwistedPairItem, GhostWireItem
-from .base import SelectableItemMixin
+# FIXED: Renamed BundleItem -> WireItem
+from .wire import WireItem, TwistedPairItem, GhostWireItem
+from .pin import PinItem
+from .device import DeviceItem

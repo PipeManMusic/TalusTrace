@@ -25,9 +25,10 @@ class WireTool(Tool):
             self.api.main_window.canvas.setCursor(Qt.CrossCursor)
 
     def _get_pin_at_pos(self, scene_pos):
-        """Hit test for PinItem under cursor."""
+        """Hit test for PinItem under cursor (Requires PIXEL coords)."""
         if not self.api.main_window: return None, None
         
+        # Check visuals (Scene Coordinates)
         items = self.api.main_window.canvas.scene.items(scene_pos)
         for item in items:
             if isinstance(item, PinItem):
@@ -39,8 +40,8 @@ class WireTool(Tool):
     def on_mouse_press(self, event):
         if event.original_event.button() != Qt.LeftButton: return
 
-        # 1. Hit Test for Pin
-        pin, device = self._get_pin_at_pos(event.pos_mm)
+        # 1. Hit Test for Pin using Pixels (scene_pos)
+        pin, device = self._get_pin_at_pos(event.scene_pos)
 
         if self.state == "IDLE":
             if pin and device:
@@ -52,7 +53,8 @@ class WireTool(Tool):
                 self.ghost_line.setPen(QPen(QColor(0, 255, 0), 2, Qt.DashLine))
                 
                 pin_item_pos = self._get_pin_scene_pos(pin)
-                self.ghost_line.setLine(pin_item_pos.x(), pin_item_pos.y(), event.pos_mm.x(), event.pos_mm.y())
+                # Draw ghost line using Pixel coordinates
+                self.ghost_line.setLine(pin_item_pos.x(), pin_item_pos.y(), event.scene_pos.x(), event.scene_pos.y())
                 self.api.main_window.canvas.scene.addItem(self.ghost_line)
                 print(f">> Wire Started from {device.id}:{pin.id}")
 
@@ -69,18 +71,24 @@ class WireTool(Tool):
                 self._reset()
 
     def on_mouse_move(self, event):
-        self.current_mouse_pos = event.pos_mm
+        self.current_mouse_pos = event.scene_pos
         
         if self.state == "DRAGGING" and self.ghost_line:
-            start_pos = self.ghost_line.line().p1()
-            
-            target_pin, _ = self._get_pin_at_pos(event.pos_mm)
-            if target_pin:
-                end_pos = self._get_pin_scene_pos(target_pin)
-            else:
-                end_pos = event.pos_mm
-            
-            self.ghost_line.setLine(start_pos.x(), start_pos.y(), end_pos.x(), end_pos.y())
+            # Check if ghost_line is still valid (it might be deleted if scene cleared)
+            try:
+                if not self.ghost_line.scene(): return
+                start_pos = self.ghost_line.line().p1()
+                
+                # Hit test target using Pixels
+                target_pin, _ = self._get_pin_at_pos(event.scene_pos)
+                if target_pin:
+                    end_pos = self._get_pin_scene_pos(target_pin)
+                else:
+                    end_pos = event.scene_pos
+                
+                self.ghost_line.setLine(start_pos.x(), start_pos.y(), end_pos.x(), end_pos.y())
+            except RuntimeError:
+                self.ghost_line = None
 
     def _create_wire(self, dev1, pin1, dev2, pin2):
         from api.commands.device import AddWireCommand
@@ -101,10 +109,12 @@ class WireTool(Tool):
         print(f">> Wire Created: {wire_id}")
 
     def _get_pin_scene_pos(self, pin_model):
+        """Returns the Pixel position of a pin."""
         scene = self.api.main_window.canvas.scene
         for item in scene.items():
             if isinstance(item, PinItem) and item.pin == pin_model:
-                return item.mapToScene(1.0, 1.0)
+                # Map 0,0 (center of pin) to scene
+                return item.mapToScene(0.0, 0.0)
         return QPointF(0,0)
 
     def _reset(self):
@@ -112,8 +122,13 @@ class WireTool(Tool):
         self.start_pin = None
         self.start_device = None
         if self.ghost_line:
-            if self.api.main_window:
-                self.api.main_window.canvas.scene.removeItem(self.ghost_line)
+            # FIXED: Handle case where scene.clear() (triggered by _create_wire -> refresh)
+            # has already deleted the C++ object.
+            try:
+                if self.api.main_window and self.ghost_line.scene():
+                    self.api.main_window.canvas.scene.removeItem(self.ghost_line)
+            except RuntimeError:
+                pass # Object already deleted, safe to ignore
             self.ghost_line = None
 
     def deactivate(self):

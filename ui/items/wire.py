@@ -5,17 +5,35 @@ from core.logic import calculate_bundle_diameter
 from core.geometry import generate_helix_points
 from ui.coordinates import THEME_FALLBACK
 from ui.items.base import SelectableItemMixin
+from api.manager import APIManager
 
-class BundleItem(SelectableItemMixin, QGraphicsPathItem):
-    def __init__(self, path_nodes, wire_diameters, wire_model=None, parent=None):
+class WireItem(SelectableItemMixin, QGraphicsPathItem):
+    def __init__(self, wire_model, parent=None):
         QGraphicsPathItem.__init__(self, parent)
-        self.path_nodes = path_nodes
-        self.wire_diameters = wire_diameters
         
+        # 1. Get Transformer
+        transformer = APIManager.get_instance().transformer
+        
+        # 2. Convert Path Nodes (MM -> Pixels)
+        raw_nodes = getattr(wire_model, 'path_nodes', [])
+        self.path_nodes = []
+        if raw_nodes:
+            self.path_nodes = [transformer.mm_to_px_tuple(p) for p in raw_nodes]
+
+        # 3. Determine Diameter/Width (MM -> Pixels)
+        gauge_mm = getattr(wire_model, 'gauge', 1.0) 
+        if not isinstance(gauge_mm, (int, float)): gauge_mm = 1.0
+        
+        self.wire_diameters = [gauge_mm]
+        self.stroke_width = transformer.mm_to_px(calculate_bundle_diameter(self.wire_diameters))
+        
+        if self.stroke_width < 1.0: self.stroke_width = 1.0
+
+        # 4. Build Graphics Path
         qpath = QPainterPath()
-        if path_nodes:
-            qpath.moveTo(path_nodes[0][0], path_nodes[0][1])
-            for node in path_nodes[1:]:
+        if self.path_nodes:
+            qpath.moveTo(self.path_nodes[0][0], self.path_nodes[0][1])
+            for node in self.path_nodes[1:]:
                 qpath.lineTo(node[0], node[1])
         self.setPath(qpath)
 
@@ -23,19 +41,19 @@ class BundleItem(SelectableItemMixin, QGraphicsPathItem):
 
     def _apply_style(self):
         from core.logic import check_bend_radius_violations
-        mm_diameter = calculate_bundle_diameter(self.wire_diameters)
+        
         check_diam = self.wire_diameters[0] if self.wire_diameters else 1.0
         
-        if check_bend_radius_violations(self.path_nodes, check_diam):
-            color = QColor(THEME_FALLBACK["bundle_violation"])
-        else:
-            color = QColor(THEME_FALLBACK["bundle_standard"])
+        color = QColor(THEME_FALLBACK["bundle_standard"])
+        if hasattr(self.model, 'color') and self.model.color:
+             # Placeholder for custom colors
+             pass
             
-        self.setPen(QPen(color, mm_diameter, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
+        self.setPen(QPen(color, self.stroke_width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin))
 
     def shape(self):
         stroker = QPainterPathStroker()
-        stroker.setWidth(6.0) 
+        stroker.setWidth(max(self.stroke_width + 4.0, 6.0)) 
         return stroker.createStroke(self.path())
 
     def paint(self, painter, option, widget):
@@ -44,7 +62,7 @@ class BundleItem(SelectableItemMixin, QGraphicsPathItem):
             painter.setBrush(QBrush(QColor(0, 200, 255)))
             painter.setPen(Qt.NoPen)
             for pt in self.path_nodes:
-                painter.drawEllipse(QPointF(pt[0], pt[1]), 2.0, 2.0)
+                painter.drawEllipse(QPointF(pt[0], pt[1]), 3.0, 3.0)
 
 class TwistedPairItem(QGraphicsItem):
     def __init__(self, path_nodes, gauge_mm=0.65, parent=None):
@@ -73,7 +91,6 @@ class TwistedPairItem(QGraphicsItem):
         cache.save(key, result)
         return result
 
-    # RESTORED FEATURE
     def determine_lod(self, view_scale: float) -> str:
         return "HELIX" if view_scale >= 0.5 else "HATCH"
 

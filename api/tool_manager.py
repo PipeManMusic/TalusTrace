@@ -1,3 +1,5 @@
+from api.actions import registry
+
 class ToolManager:
     def __init__(self):
         self._tools = {}
@@ -28,3 +30,9 @@ class ToolManager:
         
         # Initialize the new state
         self.active_tool.start()
+
+    def execute_action(self, action_id, context=None):
+        """
+        Executes an action via the global ActionRegistry.
+        """
+        registry.execute(action_id, context)

@@ -9,9 +9,10 @@ import yaml
 import os
 
 class CanvasEvent:
-    def __init__(self, view_event, pos_mm, scene, scene_item=None):
+    def __init__(self, view_event, scene_pos, pos_mm, scene, scene_item=None):
         self.original_event = view_event
-        self.pos_mm = pos_mm # Now strictly Millimeters
+        self.scene_pos = scene_pos # Pixels (Use for Visuals/HitTest)
+        self.pos_mm = pos_mm       # Millimeters (Use for Model Data)
         self.scene = scene
         self.scene_item = scene_item
 
@@ -60,8 +61,7 @@ class HarnessCanvas(QGraphicsView):
                 cmd_id = entry["command"]
                 label = cmd_id.split(".")[-1].replace("_", " ").title()
                 action = QAction(label, self)
-                # Ensure we execute the command properly
-                action.triggered.connect(lambda chk=False, cid=cmd_id: self.api.tool_manager.execute_action(cid))
+                action.triggered.connect(lambda chk=False, cid=cmd_id: registry.execute(cid))
                 menu.addAction(action)
         menu.exec_(event.globalPos())
 
@@ -73,16 +73,17 @@ class HarnessCanvas(QGraphicsView):
 
     def _create_tool_event(self, event: QMouseEvent):
         pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
-        scene_pos = self.mapToScene(pos)
-        item = self.scene.itemAt(scene_pos, self.transform())
+        scene_pos = self.mapToScene(pos) # Pixels
         
-        # FIXED: Convert Scene Pixels -> Millimeters
+        # Calculate Real Millimeters
         t = self.api.transformer
         mm_x = t.px_to_mm(scene_pos.x())
         mm_y = t.px_to_mm(scene_pos.y())
         pos_mm = QPointF(mm_x, mm_y)
         
-        return CanvasEvent(event, pos_mm, self.scene, item)
+        item = self.scene.itemAt(scene_pos, self.transform())
+        
+        return CanvasEvent(event, scene_pos, pos_mm, self.scene, item)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MiddleButton:
@@ -105,7 +106,7 @@ class HarnessCanvas(QGraphicsView):
 
     def load_harness(self, harness):
         from ui.items.device import DeviceItem
-        from ui.items.wire import WireItem 
+        from ui.items.wire import WireItem
         
         self.scene.clear()
         if not harness: return

@@ -37,19 +37,17 @@ class SelectableItemMixin:
         # --- 1. FORCE GRID SNAPPING ---
         # This intercepts Qt's internal move logic and forces the result to the grid.
         if change == QGraphicsItem.ItemPositionChange and self.scene():
-            # Lazy load API to avoid circular imports
             from api.manager import APIManager
             try:
                 transformer = APIManager.get_instance().transformer
                 new_pos = value # value is a QPointF
                 
-                # Snap the proposed position
+                # Snap the proposed position (Pixels -> Grid Pixels)
                 x = transformer.snap_to_grid(new_pos.x())
                 y = transformer.snap_to_grid(new_pos.y())
                 
                 return QPointF(x, y)
             except:
-                # Fallback if API isn't ready (shouldn't happen in runtime)
                 pass
 
         # --- 2. Visual Updates (Blue Halo) ---
@@ -57,13 +55,25 @@ class SelectableItemMixin:
             self.update_visual_state()
 
         # --- 3. Model Sync (Dragging) ---
-        # Note: We check ItemPositionHasChanged to update the model AFTER the snap
+        # FIXED: Convert View Pixels back to Model Millimeters before saving!
         if change == QGraphicsItem.ItemPositionHasChanged and hasattr(self, 'model'):
-            # Update the underlying data model to match the snapped UI position
-            if hasattr(self.model, 'x'):
-                self.model.x = self.x()
-            if hasattr(self.model, 'y'):
-                self.model.y = self.y()
+            from api.manager import APIManager
+            try:
+                # 1. Get Transformer
+                transformer = APIManager.get_instance().transformer
+                
+                # 2. Convert Current Px Position -> Millimeters
+                # We use self.pos() because 'value' in this event might be stale or just the delta
+                current_pos = self.pos()
+                mm_x = transformer.px_to_mm(current_pos.x())
+                mm_y = transformer.px_to_mm(current_pos.y())
+                
+                # 3. Update Model
+                if hasattr(self.model, 'x'):
+                    self.model.x = mm_x
+                if hasattr(self.model, 'y'):
+                    self.model.y = mm_y
+            except: pass
             
         return super().itemChange(change, value)
 
