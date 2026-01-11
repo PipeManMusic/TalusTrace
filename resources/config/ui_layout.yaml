@@ -36,7 +36,7 @@ menubar:
       - separator: true
       - command: "view.toggle_project_browser"
       - command: "view.toggle_property_panel"
-      - command: "view.toggle_library"  # <--- HOOKED UP
+      - command: "view.toggle_library"
       - separator: true
       - command: "view.reset_layout"
         
@@ -55,6 +55,8 @@ toolbar:
 
 context_menu:
   device:
+    - command: "device.add_pin"  # <--- NEW
+    - separator: true
     - command: "edit.move"
     - command: "edit.rotate_cw"
     - separator: true

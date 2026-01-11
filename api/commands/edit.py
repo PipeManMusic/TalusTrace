@@ -89,9 +89,14 @@ def edit_delete(context):
     if not mgr.current_selection_ids: return
     
     # Identify what to delete
-    # (Simplified: assuming selection IDs map to devices for now)
-    dev_ids = set(mgr.current_selection_ids)
-    wire_ids = set() # Extend logic for wires later
+    dev_ids = []
+    wire_ids = []
+    
+    for item in mgr.selected_models:
+        if hasattr(item, 'meta'): # Heuristic for Device
+            dev_ids.append(item.id)
+        elif hasattr(item, 'id'): # Heuristic for Wire
+            wire_ids.append(item.id)
     
     cmd = DeleteItemsCommand(dev_ids, wire_ids)
     APIManager.get_instance().context.undo_stack.push(cmd)

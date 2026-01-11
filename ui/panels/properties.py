@@ -82,6 +82,16 @@ class PropertyPanel(QWidget):
                         self._add_meta_spin(key, item, key)
                     else:
                         self._add_meta_text(key, item, key)
+        elif isinstance(item, Pin):
+            self._add_header(f"Pin: {item.id}")
+            self._add_text("Label", item, "label")
+            self._add_text("Net", item, "net")
+            
+            # Pins are children of devices, X/Y is relative. 
+            # We can show it, but usually you don't edit pin X/Y manually unless custom.
+            self._add_header("Relative Position")
+            self._add_spin("X", item, "x")
+            self._add_spin("Y", item, "y")
 
     def _add_header(self, text):
         lbl = QLabel(text)

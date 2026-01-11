@@ -11,7 +11,7 @@ import os
 class CanvasEvent:
     def __init__(self, view_event, scene_pos, scene, scene_item=None):
         self.original_event = view_event
-        self.pos_mm = scene_pos 
+        self.pos_mm = scene_pos
         self.scene = scene
         self.scene_item = scene_item
 
@@ -96,16 +96,23 @@ class HarnessCanvas(QGraphicsView):
         super().mouseReleaseEvent(event)
 
     def load_harness(self, harness):
-        from ui.items import DeviceItem
+        from ui.items.device import DeviceItem
+        from ui.items.wire import WireItem # <--- Critical: Render Wires
+        
         self.scene.clear()
         if not harness: return
+        
         for device in harness.devices:
             self.scene.addItem(DeviceItem(device))
+            
+        for wire in harness.wires:
+            if wire.from_conn and wire.to_conn:
+                self.scene.addItem(WireItem(wire))
 
     def drawBackground(self, painter, rect):
         super().drawBackground(painter, rect)
         
-        # FIX: Use calculated grid spacing (float) from Transformer
+        # Float-based Grid Rendering
         transformer = self.api.transformer
         grid_spacing = transformer.mm_to_px(transformer.grid_size_mm)
         
@@ -115,7 +122,6 @@ class HarnessCanvas(QGraphicsView):
         grid_pen.setWidth(0)
         painter.setPen(grid_pen)
         
-        # Calculate start points (Anchored to 0,0)
         left = math.floor(rect.left() / grid_spacing) * grid_spacing
         top = math.floor(rect.top() / grid_spacing) * grid_spacing
         
@@ -131,3 +137,8 @@ class HarnessCanvas(QGraphicsView):
              y += grid_spacing
              
         painter.drawLines(lines)
+    
+    def zoom_extents(self):
+        rect = self.scene.itemsBoundingRect()
+        if not rect.isEmpty():
+            self.fitInView(rect, Qt.KeepAspectRatio)
