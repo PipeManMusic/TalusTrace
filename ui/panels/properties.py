@@ -4,14 +4,14 @@ from PySide6.QtWidgets import (
 )
 from api.manager import APIManager
 from api.commands.edit import UpdatePropertyCommand
-from core.device import Device
+from core.device import Device, Pin
 from core.wire import Wire
 
 class PropertyPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Properties")
-        self.current_item_id = None # Track what we are looking at
+        self.current_item_id = None 
         
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0,0,0,0)
@@ -25,10 +25,9 @@ class PropertyPanel(QWidget):
         
         self.clear_panel()
         
-        # FIX: Subscribe to model changes so Undo/Redo updates values
         api = APIManager.get_instance()
         api.subscribe("selection_changed", self._on_selection_changed)
-        api.subscribe("model_changed", self._on_model_changed) # <--- CRITICAL FIX
+        api.subscribe("model_changed", self._on_model_changed)
 
     def _on_selection_changed(self, data):
         try:
@@ -41,14 +40,7 @@ class PropertyPanel(QWidget):
         except RuntimeError: pass
 
     def _on_model_changed(self, data):
-        """Refreshes the panel if the currently viewed item was modified."""
         if not self.isVisible() or not self.current_item_id: return
-        
-        # If we are looking at an item, simply reload it from the selection source of truth
-        # or find it in the harness. For simplicity, we re-trigger a selection refresh if applicable,
-        # or just reload the current object if we have a reference.
-        
-        # A robust way: check if the modified item IS the current item
         modified_item = data.get("item")
         if modified_item and hasattr(modified_item, "id") and modified_item.id == self.current_item_id:
              self.load_item(modified_item)
@@ -85,10 +77,8 @@ class PropertyPanel(QWidget):
         elif isinstance(item, Pin):
             self._add_header(f"Pin: {item.id}")
             self._add_text("Label", item, "label")
-            self._add_text("Net", item, "net")
+            # FIXED: Removed 'Net' field as it doesn't exist in Pin model
             
-            # Pins are children of devices, X/Y is relative. 
-            # We can show it, but usually you don't edit pin X/Y manually unless custom.
             self._add_header("Relative Position")
             self._add_spin("X", item, "x")
             self._add_spin("Y", item, "y")

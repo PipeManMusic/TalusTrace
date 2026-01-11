@@ -3,7 +3,7 @@ from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 from ui.coordinates import THEME_FALLBACK
 from ui.items.base import SelectableItemMixin
-from api.manager import APIManager  # <--- Needed for Unit Conversion
+from api.manager import APIManager
 
 class PinItem(QGraphicsEllipseItem):
     def __init__(self, pin_model, parent=None):
@@ -25,23 +25,22 @@ class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
     def __init__(self, device, is_ghost=False, parent=None):
         QGraphicsRectItem.__init__(self, parent)
         
-        # 1. Get Transformer
         transformer = APIManager.get_instance().transformer
         
-        # 2. Convert Dimensions (MM -> Pixels)
         width_mm = device.meta.get("width_mm", 40.0)
         height_mm = device.meta.get("height_mm", 30.0)
         
         width_px = transformer.mm_to_px(width_mm)
         height_px = transformer.mm_to_px(height_mm)
         
-        # 3. Set Origin to Top-Left (0,0) for corner snapping
         self.setRect(0, 0, width_px, height_px)
-        
-        # 4. Set Pivot Point to Center (for Rotation)
         self.setTransformOriginPoint(width_px / 2, height_px / 2)
         
-        self.setPos(device.x, device.y)
+        # FIXED: Convert Model Position (MM) to View Position (Pixels)
+        # This prevents the "microscopic/disappearing device" issue.
+        px = transformer.mm_to_px(device.x)
+        py = transformer.mm_to_px(device.y)
+        self.setPos(px, py)
         
         rotation = getattr(device, 'rotation', 0.0)
         self.setRotation(rotation)
@@ -51,11 +50,10 @@ class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
         if not self.is_ghost and hasattr(device, 'pins'):
             for pin in device.pins:
                 pin_item = PinItem(pin, self)
-                # Ensure pin positions are also converted if stored in MM
-                # (Assuming pin.x/y are relative MM from top-left)
-                px = transformer.mm_to_px(pin.x)
-                py = transformer.mm_to_px(pin.y)
-                pin_item.setPos(px, py)
+                # Pins are already relative MM, just convert to pixels
+                pin_px = transformer.mm_to_px(pin.x)
+                pin_py = transformer.mm_to_px(pin.y)
+                pin_item.setPos(pin_px, pin_py)
 
     @property
     def device(self):

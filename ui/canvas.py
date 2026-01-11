@@ -1,7 +1,7 @@
 import math
 from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QMenu
 from PySide6.QtGui import QPainter, QColor, QBrush, QPen, QMouseEvent, QAction
-from PySide6.QtCore import Qt, QLineF
+from PySide6.QtCore import Qt, QLineF, QPointF
 from ui.coordinates import THEME_FALLBACK
 from api.manager import APIManager
 from api.actions import registry
@@ -9,9 +9,9 @@ import yaml
 import os
 
 class CanvasEvent:
-    def __init__(self, view_event, scene_pos, scene, scene_item=None):
+    def __init__(self, view_event, pos_mm, scene, scene_item=None):
         self.original_event = view_event
-        self.pos_mm = scene_pos
+        self.pos_mm = pos_mm # Now strictly Millimeters
         self.scene = scene
         self.scene_item = scene_item
 
@@ -60,7 +60,8 @@ class HarnessCanvas(QGraphicsView):
                 cmd_id = entry["command"]
                 label = cmd_id.split(".")[-1].replace("_", " ").title()
                 action = QAction(label, self)
-                action.triggered.connect(lambda chk=False, cid=cmd_id: registry.execute(cid))
+                # Ensure we execute the command properly
+                action.triggered.connect(lambda chk=False, cid=cmd_id: self.api.tool_manager.execute_action(cid))
                 menu.addAction(action)
         menu.exec_(event.globalPos())
 
@@ -74,7 +75,14 @@ class HarnessCanvas(QGraphicsView):
         pos = event.position().toPoint() if hasattr(event, 'position') else event.pos()
         scene_pos = self.mapToScene(pos)
         item = self.scene.itemAt(scene_pos, self.transform())
-        return CanvasEvent(event, scene_pos, self.scene, item)
+        
+        # FIXED: Convert Scene Pixels -> Millimeters
+        t = self.api.transformer
+        mm_x = t.px_to_mm(scene_pos.x())
+        mm_y = t.px_to_mm(scene_pos.y())
+        pos_mm = QPointF(mm_x, mm_y)
+        
+        return CanvasEvent(event, pos_mm, self.scene, item)
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MiddleButton:
@@ -97,7 +105,7 @@ class HarnessCanvas(QGraphicsView):
 
     def load_harness(self, harness):
         from ui.items.device import DeviceItem
-        from ui.items.wire import WireItem # <--- Critical: Render Wires
+        from ui.items.wire import WireItem 
         
         self.scene.clear()
         if not harness: return
@@ -112,7 +120,6 @@ class HarnessCanvas(QGraphicsView):
     def drawBackground(self, painter, rect):
         super().drawBackground(painter, rect)
         
-        # Float-based Grid Rendering
         transformer = self.api.transformer
         grid_spacing = transformer.mm_to_px(transformer.grid_size_mm)
         
