@@ -1,6 +1,9 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QFormLayout, QLabel, QLineEdit, QScrollArea
-from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QFormLayout, QLabel, QLineEdit, 
+    QScrollArea, QFrame, QDoubleSpinBox
+)
 from api.manager import APIManager
+from api.commands.edit import UpdatePropertyCommand
 from core.device import Device
 from core.wire import Wire
 
@@ -12,12 +15,6 @@ class PropertyPanel(QWidget):
         self.layout = QVBoxLayout(self)
         self.layout.setContentsMargins(0,0,0,0)
         
-        # Header
-        self.header = QLabel("Properties")
-        self.header.setStyleSheet("font-weight: bold; padding: 5px;")
-        self.layout.addWidget(self.header)
-        
-        # Scroll Area for Content
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
         self.content_widget = QWidget()
@@ -25,81 +22,85 @@ class PropertyPanel(QWidget):
         self.scroll.setWidget(self.content_widget)
         self.layout.addWidget(self.scroll)
         
-        # Do not define id_edit and label_edit here; set dynamically
-        # Initial State
         self.clear_panel()
         
-        # Register Listener
-        # UPDATE: Changed .observe() to .subscribe()
-        APIManager.get_instance().subscribe(self._on_app_event)
+        # FIX: Correct 2-argument subscription
+        APIManager.get_instance().subscribe("selection_changed", self._on_selection_changed)
 
-    def _on_app_event(self, event_data):
+    def _on_selection_changed(self, data):
         try:
-            # SAFETY CHECK: If C++ object is deleted, this access will raise RuntimeError
-            if not self.isVisible() and False: pass 
-            
-            action = event_data.get("event")
-            
-            if action == "selection_changed":
-                selection = event_data.get("selection", [])
-                if selection:
-                    self.load_item(selection[0])
-                else:
-                    self.clear_panel()
-                    
-        except RuntimeError:
-            pass
+            if not self.isVisible(): return
+            selection = data.get("selection", [])
+            if selection:
+                self.load_item(selection[0])
+            else:
+                self.clear_panel()
+        except RuntimeError: pass
 
     def clear_panel(self):
         self._clear_layout()
-        if hasattr(self, 'id_edit'):
-            del self.id_edit
-        if hasattr(self, 'label_edit'):
-            del self.label_edit
         self.form_layout.addRow(QLabel("No Selection"))
 
     def _clear_layout(self):
         while self.form_layout.count():
             item = self.form_layout.takeAt(0)
             widget = item.widget()
-            if widget:
-                widget.deleteLater()
+            if widget: widget.deleteLater()
 
     def load_item(self, item):
         self._clear_layout()
         
         if isinstance(item, Device):
-            self.header.setText(f"Device: {item.id}")
-            self._add_field("ID", item.id, item, "id")
-            self._add_field("Label", item.label, item, "label")
-            self._add_field("X (mm)", str(item.x), item, "x")
-            self._add_field("Y (mm)", str(item.y), item, "y")
+            self._add_header(f"Device: {item.id}")
+            self._add_text("Label", item, "label")
+            self._add_spin("X", item, "x")
+            self._add_spin("Y", item, "y")
             
-        elif isinstance(item, Wire):
-            self.header.setText(f"Wire: {item.id}")
-            self._add_field("ID", item.id, item, "id")
-            self._add_field("From", item.from_conn, item, "from_conn")
-            self._add_field("To", item.to_conn, item, "to_conn")
-            self._add_field("Color", item.color, item, "color")
+            # FIX: The loop that was missing
+            if hasattr(item, "meta") and item.meta:
+                self._add_header("Parameters")
+                for key, val in item.meta.items():
+                    if key.startswith("_"): continue
+                    if isinstance(val, (int, float)):
+                        self._add_meta_spin(key, item, key)
+                    else:
+                        self._add_meta_text(key, item, key)
 
-    def _add_field(self, label, value, obj, attr_name):
-        edit = QLineEdit(str(value))
-        edit.editingFinished.connect(lambda: self._update_model(obj, attr_name, edit.text()))
-        self.form_layout.addRow(label, edit)
-        if attr_name == "id": self.id_edit = edit
-        if attr_name == "label": self.label_edit = edit
+    def _add_header(self, text):
+        lbl = QLabel(text)
+        lbl.setStyleSheet("font-weight: bold; background: #444; padding: 4px; color: white;")
+        self.form_layout.addRow(lbl)
 
-    def _update_model(self, obj, attr, value):
-        if hasattr(obj, attr):
-            current_type = type(getattr(obj, attr))
-            try:
-                if current_type == float:
-                    val = float(value)
-                elif current_type == int:
-                    val = int(value)
-                else:
-                    val = value
-                setattr(obj, attr, val)
-                print(f">> Updated {attr} -> {val}")
-            except ValueError:
-                print(f"Invalid input for {attr}")
+    def _commit(self, target, field, value):
+        cmd = UpdatePropertyCommand(target, field, value)
+        APIManager.get_instance().context.undo_stack.push(cmd)
+
+    def _add_text(self, label, obj, field):
+        val = getattr(obj, field, "")
+        w = QLineEdit(str(val))
+        w.editingFinished.connect(lambda: self._commit(obj, field, w.text()))
+        self.form_layout.addRow(label, w)
+
+    def _add_spin(self, label, obj, field):
+        val = getattr(obj, field, 0.0)
+        w = QDoubleSpinBox()
+        w.setRange(-99999, 99999)
+        w.setValue(float(val))
+        w.setButtonSymbols(QDoubleSpinBox.NoButtons)
+        w.editingFinished.connect(lambda: self._commit(obj, field, w.value()))
+        self.form_layout.addRow(label, w)
+
+    def _add_meta_text(self, label, obj, key):
+        val = obj.meta.get(key, "")
+        w = QLineEdit(str(val))
+        w.editingFinished.connect(lambda: self._commit(obj.meta, key, w.text()))
+        self.form_layout.addRow(label.title(), w)
+
+    def _add_meta_spin(self, label, obj, key):
+        val = obj.meta.get(key, 0.0)
+        w = QDoubleSpinBox()
+        w.setRange(-99999, 99999)
+        w.setValue(float(val))
+        w.setButtonSymbols(QDoubleSpinBox.NoButtons)
+        w.editingFinished.connect(lambda: self._commit(obj.meta, key, w.value()))
+        self.form_layout.addRow(label.title(), w)

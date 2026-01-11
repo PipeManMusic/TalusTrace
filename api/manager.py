@@ -1,4 +1,6 @@
 from infra.context import ProjectContext
+from api.tool_manager import ToolManager
+from core.library_manager import LibraryManager
 
 class APIManager:
     _instance = None
@@ -9,50 +11,31 @@ class APIManager:
             cls._instance = cls()
         return cls._instance
 
-    @classmethod
-    def reset(cls):
-        """Reset singleton for testing isolation."""
-        cls._instance = None
-
     def __init__(self):
-        self.context = ProjectContext()
-        self._observers = []
+        if APIManager._instance is not None:
+            raise Exception("This class is a singleton!")
         
-        # Initialize Subsystems
-        try:
-            from api.tool_manager import ToolManager
-            self.tool_manager = ToolManager()
-        except ImportError:
-            self.tool_manager = None
-            
-        try:
-            from ui.input_system import InputSystem
-            self.input_system = InputSystem()
-        except ImportError:
-            self.input_system = None
+        self.context = ProjectContext()
+        self.tool_manager = ToolManager()
+        self.library = LibraryManager() # <--- NEW: Centralized Library
+        
+        self._subscribers = {}
+        
+        # Lazy load InputSystem
+        from ui.input_system import InputSystem
+        self.input_system = InputSystem()
+        self.input_system.install()
 
-    # RENAMED: observe -> subscribe (Matches Test Suite expectation)
-    def subscribe(self, callback):
-        """Register a callback to receive app-wide events."""
-        if callback not in self._observers:
-            self._observers.append(callback)
+    def subscribe(self, event_type, callback):
+        if event_type not in self._subscribers:
+            self._subscribers[event_type] = []
+        if callback not in self._subscribers[event_type]:
+            self._subscribers[event_type].append(callback)
 
-
-    def _dispatch(self, event_name, data=None):
-        """Notify all observers of an event."""
-        if data is None:
-            data = {}
-        # Standardize event packet
-        if isinstance(data, dict):
-            data['event'] = event_name
-        for callback in self._observers:
-            try:
-                callback(data)
-            except Exception as e:
-                print(f"Error in observer {callback}: {e}")
-
-    @classmethod
-    def dispatch(cls, event_name, data=None):
-        """Class-level dispatch for test patching."""
-        instance = cls.get_instance()
-        instance._dispatch(event_name, data)
+    def dispatch(self, event_type, data):
+        if event_type in self._subscribers:
+            for cb in self._subscribers[event_type]:
+                try:
+                    cb(data)
+                except Exception as e:
+                    print(f"Error dispatching '{event_type}': {e}")

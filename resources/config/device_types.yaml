@@ -1,0 +1,61 @@
+# Extensible Metadata Definition
+# This file controls the default properties for generic devices.
+
+schemas:
+  generic:
+    label: "Generic Device"
+    icon: "square"
+    fields:
+      width_mm:
+        type: float
+        default: 40.0
+        label: "Width (mm)"
+        min: 5.0
+        max: 500.0
+      height_mm:
+        type: float
+        default: 30.0
+        label: "Height (mm)"
+      manufacturer:
+        type: string
+        default: "Generic"
+        label: "Manufacturer"
+      sku:
+        type: string
+        default: ""
+        label: "Part Number"
+
+  connector:
+    label: "Connector"
+    icon: "plug"
+    fields:
+      width_mm:
+        type: float
+        default: 25.0
+      height_mm:
+        type: float
+        default: 15.0
+      pin_count:
+        type: int
+        default: 2
+        min: 1
+        max: 128
+      gender:
+        type: select
+        options: ["Male", "Female", "Hybrid"]
+        default: "Female"
+
+  splice:
+    label: "Splice"
+    icon: "link"
+    fields:
+      width_mm:
+        type: float
+        default: 10.0
+      height_mm:
+        type: float
+        default: 5.0
+      type:
+        type: select
+        options: ["Butt", "Parallel", "Western Union"]
+        default: "Butt"

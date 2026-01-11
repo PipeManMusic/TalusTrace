@@ -1,4 +1,3 @@
-# resources/config/ui_layout.yaml
 menubar:
   - label: "File"
     items:
@@ -6,54 +5,54 @@ menubar:
       - command: "file.open"
       - command: "file.save"
       - separator: true
+      - command: "file.export_bom"
+      - command: "file.export_wirelist"
+      - separator: true
       - command: "file.exit"
 
   - label: "Edit"
     items:
-      - label: "Undo"
-        command: "edit.undo"
-      - label: "Redo"
-        command: "edit.redo"
+      - command: "edit.undo"
+      - command: "edit.redo"
       - separator: true
-      - label: "Rotate 90° CW"    # New Menu Item
-        command: "edit.rotate_cw"
-      - label: "Delete"
-        command: "edit.delete"
+      - command: "edit.rotate_cw"
+      - command: "edit.rotate_ccw"
+      - command: "edit.delete"
 
   - label: "Tools"
     items:
-      - label: "Select Mode"
-        command: "tool.select"
-      - label: "Place Device (Generic)"
-        command: "tool.add_generic_device"
-      - label: "Device Wizard..."
-        command: "device.create_wizard"
+      - command: "tool.select"
+      - command: "tool.move"
+      - command: "tool.wire"
       - separator: true
-      - label: "Wire Mode"
-        command: "tool.wire"
+      - command: "tool.add_generic_device"
+      - command: "device.create_wizard"
+      - command: "tool.measure"
 
-  - label: "View"  # NEW SECTION
+  - label: "View"
     items:
-      - label: "Toggle Project Browser"
-        command: "view.toggle_project_browser"
-      - label: "Toggle Property Panel"
-        command: "view.toggle_property_panel"
+      - command: "view.zoom_extents"
+      - command: "view.zoom_selected"
       - separator: true
-      - label: "Reset Layout"
-        command: "view.reset_layout"
+      - command: "view.toggle_project_browser"
+      - command: "view.toggle_property_panel"
+      - command: "view.toggle_library"  # <--- HOOKED UP
+      - separator: true
+      - command: "view.reset_layout"
         
 toolbar:
   visible: true
   items:
     - command: "tool.select"
-    - command: "tool.wire"
     - command: "tool.move"
+    - command: "tool.wire"
     - separator: true
-    - command: "device.create_wizard"
     - command: "tool.add_generic_device"
-      label: "Place Generic Device"
+    - command: "device.create_wizard"
+    - separator: true
+    - command: "edit.undo"
+    - command: "edit.redo"
 
-# PH5-CLN.1: Context Menu Definitions
 context_menu:
   device:
     - command: "edit.move"
@@ -61,6 +60,4 @@ context_menu:
     - separator: true
     - command: "edit.delete"
   wire:
-    - command: "tool.add_elbow"
-    - separator: true
     - command: "edit.delete"

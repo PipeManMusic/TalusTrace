@@ -1,13 +1,35 @@
 commands:
+  # --- Tools ---
   - id: tool.add_generic_device
     label: Place Generic Device
     icon: device.svg
     tooltip: Place a generic device on the canvas
-  - id: edit.move
+  - id: tool.select
+    label: Select Mode
+    icon: select.svg
+    default_key: S
+  - id: tool.move
     label: Move Item
     icon: move.svg
     default_key: G
     tooltip: Grab/Move Selection
+  - id: tool.wire
+    label: Draw Wire
+    icon: wire.svg
+    default_sequence:
+      - W
+      - A
+  - id: tool.measure
+    label: Measure
+    icon: ruler.svg
+    default_sequence:
+      - M
+      - E
+  - id: device.create_wizard
+    label: Device Wizard
+    icon: wizard.svg
+
+  # --- Edit ---
   - id: edit.rotate_cw
     label: "Rotate 90\xB0"
     icon: rotate_cw.svg
@@ -28,18 +50,8 @@ commands:
     label: Redo
     icon: redo.svg
     default_key: Ctrl+Shift+Z
-  - id: tool.wire_mode
-    label: Draw Wire
-    icon: wire.svg
-    default_sequence:
-      - W
-      - A
-  - id: tool.measure
-    label: Measure
-    icon: ruler.svg
-    default_sequence:
-      - M
-      - E
+
+  # --- View ---
   - id: view.zoom_extents
     label: Zoom All
     icon: zoom_all.svg
@@ -53,16 +65,38 @@ commands:
       - Z
       - S
   - id: view.toggle_grid
-    label: Grid
+    label: Toggle Grid
     icon: grid.svg
-  - id: view.toggle_props
+  - id: view.toggle_property_panel
     label: Properties
     icon: panel.svg
     default_key: Tab
+  - id: view.toggle_project_browser
+    label: Project Browser
+    icon: browser.svg
+  - id: view.toggle_library
+    label: Component Library
+    icon: library.svg
+  - id: view.reset_layout
+    label: Reset Layout
+    icon: reset.svg
+
+  # --- File ---
+  - id: file.new
+    label: New
+    icon: new.svg
+    default_key: Ctrl+N
+  - id: file.open
+    label: Open
+    icon: open.svg
+    default_key: Ctrl+O
   - id: file.save
     label: Save
     icon: save.svg
     default_key: Ctrl+S
+  - id: file.exit
+    label: Exit
+    default_key: Alt+F4
   - id: file.export_bom
     label: Export BOM
     icon: bom.svg

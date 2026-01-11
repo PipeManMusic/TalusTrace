@@ -1,8 +1,11 @@
-from PySide6.QtWidgets import QGraphicsView, QGraphicsScene
-from PySide6.QtGui import QPainter, QColor, QBrush, QPen, QMouseEvent
+from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QMenu
+from PySide6.QtGui import QPainter, QColor, QBrush, QPen, QMouseEvent, QAction
 from PySide6.QtCore import Qt, QLineF
 from ui.coordinates import THEME_FALLBACK
 from api.manager import APIManager
+from api.actions import registry
+import yaml
+import os
 
 class CanvasEvent:
     def __init__(self, view_event, scene_pos, scene, scene_item=None):
@@ -23,19 +26,49 @@ class HarnessCanvas(QGraphicsView):
         self.viewport().setMouseTracking(True)
         self.scene.setSceneRect(-50000, -50000, 100000, 100000)
         self.setBackgroundBrush(QBrush(QColor(THEME_FALLBACK["canvas_bg"])))
+        
+        self.context_menu_config = self._load_context_menu_config()
+
+    def _load_context_menu_config(self):
+        path = os.path.join("resources", "config", "ui_layout.yaml")
+        try:
+            with open(path, 'r') as f:
+                data = yaml.safe_load(f)
+                return data.get("context_menu", {})
+        except: return {}
 
     def zoom_extents(self):
         rect = self.scene.itemsBoundingRect()
         if not rect.isEmpty():
             self.fitInView(rect, Qt.KeepAspectRatio)
 
-    # FIX: Add Context Menu Handler
     def contextMenuEvent(self, event):
-        self.show_context_menu(event)
+        item = self.itemAt(event.pos())
+        menu_type = None
+        
+        if item and hasattr(item, 'model'):
+            type_name = type(item.model).__name__.lower()
+            if type_name in self.context_menu_config:
+                menu_type = type_name
+        
+        if not menu_type: return
 
-    # FIX: Stub for testing (Real impl would invoke MenuManager)
-    def show_context_menu(self, event):
-        pass
+        menu = QMenu(self)
+        items = self.context_menu_config.get(menu_type, [])
+        
+        for entry in items:
+            if entry.get("separator"):
+                menu.addSeparator()
+                continue
+            
+            cmd_id = entry.get("command")
+            if cmd_id:
+                label = cmd_id.split(".")[-1].replace("_", " ").title()
+                action = QAction(label, self)
+                action.triggered.connect(lambda chk=False, cid=cmd_id: registry.execute(cid))
+                menu.addAction(action)
+        
+        menu.exec_(event.globalPos())
 
     def wheelEvent(self, event):
         zoom_in = event.angleDelta().y() > 0
