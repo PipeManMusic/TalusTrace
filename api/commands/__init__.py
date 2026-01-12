@@ -1,5 +1,3 @@
-# Import sub-modules to ensure @register_action decorators are executed
-from . import file
-from . import edit
-from . import tools
-from . import view
+# api/__init__.py
+# This file must remain empty to prevent circular imports during startup.
+# All access should go through api.manager.APIManager

@@ -15,9 +15,8 @@ menubar:
       - command: "edit.undo"
       - command: "edit.redo"
       - separator: true
-      - command: "edit.rotate_cw"
-      - command: "edit.rotate_ccw"
-      - command: "edit.delete"
+      - command: "edit.settings"
+      - command: "edit.theme"
 
   - label: "Tools"
     items:
@@ -37,6 +36,7 @@ menubar:
       - command: "view.toggle_project_browser"
       - command: "view.toggle_property_panel"
       - command: "view.toggle_library"
+      - command: "view.toggle_audit_panel" # <--- NEW
       - separator: true
       - command: "view.reset_layout"
         
@@ -55,7 +55,7 @@ toolbar:
 
 context_menu:
   device:
-    - command: "device.add_pin"  # <--- NEW
+    - command: "device.add_pin"
     - separator: true
     - command: "edit.move"
     - command: "edit.rotate_cw"

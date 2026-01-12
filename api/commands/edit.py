@@ -2,6 +2,9 @@ from api.actions import register_action
 from api.manager import APIManager
 from infra.undo_stack import BaseCommand
 from core.selection import SelectionManager
+from ui.dialogs.settings_dialog import SettingsDialog
+from ui.dialogs.theme_dialog import ThemeDialog
+
 
 # --- Command Classes ---
 
@@ -118,3 +121,16 @@ def edit_rotate_ccw(context):
 @register_action("edit.update_property")
 def edit_update_property(context):
     pass # Invoked programmatically by PropertyPanel
+
+@register_action("edit.settings")
+def edit_settings(context):
+    # Pass main_window as parent if available to make dialog modal
+    mw = APIManager.get_instance().main_window
+    dlg = SettingsDialog(mw)
+    dlg.exec_()
+
+@register_action("edit.theme")
+def edit_theme(context):
+    mw = APIManager.get_instance().main_window
+    dlg = ThemeDialog(mw)
+    dlg.exec_()

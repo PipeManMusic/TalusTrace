@@ -1,8 +1,7 @@
 from infra.context import Context
-from ui.input_system import InputSystem
 from infra.settings import SystemSettings
-# FIXED: Restore Library Manager
 from core.library_manager import LibraryManager
+from ui.input_system import InputSystem
 
 class APIManager:
     _instance = None
@@ -17,14 +16,17 @@ class APIManager:
         if APIManager._instance is not None:
             raise Exception("This class is a singleton!")
             
-        # 1. Core Systems
-        self.settings = SystemSettings() # Physics/Grid
-        self.context = Context()         # Data/Session
-        self.library = LibraryManager()  # Part Library <--- RESTORED
-        self.input_system = InputSystem()
+        # --- PHASE 1: CORE FOUNDATION ---
+        self.settings = SystemSettings()  # Physics (Grid/Units)
+        self.context = Context()          # Session Data
+        self.library = LibraryManager()   # Part Database
         
-        # 2. Tool Manager & Registration
-        # We import inside __init__ to avoid circular dependency loops
+        # --- PHASE 2: SERVICE LAYER ---
+        self.input_system = InputSystem()
+        self.tool_manager = None
+        self.main_window = None # Set by UI later
+        
+        # Initialize Tools (Lazy import to avoid circles)
         from api.tool_manager import ToolManager
         from tools.select_tool import SelectTool
         from tools.wire_tool import WireTool
@@ -38,7 +40,6 @@ class APIManager:
         self.tool_manager.register_tool("move", MoveTool())
 
     def subscribe(self, event_type, callback):
-        # Delegate to the Context's Observer
         self.context.observer.subscribe(event_type, callback)
 
     def dispatch(self, event_type, data=None):

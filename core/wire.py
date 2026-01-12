@@ -1,4 +1,4 @@
-from typing import List, Tuple, Optional, Dict, Any, Literal
+from typing import List, Optional, Dict, Any, Literal
 from pydantic import BaseModel, Field
 
 class WireLabel(BaseModel):
@@ -10,26 +10,26 @@ class Wire(BaseModel):
     id: str
     
     # --- Connectivity ---
-    # Relaxed validation: Pins are optional for Netlist Import tests
     from_conn: str
     from_pin: str = "" 
     to_conn: str
     to_pin: str = ""
     
     # --- Physical Properties ---
-    color: str = "BK"
+    color: str = "#808080" 
     gauge: Optional[str] = None
     type: Literal["STANDARD", "TWISTED_PAIR"] = "STANDARD"
     diameter_mm: float = 1.0
     length_mm: float = 0.0
     
     # --- State & Logic ---
+    standard_id: Optional[str] = None
+    z_index: int = 0
     twisted: bool = False
     pair_id: Optional[str] = None
-    status: str = "undefined"
+    status: str = "UNDEFINED"
     
-    # --- Geometry ---
-    points: List[Tuple[float, float]] = Field(default_factory=list)
+    # --- Geometry (MM) ---
     path_nodes: List[List[float]] = Field(default_factory=list)
     
     # --- Metadata ---

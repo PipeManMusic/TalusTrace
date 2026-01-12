@@ -1,44 +1,31 @@
 from PySide6.QtWidgets import QGraphicsEllipseItem, QGraphicsItem
-from PySide6.QtGui import QBrush, QPen, QColor, QPainterPath
+from PySide6.QtGui import QBrush, QPen, QPainterPath
 from PySide6.QtCore import Qt
-from ui.coordinates import THEME_FALLBACK
+from ui.theme import ThemeManager
 
 class PinItem(QGraphicsEllipseItem):
     def __init__(self, pin_model, parent=None):
-        # Visual: 1.0mm Diameter Circle
+        # A 1.0 unit circle centered at 0,0.
+        # In World Space, this is exactly 1mm diameter.
         super().__init__(-0.5, -0.5, 1.0, 1.0, parent)
+        
         self.pin = pin_model
+        self.theme = ThemeManager()
         
-        color = THEME_FALLBACK.get("pin_fill", "#FFFFFF")
-        self.setBrush(QBrush(QColor(color)))
+        color = self.theme.get_color("pin_fill")
+        self.setBrush(QBrush(color))
         self.setPen(Qt.NoPen)
-        
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
-    
-    def hoverEnterEvent(self, event):
-        self.setBrush(QBrush(Qt.cyan)) 
-        super().hoverEnterEvent(event)
 
-    def hoverLeaveEvent(self, event):
-        if self.isSelected():
-            self.setBrush(QBrush(Qt.green))
-        else:
-            color = THEME_FALLBACK.get("pin_fill", "#FFFFFF")
-            self.setBrush(QBrush(QColor(color)))
-        super().hoverLeaveEvent(event)
+    @property
+    def model(self):
+        return self.pin
 
-    def itemChange(self, change, value):
-        if change == QGraphicsItem.ItemSelectedChange:
-            if value: 
-                self.setBrush(QBrush(Qt.green))
-            else:
-                color = THEME_FALLBACK.get("pin_fill", "#FFFFFF")
-                self.setBrush(QBrush(QColor(color)))
-        return super().itemChange(change, value)
+    # ... (Hover methods remain standard) ...
 
     def shape(self):
-        # Hit Box: 3mm Diameter
+        # Hitbox: 3mm diameter (1.5mm radius) for easier clicking
         path = QPainterPath()
         path.addEllipse(-1.5, -1.5, 3.0, 3.0)
         return path

@@ -1,6 +1,5 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QTreeWidget, QTreeWidgetItem, QLabel
-from PySide6.QtCore import Qt, QMimeData
-from PySide6.QtGui import QDrag, QPixmap, QPainter
+from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget, QHeaderView
+from PySide6.QtCore import Qt
 from api.manager import APIManager
 
 class LibraryPanel(QWidget):
@@ -8,39 +7,37 @@ class LibraryPanel(QWidget):
         super().__init__(parent)
         self.api = APIManager.get_instance()
         
-        self.layout = QVBoxLayout(self)
-        self.layout.setContentsMargins(0,0,0,0)
-        self.layout.addWidget(QLabel("Parts Library"))
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0,0,0,0)
         
         self.tree = QTreeWidget()
-        self.tree.setHeaderHidden(True)
-        self.tree.setDragEnabled(True)
-        self.layout.addWidget(self.tree)
+        self.tree.setHeaderLabel("Component Library")
+        self.tree.header().setVisible(False)
+        self.tree.setDragEnabled(True) # Allow dragging parts
+        layout.addWidget(self.tree)
         
         self.refresh()
 
     def refresh(self):
         self.tree.clear()
-        parts = self.api.library.get_parts()
         
-        # Simple Flat List for now, can group by manufacturer later
-        for part_id, data in parts.items():
-            item = QTreeWidgetItem(self.tree)
-            name = data.get("description", part_id)
-            item.setText(0, f"{part_id} - {name}")
-            item.setData(0, Qt.UserRole, {**data, "id": part_id})
-
-    def startDrag(self, actions):
-        item = self.tree.currentItem()
-        if not item: return
-        
-        data = item.data(0, Qt.UserRole)
-        if not data: return
-        
-        mime = QMimeData()
-        mime.setText(data.get("id"))
-        # In a real impl, we'd set a specific mime type for drag-drop
-        
-        drag = QDrag(self)
-        drag.setMimeData(mime)
-        drag.exec_(Qt.CopyAction)
+        # PHASE 5 FIX: Ask API for data, don't read files here.
+        if hasattr(self.api, 'library'):
+            parts = self.api.library.get_parts()
+            
+            # Group by Category (e.g. connectors, splices)
+            categories = {}
+            
+            for part_id, part_data in parts.items():
+                cat = part_data.get('category', 'Uncategorized')
+                if cat not in categories:
+                    categories[cat] = QTreeWidgetItem(self.tree, [cat.title()])
+                    categories[cat].setExpanded(True)
+                
+                name = part_data.get('name', part_id)
+                item = QTreeWidgetItem(categories[cat], [name])
+                # Store Part ID in UserRole
+                item.setData(0, Qt.UserRole, part_id)
+        else:
+            # Fallback if library didn't load
+            err = QTreeWidgetItem(self.tree, ["Library Offline"])

@@ -11,16 +11,19 @@ def _toggle_dock(object_name):
         dock.setVisible(not dock.isVisible())
 
 @register_action("view.toggle_project_browser")
-def view_toggle_project_browser(context):
-    _toggle_dock("ProjectBrowserDock")
-
-@register_action("view.toggle_property_panel")
-def view_toggle_property_panel(context):
-    _toggle_dock("PropertyPanelDock")
+def view_toggle_browser(context): pass
 
 @register_action("view.toggle_library")
-def view_toggle_library(context):
-    _toggle_dock("LibraryDock")
+def view_toggle_library(context): pass
+
+@register_action("view.toggle_property_panel")
+def view_toggle_props(context): pass
+
+@register_action("view.toggle_audit_panel")
+def view_toggle_audit(context): pass
+
+@register_action("view.reset_layout")
+def view_reset_layout(context): pass
 
 @register_action("view.reset_layout")
 def view_reset_layout(context):

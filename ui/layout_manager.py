@@ -1,4 +1,5 @@
 import yaml
+import os
 from pathlib import Path
 from PySide6.QtWidgets import QToolBar, QMenuBar, QMenu
 from PySide6.QtGui import QAction, QIcon
@@ -6,87 +7,86 @@ from PySide6.QtCore import Qt
 from api.actions import registry
 
 class LayoutManager:
-    def __init__(self, layout_path="resources/config/ui_layout.yaml", actions_path="resources/config/actions.yaml", config_path=None):
-        final_layout_path = config_path or layout_path
-        self.layout_cfg = self._load_yaml(final_layout_path)
+    def __init__(self, layout_path="resources/config/ui_layout.yaml", actions_path="resources/config/actions.yaml"):
+        self.layout_cfg = self._load_yaml(layout_path)
         self.actions_map = self._load_actions_map(actions_path)
 
     def _load_yaml(self, path):
-        default = {}
+        if not os.path.exists(path):
+            print(f">> Warning: Config file not found: {path}")
+            return {}
         try:
-            if not Path(path).exists(): return default
             with open(path, 'r') as f:
-                data = yaml.safe_load(f)
-                return data if isinstance(data, dict) else default
+                return yaml.safe_load(f) or {}
         except Exception as e:
-            print(f"Error loading {path}: {e}")
-            return default
+            print(f">> Error loading {path}: {e}")
+            return {}
 
     def _load_actions_map(self, path):
         data = self._load_yaml(path)
         commands = data.get('commands', [])
-        return {cmd['id']: cmd for cmd in commands}
+        # Create a lookup dict: "file.new" -> {label: "New", icon: "new.png", ...}
+        if isinstance(commands, list):
+            return {cmd['id']: cmd for cmd in commands}
+        return {}
 
     def create_menubar(self, parent=None):
-        menubar_cfg = self.layout_cfg.get('menubar', [])
         menubar = QMenuBar(parent)
-        for menu_def in menubar_cfg:
-            menu = QMenu(menu_def.get('label', 'Menu'), menubar)
+        menu_defs = self.layout_cfg.get('menubar', [])
+        
+        for menu_def in menu_defs:
+            label = menu_def.get('label', 'Untitled')
+            menu = QMenu(label, menubar)
+            
             for item in menu_def.get('items', []):
-                if 'command' in item:
-                    self._add_action_to_container(menu, item['command'], item)
-                elif item.get('separator'):
-                    menu.addSeparator()
+                self._process_item(menu, item)
+                
             menubar.addMenu(menu)
         return menubar
 
     def create_toolbar(self, parent=None):
-        toolbar_cfg = self.layout_cfg.get('toolbar', {})
-        if not toolbar_cfg:
+        toolbar_def = self.layout_cfg.get('toolbar', {})
+        if not toolbar_def.get('visible', True):
             return None
-
-        toolbar = QToolBar(parent)
-        toolbar.setWindowTitle("Main Toolbar")
-        # FIX: Set ObjectName for persistence
-        toolbar.setObjectName("MainToolbar") 
+            
+        toolbar = QToolBar("Main Toolbar", parent)
+        toolbar.setObjectName("MainToolbar")
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-
-        if not toolbar_cfg.get('visible', True):
-            toolbar.hide()
-
-        items = toolbar_cfg.get('items', [])
-        for item in items:
-            if item.get('separator'):
-                toolbar.addSeparator()
-            elif 'command' in item:
-                self._add_action_to_container(toolbar, item['command'], item)
-
+        
+        for item in toolbar_def.get('items', []):
+            self._process_item(toolbar, item)
+            
         return toolbar
 
-    def _add_action_to_container(self, container, cmd_id, override_meta=None):
+    def _process_item(self, container, item):
+        """Helper to create actions from config items."""
+        if item.get('separator'):
+            container.addSeparator()
+            return
+
+        cmd_id = item.get('command')
+        if not cmd_id: return
+
+        # 1. Get Metadata (Config > Defaults)
         meta = self.actions_map.get(cmd_id, {})
-        if override_meta:
-            meta = {**meta, **override_meta}
-            
-        label = meta.get('label', cmd_id.split('.')[-1].replace('_', ' ').title())
+        label = item.get('label', meta.get('label', cmd_id.split('.')[-1].title()))
+        icon_name = item.get('icon', meta.get('icon'))
+        tooltip = item.get('tooltip', meta.get('tooltip'))
+        shortcut = item.get('shortcut', meta.get('default_key'))
+
+        # 2. Create Action
         action = QAction(label, container)
         action.setData(cmd_id)
-
-        icon_name = meta.get('icon')
+        
         if icon_name:
-            from PySide6.QtWidgets import QStyle, QApplication
-            if hasattr(QStyle, icon_name):
-                action.setIcon(QApplication.style().standardIcon(getattr(QStyle, icon_name)))
-            else:
-                icon_path = Path("resources/icons") / icon_name
-                if icon_path.exists():
-                    action.setIcon(QIcon(str(icon_path)))
+            # Check resource path
+            icon_path = Path(f"resources/icons/{icon_name}")
+            if icon_path.exists():
+                action.setIcon(QIcon(str(icon_path)))
+        
+        if tooltip: action.setToolTip(tooltip)
+        if shortcut: action.setShortcut(shortcut)
 
-        if 'tooltip' in meta:
-            action.setToolTip(meta['tooltip'])
-            
-        if 'default_key' in meta:
-            action.setShortcut(meta['default_key'])
-
-        action.triggered.connect(lambda checked=False, cid=cmd_id: registry.execute(cid))
+        # 3. Connect to Registry
+        action.triggered.connect(lambda chk=False, cid=cmd_id: registry.execute(cid))
         container.addAction(action)

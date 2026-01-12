@@ -1,7 +1,6 @@
 import yaml
 from pathlib import Path
 from core.harness import Harness
-# FIXED: Import Observer
 from infra.observer import Observer 
 
 class Context:
@@ -10,10 +9,10 @@ class Context:
         self.current_file = None
         self.dirty = False
         
-        # FIXED: Initialize the Observer
+        # Event Bus
         self.observer = Observer()
         
-        # Initialize Undo Stack
+        # Undo Stack
         from infra.undo_stack import UndoStack
         self.undo_stack = UndoStack()
 
@@ -26,19 +25,11 @@ class Context:
         self.dirty = value
 
     def new_project(self):
-        """Resets the context to a new harness and clears undo stack."""
         self.harness = Harness(meta={"name": "New Harness", "trunk_length_mm": 1000})
         self.current_file = None
         self.dirty = False
         self.undo_stack.clear()
-        # Notify UI of reset
         self.observer.dispatch("model_changed", {"action": "new_project"})
-
-    def mark_dirty(self):
-        self.dirty = True
-
-    def mark_clean(self):
-        self.dirty = False
 
     def load(self, path: Path):
         path = Path(path)
@@ -54,14 +45,8 @@ class Context:
         self.observer.dispatch("model_changed", {"action": "load"})
 
     def save_as(self, path: Path):
-        """
-        PH6-2.1: Uses safe_dump + model_dump(mode='json') for clean YAML.
-        """
         path = Path(path)
-        
         self.harness.increment_revision()
-        
-        # Converts all Models -> Dicts, Lists -> Lists, Enums -> Strings
         data = self.harness.model_dump(mode='json')
         
         with open(path, 'w') as f:
