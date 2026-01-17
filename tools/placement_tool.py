@@ -12,10 +12,12 @@ class PlacementTool(Tool):
         self.ghost_item = None
         self.active_type = "generic"
 
-    def start(self):
+    @property
+    def api(self):
         from api.manager import APIManager
-        self.api = APIManager.get_instance()
-        
+        return APIManager.get_instance()
+
+    def start(self):
         if not self.canvas:
             if hasattr(self.api, 'main_window'):
                 self.canvas = self.api.main_window.canvas
@@ -24,13 +26,13 @@ class PlacementTool(Tool):
 
         self.canvas.setFocus()
         self.canvas.viewport().setMouseTracking(True)
-        
+
         # Initialize Ghost at (0,0) - logic will update position on first move
         meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
         ghost_model = Device(id="GHOST", x=0, y=0, meta=meta_defaults)
-        
+
         self.ghost_item = DeviceItem(ghost_model, is_ghost=True)
-        self.ghost_item.setZValue(2000) 
+        self.ghost_item.setZValue(2000)
         self.canvas.scene.addItem(self.ghost_item)
 
     def on_mouse_move(self, event):
@@ -69,7 +71,21 @@ class PlacementTool(Tool):
         
         cmd = AddDeviceCommand(new_device)
         self.api.context.undo_stack.push(cmd)
-        
+
+        # Select the new device in the core and update PropertyPanel
+        from core.selection import SelectionManager
+        SelectionManager().set_selection([new_device])
+        self.api.dispatch("selection_changed", {"selection": [new_device], "tool": "PlacementTool"})
+
+        # Also set Qt selection on the corresponding DeviceItem in the scene
+        if self.canvas and self.canvas.scene:
+            for item in self.canvas.scene.items():
+                # DeviceItem has .model pointing to the device model
+                if hasattr(item, 'model') and item.model is new_device:
+                    if hasattr(item, 'setSelected'):
+                        item.setSelected(True)
+                        break
+
         self.api.tool_manager.set_tool("select")
 
     def on_mouse_release(self, event): pass

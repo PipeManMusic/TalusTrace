@@ -94,13 +94,38 @@ def edit_delete(context):
     # Identify what to delete
     dev_ids = []
     wire_ids = []
-    
+
+    # Collect device and wire IDs from selection
     for item in mgr.selected_models:
-        if hasattr(item, 'meta'): # Heuristic for Device
+        # Device: must have 'meta' and 'pins'
+        if hasattr(item, 'meta') and hasattr(item, 'pins'):
             dev_ids.append(item.id)
-        elif hasattr(item, 'id'): # Heuristic for Wire
+        # Wire: must have 'from_conn' and 'to_conn'
+        elif hasattr(item, 'from_conn') and hasattr(item, 'to_conn'):
             wire_ids.append(item.id)
-    
+
+    # If deleting a device, also delete all connected wires
+    if dev_ids:
+        api = APIManager.get_instance()
+        harness = api.context.harness
+        connected_wire_ids = []
+        for wire in harness.wires:
+            if wire.from_conn in dev_ids or wire.to_conn in dev_ids:
+                connected_wire_ids.append(wire.id)
+        # If there are connected wires, show confirmation dialog
+        if connected_wire_ids:
+            from PySide6.QtWidgets import QMessageBox
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setText("Deleting device(s) will also delete connected wires.")
+            msg.setInformativeText(f"Device IDs: {dev_ids}\nConnected Wire IDs: {connected_wire_ids}\nContinue?")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.setDefaultButton(QMessageBox.No)
+            ret = msg.exec_()
+            if ret != QMessageBox.Yes:
+                return  # Abort deletion
+        wire_ids.extend(connected_wire_ids)
+
     cmd = DeleteItemsCommand(dev_ids, wire_ids)
     APIManager.get_instance().context.undo_stack.push(cmd)
 

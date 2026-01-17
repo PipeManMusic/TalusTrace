@@ -18,9 +18,12 @@ class PropertyPanel(QWidget):
         
         self.scroll = QScrollArea()
         self.scroll.setWidgetResizable(True)
+        from PySide6.QtWidgets import QSizePolicy
         self.content = QWidget()
+        self.content.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
         self.form = QFormLayout(self.content)
         self.scroll.setWidget(self.content)
+        self.scroll.setWidgetResizable(True)
         self.layout.addWidget(self.scroll)
         
         # Subscribe to Selection Changes
@@ -31,33 +34,38 @@ class PropertyPanel(QWidget):
         self.refresh()
 
     def on_selection_changed(self, data):
-        # Data might contain 'selection' list
-        # We generally show the first selected item
-        from core.selection import SelectionManager
-        sel = SelectionManager().selected_models
+        # Use the event payload for selection
+        sel = data.get('selection', [])
+        print(f"[PropertyPanel] on_selection_changed: selection={sel}")
         self.current_item = sel[0] if sel else None
         self.refresh()
 
     def refresh(self, data=None):
+        print(f"[PropertyPanel] refresh: current_item={self.current_item}")
         # Clear existing rows
         while self.form.count():
             child = self.form.takeAt(0)
             if child.widget(): child.widget().deleteLater()
-            
         if not self.current_item:
+            print("[PropertyPanel] refresh: No Selection")
             self.form.addRow(QLabel("No Selection"))
+            self.content.adjustSize()
+            self.scroll.ensureVisible(0, 0, 1, 1)
             return
-
         model = self.current_item
-        
+        print(f"[PropertyPanel] refresh: model type={type(model).__name__}, model={model}")
         # Route to specific renderer
         if isinstance(model, Device):
+            print("[PropertyPanel] refresh: rendering Device")
             self._render_device(model)
         elif isinstance(model, Wire):
+            print("[PropertyPanel] refresh: rendering Wire")
             self._render_wire(model)
         elif isinstance(model, Pin):
+            print("[PropertyPanel] refresh: rendering Pin")
             self._render_pin(model) # <--- NEW HANDLER
         else:
+            print(f"[PropertyPanel] refresh: Unknown Item: {type(model).__name__}")
             self.form.addRow(QLabel(f"Unknown Item: {type(model).__name__}"))
 
     def _render_device(self, device):

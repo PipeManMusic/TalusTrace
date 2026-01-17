@@ -8,7 +8,8 @@ class SelectableItemMixin:
         self.is_ghost = is_ghost
         self.setAcceptHoverEvents(True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, not self.is_ghost)
-        self.setFlag(QGraphicsItem.ItemIsMovable, not self.is_ghost)
+        # Only ghost items are movable; real items are moved via MoveTool
+        self.setFlag(QGraphicsItem.ItemIsMovable, self.is_ghost)
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)
         
         if self.is_ghost:
@@ -34,7 +35,7 @@ class SelectableItemMixin:
                 if hasattr(self.model, 'x'): self.model.x = self.x()
                 if hasattr(self.model, 'y'): self.model.y = self.y()
             except: pass
-            
+        
         return super().itemChange(change, value)
 
     def update_visual_state(self):

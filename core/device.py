@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional
-from core.pin import Pin
+from core.pin import Pin  # <--- Import Pin from the correct file
 
 @dataclass
 class Device:

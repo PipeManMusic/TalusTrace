@@ -8,24 +8,50 @@ class SelectionManager:
         if cls._instance is None:
             cls._instance = super(SelectionManager, cls).__new__(cls)
             cls._instance.selected_models = []
+            cls._instance._listeners = []
         return cls._instance
+    def add_listener(self, callback):
+        """Register a callback to be called on selection change."""
+        if callback not in self._listeners:
+            self._listeners.append(callback)
+
+    def remove_listener(self, callback):
+        if callback in self._listeners:
+            self._listeners.remove(callback)
 
     @property
     def current_selection_ids(self):
         return [item.id for item in self.selected_models if hasattr(item, 'id')]
 
-    def set_selection(self, models):
-        """Updates the selection and notifies the API."""
+
+    def set_selection(self, models, on_complete=None, restore_previous=True):
+        """
+        Updates the selection and notifies the API.
+        If on_complete is provided, runs it, then restores previous selection if requested.
+        """
+        prev_selection = self.selected_models[:]
         self.selected_models = models
         self._notify()
+        if on_complete:
+            def _after():
+                if restore_previous:
+                    self.selected_models = prev_selection
+                    self._notify()
+            on_complete(_after)
+        # If no on_complete, nothing else to do
 
     def clear_selection(self):
         self.selected_models = []
         self._notify()
 
     def _notify(self):
-        """Dispatches the selection_changed event safely."""
+        """Dispatches the selection_changed event safely and notifies listeners."""
         # LAZY IMPORT: Breaks the cycle with api/manager.py
+        for callback in self._listeners:
+            try:
+                callback(self.selected_models)
+            except Exception as e:
+                print(f"[SelectionManager] Listener error: {e}")
         from api.manager import APIManager
         
         # Guard against early calls before API is ready

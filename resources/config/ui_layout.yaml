@@ -20,10 +20,6 @@ menubar:
 
   - label: "Tools"
     items:
-      - command: "tool.select"
-      - command: "tool.move"
-      - command: "tool.wire"
-      - separator: true
       - command: "tool.add_generic_device"
       - command: "device.create_wizard"
       - command: "tool.measure"
@@ -40,13 +36,11 @@ menubar:
       - separator: true
       - command: "view.reset_layout"
         
+keymap:
+  cancel: Key_Escape
 toolbar:
   visible: true
   items:
-    - command: "tool.select"
-    - command: "tool.move"
-    - command: "tool.wire"
-    - separator: true
     - command: "tool.add_generic_device"
     - command: "device.create_wizard"
     - separator: true
@@ -57,7 +51,6 @@ context_menu:
   device:
     - command: "device.add_pin"
     - separator: true
-    - command: "edit.move"
     - command: "edit.rotate_cw"
     - separator: true
     - command: "edit.delete"

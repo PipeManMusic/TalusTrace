@@ -32,7 +32,26 @@ class InputSystem(QObject):
         return super().eventFilter(obj, event)
 
     def _handle_key(self, event):
-        # NOW SAFE: We access self.api only when a key is actually pressed
+        # Check for cancel key mapping from UI YAML (default: Escape)
+        cancel_key = Qt.Key_Escape
+        try:
+            import yaml, os
+            path = os.path.join("resources", "config", "ui_layout.yaml")
+            if os.path.exists(path):
+                with open(path, 'r') as f:
+                    config = yaml.safe_load(f)
+                    keymap = config.get('keymap', {})
+                    cancel_key = getattr(Qt, keymap.get('cancel', 'Key_Escape'), Qt.Key_Escape)
+        except Exception as e:
+            print(f"[InputSystem] Could not load keymap from YAML: {e}")
+
+        if event.key() == cancel_key:
+            tool = self.api.tool_manager.active_tool
+            if tool and hasattr(tool, 'cancel'):
+                print("[InputSystem] Cancel key pressed, cancelling active tool.")
+                tool.cancel()
+                return True
+
         tool = self.api.tool_manager.active_tool
         if tool and hasattr(tool, 'on_key_press'):
             tool.on_key_press(event)

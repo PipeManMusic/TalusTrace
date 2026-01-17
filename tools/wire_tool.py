@@ -9,10 +9,11 @@ from core.wire import Wire
 class WireTool(Tool):
     def __init__(self):
         super().__init__()
-        self.state = "IDLE"
+        self.state = "IDLE"  # IDLE | DRAGGING
         self.start_pin = None
         self.start_device = None
         self.ghost_line = None
+        self.current_mouse_pos = QPointF(0, 0)
 
     @property
     def api(self):
@@ -23,10 +24,21 @@ class WireTool(Tool):
         if hasattr(self.api, 'main_window'):
             self.api.main_window.canvas.setCursor(Qt.CrossCursor)
 
+    def _get_pin_at_pos(self, scene_pos):
+        """Hit test for PinItem under cursor in World Space (MM)."""
+        if not self.api.main_window: return None, None
+        
+        items = self.api.main_window.canvas.scene.items(scene_pos)
+        for item in items:
+            if isinstance(item, PinItem):
+                device_item = item.parentItem()
+                if device_item and hasattr(device_item, 'model'):
+                    return item.pin, device_item.model
+        return None, None
+
     def on_mouse_press(self, event):
         if event.original_event.button() != Qt.LeftButton: return
 
-        # scene_pos is ALREADY in MM. No conversion needed.
         pin, device = self._get_pin_at_pos(event.scene_pos)
 
         if self.state == "IDLE":
@@ -37,50 +49,60 @@ class WireTool(Tool):
                 
                 # Visual Feedback
                 self.ghost_line = QGraphicsLineItem()
-                # Use a cosmetic pen so dashed line stays thin regardless of zoom
+                # Cosmetic pen ensures line stays thin regardless of zoom
                 pen = QPen(QColor(0, 255, 0), 0, Qt.DashLine)
                 pen.setCosmetic(True)
                 self.ghost_line.setPen(pen)
                 
+                # Calculate start pos
                 start_pos = self._get_pin_scene_pos(pin, device)
                 self.ghost_line.setLine(start_pos.x(), start_pos.y(), event.scene_pos.x(), event.scene_pos.y())
                 self.api.main_window.canvas.scene.addItem(self.ghost_line)
+                print(f">> Wire Started from {device.id}:{pin.id}")
 
         elif self.state == "DRAGGING":
             if pin and device:
                 if device == self.start_device and pin == self.start_pin:
                     print(">> Cannot connect pin to itself")
                     return
+                
                 self._create_wire(self.start_device, self.start_pin, device, pin)
                 self._reset()
             else:
+                print(">> Wire Cancelled (No target pin)")
                 self._reset()
 
     def on_mouse_move(self, event):
+        self.current_mouse_pos = event.scene_pos
+        
         if self.state == "DRAGGING" and self.ghost_line:
-            if not self.ghost_line.scene(): return
-            
-            start_pos = self.ghost_line.line().p1()
-            target_pin, target_device = self._get_pin_at_pos(event.scene_pos)
-            
-            if target_pin:
-                end_pos = self._get_pin_scene_pos(target_pin, target_device)
-            else:
-                end_pos = event.scene_pos
-            
-            self.ghost_line.setLine(start_pos.x(), start_pos.y(), end_pos.x(), end_pos.y())
+            try:
+                # Check if C++ object is still valid
+                if not self.ghost_line.scene(): 
+                    self.ghost_line = None
+                    return
+                
+                start_pos = self.ghost_line.line().p1()
+                
+                target_pin, target_device = self._get_pin_at_pos(event.scene_pos)
+                if target_pin and target_device:
+                    end_pos = self._get_pin_scene_pos(target_pin, target_device)
+                else:
+                    end_pos = event.scene_pos
+                
+                self.ghost_line.setLine(start_pos.x(), start_pos.y(), end_pos.x(), end_pos.y())
+            except RuntimeError:
+                # Object deleted by Qt, safe to ignore
+                self.ghost_line = None
 
     def _create_wire(self, dev1, pin1, dev2, pin2):
         from api.commands.device import AddWireCommand
-        
-        # 1. Get Geometry in MM
+        # 1. Get Positions in Scene (MM)
         p1 = self._get_pin_scene_pos(pin1, dev1)
         p2 = self._get_pin_scene_pos(pin2, dev2)
-
-        # 2. Store directly. No math.
+        # 2. Create Geometry (No pixel conversion needed)
         path_nodes = [[p1.x(), p1.y()], [p2.x(), p2.y()]]
         wire_id = f"W_{str(uuid.uuid4())[:8]}"
-        
         new_wire = Wire(
             id=wire_id,
             from_conn=dev1.id,
@@ -90,30 +112,17 @@ class WireTool(Tool):
             type="STANDARD",
             path_nodes=path_nodes
         )
-        
         cmd = AddWireCommand(new_wire)
         self.api.context.undo_stack.push(cmd)
-
-    def _get_pin_at_pos(self, scene_pos):
-        """Hit test in World Space (MM)."""
-        if not self.api.main_window: return None, None
-        
-        # scene.items() takes a point in Scene Coordinates (MM)
-        items = self.api.main_window.canvas.scene.items(scene_pos)
-        for item in items:
-            if isinstance(item, PinItem):
-                # Ensure we get the parent Device model
-                parent = item.parentItem()
-                if parent and hasattr(parent, 'model'):
-                    return item.pin, parent.model
-        return None, None
+        print(f">> Wire Created: {wire_id}")
+        # After wire creation, switch back to SelectTool
+        self.api.tool_manager.set_tool('select')
 
     def _get_pin_scene_pos(self, pin_model, device_model):
-        """Finds the pin item and returns its absolute position in the Scene (MM)."""
+        """Returns the scene position of a pin, checking parent Device ID."""
         scene = self.api.main_window.canvas.scene
         for item in scene.items():
             if isinstance(item, PinItem) and item.pin.id == pin_model.id:
-                # Double check parent to be safe
                 parent = item.parentItem()
                 if parent and hasattr(parent, 'model') and parent.model.id == device_model.id:
                     return item.mapToScene(0.0, 0.0)
@@ -123,11 +132,19 @@ class WireTool(Tool):
         self.state = "IDLE"
         self.start_pin = None
         self.start_device = None
-        if self.ghost_line and self.ghost_line.scene():
-            self.api.main_window.canvas.scene.removeItem(self.ghost_line)
-        self.ghost_line = None
+        
+        # CRITICAL FIX: Safe cleanup of C++ object
+        if self.ghost_line:
+            try:
+                if self.api.main_window and self.ghost_line.scene():
+                    self.api.main_window.canvas.scene.removeItem(self.ghost_line)
+            except RuntimeError:
+                # Already deleted by Qt
+                pass
+            self.ghost_line = None
 
     def deactivate(self):
         self._reset()
         if hasattr(self.api, 'main_window'):
+            from PySide6.QtCore import Qt
             self.api.main_window.canvas.setCursor(Qt.ArrowCursor)
