@@ -21,28 +21,27 @@ def discover_view_classes():
         sys.path.insert(0, str(project_root))
 
     found_classes = []
-    
-    # Iterate over all .py files in ui/items/
+    found_names = []
+
     for module_info in pkgutil.iter_modules([str(items_pkg)]):
         module_name = f"ui.items.{module_info.name}"
         try:
             module = importlib.import_module(module_name)
-        except ImportError as e:
-            # Skip modules that might fail due to partial environment setup
-            print(f"[WARNING] Could not import {module_name}: {e}")
-            continue
         except Exception as e:
-            print(f"[WARNING] Skipping {module_name} due to load error: {e}")
-            continue
+            pytest.fail(f"DISCOVERY ERROR: Could not import '{module_name}'. Error: {e}")
 
-        # Inspect the module for classes
         for name, cls in inspect.getmembers(module, inspect.isclass):
-            # We want classes defined IN this module (not imported ones)
             if cls.__module__ == module_name:
-                # Must be a GraphicsItem, but NOT the base mixin itself
                 if issubclass(cls, QGraphicsItem) and cls is not ObservableGraphicsItemMixin:
                     found_classes.append(cls)
-    
+                    found_names.append(cls.__name__)
+
+    # CRITICAL: Fail if core classes are missing
+    required_classes = ["WireItem", "DeviceItem"]
+    missing = [req for req in required_classes if req not in found_names]
+    if missing:
+        pytest.fail(f"DISCOVERY ERROR: Could not find classes: {missing}. Check imports.")
+
     return found_classes
 
 # Run discovery once

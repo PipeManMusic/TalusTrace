@@ -5,10 +5,10 @@ from PySide6.QtGui import QBrush, QPen, QColor
 from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 
 class ElbowGripItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
-        __test_scenario__ = {
-            'model_data': {'index': 0, 'pos': (0, 0)},
-            'expected_child_count': 0
-        }
+    __test_scenario__ = {
+        'model_data': {'index': 0, 'pos': (0, 0)},
+        'expected_child_count': 0
+    }
     def __init__(self, wire_item, index, pos, radius=2.5, parent=None):
         QGraphicsEllipseItem.__init__(self, -radius, -radius, radius*2, radius*2, parent)
         self._observers = []
@@ -67,37 +67,5 @@ class ElbowGripItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
             tool.on_mouse_move(canvas_event)
         event.accept()
 
-    def mouseReleaseEvent(self, event):
-        # ...removed debug print...
-        from api.manager import APIManager
-        api = APIManager.get_instance()
-        tool = api.tool_manager.active_tool
-        if hasattr(tool, 'on_mouse_release'):
-            from ui.utils import get_scene_pos
-            scene_pos = get_scene_pos(event, api.input_system.canvas)
-            # ...removed debug print...
-            from ui.canvas import CanvasEvent
-            canvas_event = CanvasEvent(event, scene_pos, api.input_system.canvas.scene if api.input_system.canvas else None)
-            tool.on_mouse_release(canvas_event)
-        event.accept()
 
-    def mouseDoubleClickEvent(self, event):
-        # No-op for double click on grip
-        event.ignore()
 
-    def mousePressEvent(self, event):
-        from api.manager import APIManager
-        api = APIManager.get_instance()
-        if event.button() == Qt.RightButton:
-            print(f"[DEBUG] ElbowGripItem: Right-click at index {self.index}, pos={self.pos()}")
-            api.remove_elbow(self.wire_item.model, self.index)
-            event.accept()
-        elif event.button() == Qt.LeftButton:
-            from ui.utils import get_scene_pos
-            scene_pos = get_scene_pos(event, api.input_system.canvas)
-            from ui.canvas import CanvasEvent
-            canvas_event = CanvasEvent(event, scene_pos, api.input_system.canvas.scene if api.input_system.canvas else None)
-            api.tool_manager.set_tool('elbow_move', self.wire_item, self.index, canvas_event)
-            event.accept()
-        else:
-            super().mousePressEvent(event)

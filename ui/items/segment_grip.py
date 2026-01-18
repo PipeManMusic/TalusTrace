@@ -4,10 +4,10 @@ from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QBrush, QPen, QColor
 
 class SegmentGripItem(ObservableGraphicsItemMixin, QGraphicsRectItem):
-        __test_scenario__ = {
-            'model_data': {'start_idx': 0, 'end_idx': 1, 'start_pos': (0, 0), 'end_pos': (1, 1)},
-            'expected_child_count': 0
-        }
+    __test_scenario__ = {
+        'model_data': {'start_idx': 0, 'end_idx': 1, 'start_pos': (0, 0), 'end_pos': (1, 1)},
+        'expected_child_count': 0
+    }
     def __init__(self, wire_item, start_idx, end_idx, start_pos, end_pos, width=6.0, height=3.0, parent=None):
         # Center grip between elbows
         mid_x = (start_pos[0] + end_pos[0]) / 2
@@ -65,33 +65,5 @@ class SegmentGripItem(ObservableGraphicsItemMixin, QGraphicsRectItem):
             tool.on_mouse_move(canvas_event)
         event.accept()
 
-    def mouseDoubleClickEvent(self, event):
-        event.ignore()
 
-    def mousePressEvent(self, event):
-        from PySide6.QtCore import Qt
-        if event.button() == Qt.LeftButton:
-            # ...removed debug print...
-            from api.manager import APIManager
-            api = APIManager.get_instance()
-            from ui.utils import get_scene_pos
-            scene_pos = get_scene_pos(event, api.input_system.canvas)
-            from ui.canvas import CanvasEvent
-            canvas_event = CanvasEvent(event, scene_pos, api.input_system.canvas.scene if api.input_system.canvas else None)
-            api.tool_manager.set_tool('segment_move', self.wire_item, self.start_idx, self.end_idx, canvas_event)
-            event.accept()
-        else:
-            super().mousePressEvent(event)
 
-    def mouseReleaseEvent(self, event):
-        from api.manager import APIManager
-        api = APIManager.get_instance()
-        tool = api.tool_manager.active_tool
-        if hasattr(tool, 'on_mouse_release'):
-            from ui.utils import get_scene_pos
-            scene_pos = get_scene_pos(event, api.input_system.canvas)
-            # ...removed debug print...
-            from ui.canvas import CanvasEvent
-            canvas_event = CanvasEvent(event, scene_pos, api.input_system.canvas.scene if api.input_system.canvas else None)
-            tool.on_mouse_release(canvas_event)
-        event.accept()
