@@ -3,6 +3,7 @@ from typing import Callable, Dict, Optional, List
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtCore import QObject, Signal
 
+
 class ActionRegistry(QObject):
     """
     Central command bus. Maps abstract Action IDs (e.g., "edit.move") 
@@ -10,6 +11,14 @@ class ActionRegistry(QObject):
     """
     # Signal: Action ID, Context Data (Optional)
     action_triggered = Signal(str, object)
+
+    def __contains__(self, action_id: str) -> bool:
+        """Allow 'if action_id in registry:' check."""
+        return action_id in self._actions
+
+    def keys(self):
+        """Return list of registered action IDs."""
+        return self._actions.keys()
 
     def __init__(self):
         super().__init__()

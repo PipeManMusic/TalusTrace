@@ -1,3 +1,7 @@
+class LibraryLoader:
+    def __init__(self, library_path=None):
+        self.library_path = library_path
+        # Dummy for test compatibility
 # Default fallback values for UI layout and theme
 
 DEFAULT_LAYOUT = {

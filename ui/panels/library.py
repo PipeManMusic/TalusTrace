@@ -1,3 +1,15 @@
+# Minimal LibraryLoader for test compatibility
+class LibraryLoader:
+    def __init__(self, library_path=None):
+        self.library_path = library_path
+
+    def get_items(self):
+        import yaml
+        if not self.library_path:
+            return {}
+        with open(self.library_path, 'r') as f:
+            data = yaml.safe_load(f) or {}
+        return data.get("parts", {})
 from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget, QHeaderView
 from PySide6.QtCore import Qt
 from api.manager import APIManager

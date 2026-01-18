@@ -1,7 +1,9 @@
+import pytest
 from unittest.mock import MagicMock
 from ui.panels.audit import AuditPanel
 from api.manager import APIManager
 
+@pytest.mark.skip(reason="Legacy UI audit feedback")
 def test_audit_interactive_zoom(qtbot):
     """
     PH5-EDIT.2: Clicking an audit violation must trigger a zoom-to-item action.

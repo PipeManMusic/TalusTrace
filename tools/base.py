@@ -1,4 +1,5 @@
 class BaseTool:
+    __guide__ = "BaseTool: Base class for all interaction tools. Implements start/stop and event hooks."
     def activate(self):
         pass
 

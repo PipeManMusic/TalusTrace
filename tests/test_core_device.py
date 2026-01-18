@@ -26,4 +26,4 @@ def test_device_revision_initialization():
 def test_invalid_device_coordinates():
     """Reject non-float coordinates in Device position."""
     with pytest.raises(ValidationError):
-        Device(id="err", x="x", y="y")
+        Device(id="err", x="banana", y="banana")

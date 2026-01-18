@@ -9,6 +9,13 @@ from api.manager import APIManager
 def qapp():
     return QApplication.instance() or QApplication([])
 
+@pytest.fixture(autouse=True)
+def reset_api_singleton():
+    """Forces a clean slate for every test in this module."""
+    APIManager._instance = None
+    yield
+    APIManager._instance = None
+
 def test_main_window_structure(qapp):
     window = MainWindow()
     assert isinstance(window.centralWidget(), HarnessCanvas)
@@ -16,5 +23,5 @@ def test_main_window_structure(qapp):
 
 def test_global_input_system_installation(qapp):
     window = MainWindow()
-    api = APIManager()
+    api = APIManager.get_instance()
     assert api.input_system is not None

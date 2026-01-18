@@ -11,6 +11,7 @@ class PlacementTool(Tool):
         self.canvas = canvas
         self.ghost_item = None
         self.active_type = "generic"
+    __guide__ = "PlacementTool: Handles device placement and drag logic."
 
     @property
     def api(self):

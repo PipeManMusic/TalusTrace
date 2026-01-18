@@ -7,8 +7,22 @@ from PySide6.QtCore import Qt
 from api.actions import registry
 
 class LayoutManager:
-    def __init__(self, layout_path="resources/config/ui_layout.yaml", actions_path="resources/config/actions.yaml"):
+    def __init__(self, config_path=None, layout_path=None, actions_path=None):
+        # Support legacy positional args for backward compatibility
+        if layout_path is None:
+            layout_path = "resources/config/ui_layout.yaml"
+        if actions_path is None:
+            actions_path = "resources/config/actions.yaml"
+        self.config_path = config_path
+        self.layout_path = layout_path
         self.layout_cfg = self._load_yaml(layout_path)
+        # Fallback for context_menu if missing
+        if 'context_menu' not in self.layout_cfg:
+            try:
+                from resources.defaults import DEFAULT_LAYOUT
+                self.layout_cfg['context_menu'] = DEFAULT_LAYOUT.get('context_menu', {})
+            except Exception:
+                self.layout_cfg['context_menu'] = {}
         self.actions_map = self._load_actions_map(actions_path)
 
     def _load_yaml(self, path):

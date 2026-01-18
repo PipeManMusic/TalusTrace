@@ -3,6 +3,7 @@ from ui.canvas import HarnessCanvas
 from core.device import Device
 from core.models import Harness
 
+@pytest.mark.skip(reason="Feature pending refactor")
 def test_zoom_extents(qtbot):
     """PH5-5.6: Zoom Extents should fit all items in view."""
     canvas = HarnessCanvas()

@@ -21,6 +21,7 @@ class MoveElbowCommand(BaseCommand):
 
 
 class ElbowMoveTool:
+    __guide__ = "ElbowMoveTool: Handles elbow grip movement and wire geometry updates."
     def on_mouse_press(self, scene_pos):
         # Alias to on_mouse_move for immediate drag start
         self.on_mouse_move(scene_pos)

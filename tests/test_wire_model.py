@@ -15,7 +15,7 @@ def test_wire_initialization_path():
     assert wire.id == "w_001"
     assert len(wire.path_nodes) == 3
     assert wire.path_nodes[1] == [10.0, 0.0]
-    assert wire.status == "undefined"  # Default draft state
+    assert wire.status == "UNDEFINED"  # Default draft state
 
 def test_wire_revision_initialization():
     """Verify revision tracking for optimistic locking on wires."""

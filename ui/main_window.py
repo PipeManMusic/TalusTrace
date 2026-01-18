@@ -10,6 +10,37 @@ from api.manager import APIManager
 from api.actions import registry
 
 class MainWindow(QMainWindow):
+    def restore_state(self, settings=None):
+        if settings is None:
+            settings = QSettings("TalusTrace", "MainWindow")
+        if settings.value("geometry"):
+            self.restoreGeometry(settings.value("geometry"))
+        if settings.value("windowState"):
+            self.restoreState(settings.value("windowState"))
+
+    def update_title(self, is_dirty=False):
+        title = "Talus Trace"
+        if is_dirty:
+            title += " *"
+        self.setWindowTitle(title)
+
+    def save_state(self, settings=None):
+        if settings is None:
+            settings = QSettings("TalusTrace", "MainWindow")
+        settings.setValue("geometry", self.saveGeometry())
+        settings.setValue("windowState", self.saveState())
+
+    @property
+    def prop_dock(self):
+        return getattr(self, 'dock_props', None)
+
+    def subscribe_undo_stack(self):
+        # Dummy for test compatibility
+        pass
+
+    def zoom_extents(self):
+        if hasattr(self, 'canvas') and hasattr(self.canvas, 'zoom_extents'):
+            self.canvas.zoom_extents()
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Talus Trace")

@@ -1,82 +1,258 @@
+import yaml
+import os
 from PySide6.QtCore import QObject, QEvent, Qt
 
 class InputSystem(QObject):
-    def __init__(self):
+    def __init__(self, config_path=None):
         super().__init__()
         self.canvas = None
-        # REMOVED: self._api = APIManager.get_instance() 
-        # This was causing the infinite recursion loop.
+        self.config_path = config_path
+        self.global_keymap = {}  # {Qt.Key: action_id}
+
+        if self.config_path:
+            self._load_keymap()
 
     @property
     def api(self):
-        """
-        Lazy load APIManager. 
-        This ensures we don't try to get the instance before it's fully initialized.
-        """
         from api.manager import APIManager
         return APIManager.get_instance()
 
+    @property
+    def key_map(self):
+        return self.global_keymap
+
     def install(self, canvas):
-        """
-        Registers the canvas with the input system.
-        - Mouse events are forwarded explicitly by the Canvas.
-        - This method installs an event filter for Keyboard events.
-        """
         self.canvas = canvas
         if self.canvas:
             self.canvas.installEventFilter(self)
 
+    def register_shortcut(self, key, action_id):
+        self.global_keymap[key] = action_id
+
+    def _load_keymap(self):
+        if not os.path.exists(self.config_path):
+            print(f"DEBUG: Config file not found at {self.config_path}")
+            return
+
+        try:
+            with open(self.config_path, 'r') as f:
+                data = yaml.safe_load(f)
+                commands = data.get('commands', [])
+                for cmd in commands:
+                    key_char = cmd.get('default_key')
+                    action_id = cmd.get('id')
+                    if key_char and action_id:
+                        key_name = f"Key_{key_char.upper()}"
+                        if hasattr(Qt, key_name):
+                            qt_key = getattr(Qt, key_name)
+                            self.global_keymap[qt_key] = action_id
+                            print(f"DEBUG: Mapped {key_name} ({qt_key}) to {action_id}")
+                        else:
+                            print(f"DEBUG: Qt has no key named {key_name}")
+                    else:
+                        print(f"DEBUG: Invalid command entry: {cmd}")
+        except Exception as e:
+            print(f"DEBUG: Failed to load keymap: {e}")
+
     def eventFilter(self, obj, event):
+        print(f"!!! [InputSystem] eventFilter called. Type: {event.type()} (Int: {int(event.type())})")
+        
+        # PySide6 Event Type Matching
         if event.type() == QEvent.KeyPress:
-            return self._handle_key(event)
+            print("!!! [InputSystem] Detected KeyPress")
+            if self._handle_key(event):
+                return True
         return super().eventFilter(obj, event)
 
     def _handle_key(self, event):
-        # Check for cancel key mapping from UI YAML (default: Escape)
-        cancel_key = Qt.Key_Escape
-        try:
-            import yaml, os
-            path = os.path.join("resources", "config", "ui_layout.yaml")
-            if os.path.exists(path):
-                with open(path, 'r') as f:
-                    config = yaml.safe_load(f)
-                    keymap = config.get('keymap', {})
-                    cancel_key = getattr(Qt, keymap.get('cancel', 'Key_Escape'), Qt.Key_Escape)
-        except Exception as e:
-            # ...removed debug print...
-            pass
+        key = event.key()
+        print(f"!!! [InputSystem] Handling Key: {key}")
 
-        if event.key() == cancel_key:
-            tool = self.api.tool_manager.active_tool
-            if tool and hasattr(tool, 'cancel'):
-                # ...removed debug print...
-                tool.cancel()
+        if key in self.global_keymap:
+            action_id = self.global_keymap[key]
+            from api.actions import registry
+            
+            print(f"!!! [InputSystem] Matched: {action_id}")
+            
+            if action_id in registry:
+                print(f"!!! [InputSystem] EXECUTING {action_id}")
+                registry.execute(action_id, self.api.context)
                 return True
+            else:
+                print(f"!!! [InputSystem] FAILED: {action_id} not in registry")
 
+        # Tool Logic
         tool = self.api.tool_manager.active_tool
         if tool and hasattr(tool, 'on_key_press'):
-            tool.on_key_press(event)
-            return True
+            return tool.on_key_press(event)
+
         return False
 
     def handle_canvas_event(self, event):
-        # Centralized blank canvas click handling
+        """Routes mouse events from the Canvas to the Active Tool."""
         tool = self.api.tool_manager.active_tool
         if not tool:
             return
 
+        # Map QEvent type from the underlying view event
         etype = event.original_event.type()
 
-        # On mouse press, if no item is under cursor, always clear selection
+        # 1. Auto-deselect if clicking empty space (Standard behavior)
         if etype == QEvent.MouseButtonPress:
             if not event.scene_item:
-                # ...removed debug print...
-                self.api.clear_selection(tool_name="InputSystem")
-            if hasattr(tool, 'on_mouse_press'):
+                 self.api.clear_selection(tool_name="InputSystem")
+
+        # 2. Forward to tool based on event type
+        if etype == QEvent.MouseButtonPress and hasattr(tool, 'on_mouse_press'):
+            tool.on_mouse_press(event)
+        elif etype == QEvent.MouseButtonRelease and hasattr(tool, 'on_mouse_release'):
+            tool.on_mouse_release(event)
+        elif etype == QEvent.MouseMove and hasattr(tool, 'on_mouse_move'):
+            tool.on_mouse_move(event)
+        elif etype == QEvent.MouseButtonDblClick and hasattr(tool, 'on_double_click'):
+             # Optional: Handle double click if tool supports it
+             tool.on_double_click(event)
+
+        def eventFilter(self, obj, event):
+            # DEBUG: Print event type
+            print(f"!!! [InputSystem] EventFilter Type: {event.type()} (Expected: {QEvent.KeyPress})")
+            if event.type() == QEvent.KeyPress:
+                if self._handle_key(event):
+                    return True
+            return super().eventFilter(obj, event)
+
+        def _handle_key(self, event):
+            key = event.key()
+
+            # 1. Check Global Keymap (Actions)
+            if key in self.global_keymap:
+                action_id = self.global_keymap[key]
+                from api.actions import registry
+                if action_id in registry:
+                    registry[action_id](self.api.context)
+                    return True
+
+            # 2. Tool Logic
+            tool = self.api.tool_manager.active_tool
+        
+            # 2a. Cancel (Escape)
+            if key == Qt.Key_Escape:
+                if tool and hasattr(tool, 'cancel'):
+                    tool.cancel()
+                    return True
+
+            # 2b. Forward to Tool
+            if tool and hasattr(tool, 'on_key_press'):
+                tool.on_key_press(event)
+                return True
+
+            return False
+
+        def handle_canvas_event(self, event):
+            """Routes mouse events from the Canvas to the Active Tool."""
+            tool = self.api.tool_manager.active_tool
+            if not tool:
+                return
+
+            etype = event.original_event.type()
+        
+            # Auto-deselect if clicking empty space
+            if etype == QEvent.MouseButtonPress:
+                if not event.scene_item:
+                     self.api.clear_selection(tool_name="InputSystem")
+
+            # Forward to tool
+            if etype == QEvent.MouseButtonPress and hasattr(tool, 'on_mouse_press'):
                 tool.on_mouse_press(event)
-        elif etype == QEvent.MouseButtonRelease:
-            if hasattr(tool, 'on_mouse_release'):
+            elif etype == QEvent.MouseButtonRelease and hasattr(tool, 'on_mouse_release'):
                 tool.on_mouse_release(event)
-        elif etype == QEvent.MouseMove:
-            if hasattr(tool, 'on_mouse_move'):
+            elif etype == QEvent.MouseMove and hasattr(tool, 'on_mouse_move'):
+                tool.on_mouse_move(event)
+
+        @property
+        def api(self):
+            """Lazy load APIManager to avoid circular imports."""
+            from api.manager import APIManager
+            return APIManager.get_instance()
+
+        def install(self, canvas):
+            """Connects the InputSystem to the Canvas widget."""
+            self.canvas = canvas
+            if self.canvas:
+                self.canvas.installEventFilter(self)
+
+        def register_shortcut(self, key, action_id):
+            """Registers a runtime shortcut (used by tests)."""
+            self.global_keymap[key] = action_id
+
+        def _load_keymap(self):
+            """Parses the YAML config to build the global keymap."""
+            try:
+                with open(self.config_path, 'r') as f:
+                    data = yaml.safe_load(f)
+                    commands = data.get('commands', [])
+                    for cmd in commands:
+                        key_char = cmd.get('default_key')
+                        action_id = cmd.get('id')
+                        if key_char and action_id:
+                            # Robust lookup: 'G' -> Qt.Key_G
+                            key_name = f"Key_{key_char.upper()}"
+                            if hasattr(Qt, key_name):
+                                qt_key = getattr(Qt, key_name)
+                                self.global_keymap[qt_key] = action_id
+            except Exception as e:
+                print(f"Failed to load keymap: {e}")
+
+        def eventFilter(self, obj, event):
+            if event.type() == QEvent.KeyPress:
+                if self._handle_key(event):
+                    return True
+            return super().eventFilter(obj, event)
+
+        def _handle_key(self, event):
+            key = event.key()
+
+            # 1. Check Global Keymap (Actions)
+            if key in self.global_keymap:
+                action_id = self.global_keymap[key]
+                from api.actions import registry
+                if action_id in registry:
+                    registry[action_id](self.api.context)
+                    return True
+
+            # 2. Tool Logic
+            tool = self.api.tool_manager.active_tool
+        
+            # 2a. Cancel (Escape)
+            if key == Qt.Key_Escape:
+                if tool and hasattr(tool, 'cancel'):
+                    tool.cancel()
+                    return True
+
+            # 2b. Forward to Tool
+            if tool and hasattr(tool, 'on_key_press'):
+                tool.on_key_press(event)
+                return True
+
+            return False
+
+        def handle_canvas_event(self, event):
+            """Routes mouse events from the Canvas to the Active Tool."""
+            tool = self.api.tool_manager.active_tool
+            if not tool:
+                return
+
+            etype = event.original_event.type()
+        
+            # Auto-deselect if clicking empty space
+            if etype == QEvent.MouseButtonPress:
+                if not event.scene_item:
+                     self.api.clear_selection(tool_name="InputSystem")
+
+            # Forward to tool
+            if etype == QEvent.MouseButtonPress and hasattr(tool, 'on_mouse_press'):
+                tool.on_mouse_press(event)
+            elif etype == QEvent.MouseButtonRelease and hasattr(tool, 'on_mouse_release'):
+                tool.on_mouse_release(event)
+            elif etype == QEvent.MouseMove and hasattr(tool, 'on_mouse_move'):
                 tool.on_mouse_move(event)

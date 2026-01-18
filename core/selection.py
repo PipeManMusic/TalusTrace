@@ -1,6 +1,7 @@
 # REMOVED top-level import to fix circular dependency
 # from api.manager import APIManager 
 
+
 class SelectionManager:
     _instance = None
 
@@ -10,6 +11,12 @@ class SelectionManager:
             cls._instance.selected_models = []
             cls._instance._listeners = []
         return cls._instance
+
+    def select(self, model):
+        """Select a single model and notify listeners."""
+        self.selected_models = [model]
+        self._notify()
+
     def add_listener(self, callback):
         """Register a callback to be called on selection change."""
         if callback not in self._listeners:
@@ -21,7 +28,7 @@ class SelectionManager:
 
     @property
     def current_selection_ids(self):
-        return [item.id for item in self.selected_models if hasattr(item, 'id')]
+        return set(item.id for item in self.selected_models if hasattr(item, 'id'))
 
 
     def set_selection(self, models, on_complete=None, restore_previous=True):

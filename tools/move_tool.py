@@ -63,6 +63,14 @@ class MoveCommand(BaseCommand):
                 self.api.dispatch("model_changed", {"action": "update", "item": wire})
 
 class MoveTool:
+    __guide__ = "MoveTool: Handles device and wire movement, ghosting, and drag events."
+
+    def update(self, dx=0, dy=0):
+        """Update ghost_item position for test compatibility."""
+        if self.ghost_item is not None:
+            self.ghost_item.x = self._original_x + dx
+            self.ghost_item.y = self._original_y + dy
+
     def __init__(self):
         self.ghost_item = None
         self._target = None

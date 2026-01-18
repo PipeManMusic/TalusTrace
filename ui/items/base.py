@@ -17,6 +17,7 @@ class SelectableItemMixin:
             self.setZValue(2000)
         self.update_visual_state()
 
+
     def itemChange(self, change, value):
         if change == QGraphicsItem.ItemPositionChange and self.scene():
             # Grid Snapping (in MM)
@@ -28,6 +29,16 @@ class SelectableItemMixin:
 
         if change == QGraphicsItem.ItemSelectedChange:
             self.update_visual_state()
+            # Sync selection to core SelectionManager if selected
+            try:
+                from core.selection import SelectionManager
+                if value:  # Selected
+                    if hasattr(self, 'model'):
+                        SelectionManager().select(self.model)
+                else:  # Deselected
+                    SelectionManager().clear_selection()
+            except Exception:
+                pass
 
         if change == QGraphicsItem.ItemPositionHasChanged and hasattr(self, 'model'):
             # Model Update: Coordinates are already MM. Direct sync.
@@ -35,7 +46,7 @@ class SelectableItemMixin:
                 if hasattr(self.model, 'x'): self.model.x = self.x()
                 if hasattr(self.model, 'y'): self.model.y = self.y()
             except: pass
-        
+
         return super().itemChange(change, value)
 
     def update_visual_state(self):

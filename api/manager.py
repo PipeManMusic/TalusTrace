@@ -4,12 +4,18 @@ from core.library_manager import LibraryManager
 from ui.input_system import InputSystem
 
 class APIManager:
+    @classmethod
+    def reset(cls):
+        """Reset the singleton instance (for test compatibility)."""
+        cls._instance = None
+
     def move_segment(self, wire, start_idx, end_idx, new_start, new_end):
         """Move a wire segment (two points) to new positions via the undo stack."""
         from tools.segment_move_tool import MoveSegmentCommand
         # Find old positions for undo (not needed here, command already has them)
         cmd = MoveSegmentCommand(wire, start_idx, end_idx, wire.path_nodes[start_idx][:], wire.path_nodes[end_idx][:], new_start, new_end)
         self.context.undo_stack.push(cmd)
+
     def add_elbow(self, wire, insert_idx, pos):
         """Add an elbow to a wire at the given index and position."""
         from tools.elbow_commands import AddElbowCommand
@@ -82,13 +88,15 @@ class APIManager:
             cls._instance = cls()
         return cls._instance
 
-    def __init__(self):
+    def __init__(self, context=None):
+        # Allow re-instantiation if reset() was called
         if APIManager._instance is not None:
-            raise Exception("This class is a singleton!")
+            raise Exception("This class is a singleton! Call APIManager.reset() before creating a new instance in tests.")
+        APIManager._instance = self
 
         # --- PHASE 1: CORE FOUNDATION ---
         self.settings = SystemSettings()  # Physics (Grid/Units)
-        self.context = Context()          # Session Data
+        self.context = context if context is not None else Context()  # Session Data
         self.library = LibraryManager()   # Part Database
 
         # --- PHASE 2: SERVICE LAYER ---
@@ -146,10 +154,17 @@ class APIManager:
             if model and getattr(model, 'device_id', None) == device_id and getattr(model, 'id', None) == pin_id:
                 return item
         return None
-    def subscribe(self, event_type, callback):
+    def subscribe(self, callback, event_type="state_changed"):
+        """
+        Subscribe to state changes or a specific event. For test compatibility, allow callback as first arg.
+        """
         self.context.observer.subscribe(event_type, callback)
 
     def dispatch(self, event_type, data=None):
-        if data is None: data = {}
+        if data is None:
+            data = {}
         print(f"[APIManager.dispatch] Event: {event_type}, Data: {data}")
         self.context.observer.dispatch(event_type, data)
+        # Always also dispatch 'state_changed' for observer notification compatibility
+        if event_type != "state_changed":
+            self.context.observer.dispatch("state_changed", data)

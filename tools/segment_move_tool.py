@@ -22,6 +22,7 @@ class MoveSegmentCommand(BaseCommand):
 
 
 class SegmentMoveTool:
+    __guide__ = "SegmentMoveTool: Handles wire segment movement and elbow creation."
     def on_mouse_press(self, scene_pos):
         # Alias to on_mouse_move for immediate drag start
         self.on_mouse_move(scene_pos)
