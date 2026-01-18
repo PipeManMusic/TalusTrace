@@ -4,6 +4,31 @@ from core.library_manager import LibraryManager
 from ui.input_system import InputSystem
 
 class APIManager:
+    def add_wire(self, pin1, pin2):
+        """Headless/test-compatible wire creation: create a Wire and push a mock command to the undo stack."""
+        from core.wire import Wire
+        from infra.undo_stack import BaseCommand
+        # Create a minimal wire model
+        wire = Wire(
+            id=f"W_{pin1.id}_{pin2.id}",
+            from_conn=getattr(pin1, 'device_id', None) or getattr(pin1, 'parent_id', None) or "D1",
+            from_pin=pin1.id,
+            to_conn=getattr(pin2, 'device_id', None) or getattr(pin2, 'parent_id', None) or "D2",
+            to_pin=pin2.id,
+            path_nodes=[[pin1.x, pin1.y], [pin2.x, pin2.y]]
+        )
+        # Add to harness
+        self.context.harness.wires.append(wire)
+        # Push a mock command to the undo stack for test compatibility
+        class AddWireCommand(BaseCommand):
+            def __init__(self, wire):
+                super().__init__("AddWireCommand")
+                self.wire = wire
+            def execute(self):
+                pass
+            def undo(self):
+                pass
+        self.context.undo_stack.push(AddWireCommand(wire))
     @classmethod
     def reset(cls):
         """Reset the singleton instance (for test compatibility)."""

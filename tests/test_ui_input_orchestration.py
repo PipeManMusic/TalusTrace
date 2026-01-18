@@ -7,30 +7,43 @@ from ui.canvas import CanvasEvent
 
 def test_dispatcher_routing_to_active_tool(qtbot):
     """PH6-EVT.1: InputSystem should route canvas events to the active tool."""
-    input_sys = InputSystem()
+    # 1. Force Clean Slate
+    from api.manager import APIManager
+    APIManager._instance = None
     api = APIManager.get_instance()
-    
-    # 1. Setup Mock Tool
+
+    # 2. Ensure ToolManager is real
+    from api.tool_manager import ToolManager
+    from unittest.mock import MagicMock
+    if isinstance(api.tool_manager, MagicMock):
+        api.tool_manager = ToolManager()
+
+    input_sys = InputSystem()
+
+    # 3. Setup Mock Tool
     mock_tool = MagicMock()
+    mock_tool.start = MagicMock()
     api.tool_manager.register_tool("mock_tool", mock_tool)
     api.tool_manager.set_tool("mock_tool")
-    
-    # 2. Create a Mock Canvas Event
+
+    # Verify active tool IS the mock tool
+    assert api.tool_manager.active_tool == mock_tool
+
+    # 4. Create a Mock Canvas Event
     mock_event = MagicMock()
-    # Simulate a MousePress event type
     mock_event.type.return_value = 2 # QEvent.MouseButtonPress
-    
+
     canvas_event = CanvasEvent(
         view_event=mock_event,
         scene_pos=QPointF(100, 100),
         scene=MagicMock(),
         scene_item=None
     )
-    
-    # 3. Dispatch via InputSystem
+
+    # 5. Dispatch via InputSystem
     input_sys.handle_canvas_event(canvas_event)
-    
-    # 4. Verify the correct tool method was called
+
+    # 6. Verify the correct tool method was called
     mock_tool.on_mouse_press.assert_called_once_with(canvas_event)
 
 def test_dispatcher_graceful_no_tool(qtbot):
