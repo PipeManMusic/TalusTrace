@@ -1,133 +1,168 @@
-from infra.undo_stack import BaseCommand
-from PySide6.QtCore import QPointF
+from PySide6.QtCore import Qt, QPointF
+from tools.base_tool import BaseTool
 
-class MoveSegmentCommand(BaseCommand):
-    def __init__(self, wire, start_idx, end_idx, old_start, old_end, new_start, new_end):
-        super().__init__("MoveSegmentCommand")
+class MoveSegmentCommand:
+    """Command to finalize segment movement for Undo/Redo."""
+    def __init__(self, wire, start_idx, end_idx, old_pos_start, old_pos_end, new_pos_start, new_pos_end, api):
         self.wire = wire
         self.start_idx = start_idx
         self.end_idx = end_idx
-        self.old_start = old_start[:]
-        self.old_end = old_end[:]
-        self.new_start = new_start[:]
-        self.new_end = new_end[:]
-        from api.manager import APIManager
-        self.api = APIManager.get_instance()
+        self.old_pos_start = old_pos_start
+        self.old_pos_end = old_pos_end
+        self.new_pos_start = new_pos_start
+        self.new_pos_end = new_pos_end
+        self.api = api
+        self.executed = False
 
     def execute(self):
-        self.api.move_segment(self.wire, self.start_idx, self.end_idx, self.new_start[0] - self.old_start[0], self.new_start[1] - self.old_start[1])
+        # In headless/realtime mode, the model is already updated by the tool.
+        # We just ensure consistency or handle re-do.
+        self.api.move_segment(
+            self.wire, 
+            self.start_idx, 
+            self.end_idx, 
+            self.new_pos_start[0] - self.old_pos_start[0], # Delta X
+            self.new_pos_start[1] - self.old_pos_start[1]  # Delta Y
+        )
+        self.executed = True
 
     def undo(self):
-        self.api.move_segment(self.wire, self.start_idx, self.end_idx, self.old_start[0] - self.new_start[0], self.old_start[1] - self.new_start[1])
+        # Inverse move
+        delta_x = self.old_pos_start[0] - self.new_pos_start[0]
+        delta_y = self.old_pos_start[1] - self.new_pos_start[1]
+        self.api.move_segment(self.wire, self.start_idx, self.end_idx, delta_x, delta_y)
 
+    def redo(self):
+        delta_x = self.new_pos_start[0] - self.old_pos_start[0]
+        delta_y = self.new_pos_start[1] - self.old_pos_start[1]
+        self.api.move_segment(self.wire, self.start_idx, self.end_idx, delta_x, delta_y)
+    
+    def mark_executed(self):
+        self.executed = True
 
-class SegmentMoveTool:
-    __guide__ = "SegmentMoveTool: Handles wire segment movement and elbow creation."
-    def on_mouse_press(self, scene_pos):
-        # Alias to on_mouse_move for immediate drag start
-        self.on_mouse_move(scene_pos)
-
-    def deactivate(self):
-        pass
+class SegmentMoveTool(BaseTool):
+    __guide__ = {
+        "name": "Segment Move Tool",
+        "description": "Drag wire segments to reshape the path.",
+        "shortcuts": {}
+    }
 
     def __init__(self):
-        self._wire_item = None
-        self._start_idx = None
-        self._end_idx = None
-        self._original_start = None
-        self._original_end = None
-        self._ghost_start = None
-        self._ghost_end = None
+        super().__init__()
+        self.wire = None
+        self.start_idx = None
+        self.end_idx = None
+        self.drag_start_pos = None
+        self.initial_nodes = {} # {idx: [x, y]}
+        self.is_dragging = False
 
-    @property
-    def api(self):
-        from api.manager import APIManager
-        return APIManager.get_instance()
+    def start(self, wire, start_idx, end_idx, *args, **kwargs):
+        """
+        Called by SelectTool (or tests) to initiate a segment move.
+        """
+        self.wire = wire
+        self.start_idx = start_idx
+        self.end_idx = end_idx
 
-    def start(self, wire_item, start_idx, end_idx, event=None):
-        self._wire_item = wire_item
-        self._start_idx = start_idx
-        self._end_idx = end_idx
-        self._original_start = wire_item.path_nodes[start_idx][:]
-        self._original_end = wire_item.path_nodes[end_idx][:]
-        self._ghost_start = self._original_start[:]
-        self._ghost_end = self._original_end[:]
-        # Save current selection
-        from core.selection import SelectionManager
-        self._prev_selection = SelectionManager().selected_models[:]
-        if event is not None:
-            self.on_mouse_press(event)
+        # Store original state
+        if self.wire and 0 <= self.start_idx < len(self.wire.path_nodes) and 0 <= self.end_idx < len(self.wire.path_nodes):
+            self.initial_nodes = {
+                self.start_idx: list(self.wire.path_nodes[self.start_idx]),
+                self.end_idx: list(self.wire.path_nodes[self.end_idx])
+            }
 
-    def on_mouse_move(self, scene_pos):
-        if self._wire_item and self._start_idx is not None and self._end_idx is not None:
-            # scene_pos is a CanvasEvent, use its .scene_pos attribute (QPointF)
-            x = scene_pos.scene_pos.x()
-            y = scene_pos.scene_pos.y()
-            # Compute delta from the midpoint of the original segment (no snapping for grip)
-            orig_mid_x = (self._original_start[0] + self._original_end[0]) / 2
-            orig_mid_y = (self._original_start[1] + self._original_end[1]) / 2
-            dx = x - orig_mid_x
-            dy = y - orig_mid_y
-            # Snap elbows to grid, but not the grip
-            from api.manager import APIManager
-            api = APIManager.get_instance()
-            new_start_x, new_start_y = api.snap_to_grid(self._original_start[0] + dx, self._original_start[1] + dy)
-            new_end_x, new_end_y = api.snap_to_grid(self._original_end[0] + dx, self._original_end[1] + dy)
-            new_start = [new_start_x, new_start_y]
-            new_end = [new_end_x, new_end_y]
-            self._ghost_start = new_start[:]
-            self._ghost_end = new_end[:]
-            self._wire_item.model.path_nodes[self._start_idx] = new_start
-            self._wire_item.model.path_nodes[self._end_idx] = new_end
-            # Robustly check if WireItem is deleted before calling methods
-            try:
-                if self._wire_item is not None:
-                    # Only check for PySide6's wasDeleted if available
-                    deleted = hasattr(self._wire_item, 'wasDeleted') and self._wire_item.wasDeleted() if hasattr(self._wire_item, 'wasDeleted') else False
-                    if not deleted:
-                        self._wire_item._build_path_and_grips()
-            except RuntimeError:
-                pass
-            self._wire_item.update()
+            # Check for event in kwargs or args
+            event = kwargs.get('event')
+            if not event and len(args) > 0 and hasattr(args[0], 'scene_pos'):
+                event = args[0]
 
-    def on_mouse_release(self, scene_pos):
-        if self._wire_item is None:
+            if event:
+                pos = getattr(event, 'scene_pos', None) or (event.pos() if hasattr(event, 'pos') else QPointF(0,0))
+                self.drag_start_pos = pos
+            else:
+                self.drag_start_pos = QPointF(0,0)
+
+            self.is_dragging = True
+            if hasattr(self.api, 'main_window') and self.api.main_window:
+                self.api.main_window.canvas.setCursor(Qt.SizeAllCursor)
+
+    def on_mouse_press(self, event):
+        # Handled by start() typically
+        pass
+
+    def on_mouse_move(self, event):
+        if not self.is_dragging or not self.wire:
             return
-        # Use the actual grip position (no snapping), but elbows snap
-        x = scene_pos.scene_pos.x()
-        y = scene_pos.scene_pos.y()
-        orig_mid_x = (self._original_start[0] + self._original_end[0]) / 2
-        orig_mid_y = (self._original_start[1] + self._original_end[1]) / 2
-        dx = x - orig_mid_x
-        dy = y - orig_mid_y
-        from api.manager import APIManager
-        api = APIManager.get_instance()
-        new_start_x, new_start_y = api.snap_to_grid(self._original_start[0] + dx, self._original_start[1] + dy)
-        new_end_x, new_end_y = api.snap_to_grid(self._original_end[0] + dx, self._original_end[1] + dy)
-        new_start = [new_start_x, new_start_y]
-        new_end = [new_end_x, new_end_y]
-        cmd = MoveSegmentCommand(self._wire_item.model, self._start_idx, self._end_idx, self._original_start, self._original_end, new_start, new_end)
-        self._wire_item.model.ui_item = self._wire_item
-        api.context.undo_stack.push(cmd)
-        # Restore previous selection after move
-        from core.selection import SelectionManager
-        prev = getattr(self, '_prev_selection', None)
-        if prev is not None:
-            SelectionManager().set_selection(prev)
-        self._wire_item = None
-        self._start_idx = None
-        self._end_idx = None
-        self._original_start = None
-        self._original_end = None
-        self._ghost_start = None
-        self._ghost_end = None
-        api.tool_manager.set_tool('select')
+
+        # 1. Get Current Position
+        current_pos = getattr(event, 'scene_pos', None) or (event.pos() if hasattr(event, 'pos') else QPointF(0,0))
+        
+        # If we didn't get a start pos in start(), grab it now (first move)
+        if not self.drag_start_pos:
+            self.drag_start_pos = current_pos
+            return
+
+        # 2. Calculate Delta
+        dx = current_pos.x() - self.drag_start_pos.x()
+        dy = current_pos.y() - self.drag_start_pos.y()
+
+        # 3. Update Model Directly (Realtime)
+        for idx, original_pos in self.initial_nodes.items():
+            # Optional: Apply grid snapping logic here if desired
+            new_x = original_pos[0] + dx
+            new_y = original_pos[1] + dy
+            
+            # Simple snapping (can be delegated to API util)
+            # new_x = round(new_x / 5.0) * 5.0
+            # new_y = round(new_y / 5.0) * 5.0
+            
+            self.wire.path_nodes[idx] = [new_x, new_y]
+
+        # 4. Notify View (if not pure headless)
+        if hasattr(self.wire, 'ui_item') and self.wire.ui_item:
+            self.wire.ui_item.update_from_model(self.wire)
+
+    def on_mouse_release(self, event):
+        if self.is_dragging and self.wire:
+            # 1. Create Command
+            # Get final positions from model
+            final_start = self.wire.path_nodes[self.start_idx]
+            final_end = self.wire.path_nodes[self.end_idx]
+            
+            if hasattr(self.api.context, 'undo_stack'):
+                cmd = MoveSegmentCommand(
+                    self.wire,
+                    self.start_idx,
+                    self.end_idx,
+                    self.initial_nodes[self.start_idx],
+                    self.initial_nodes[self.end_idx],
+                    final_start,
+                    final_end,
+                    self.api
+                )
+                cmd.mark_executed()
+                self.api.context.undo_stack.push(cmd)
+
+        # 2. Cleanup
+        self.is_dragging = False
+        self.wire = None
+        self.initial_nodes = {}
+        self.drag_start_pos = None
+        
+        if hasattr(self.api.tool_manager, 'set_tool'):
+            self.api.tool_manager.set_tool('select')
+            
+        if hasattr(self.api, 'main_window') and self.api.main_window:
+            self.api.main_window.canvas.setCursor(Qt.ArrowCursor)
 
     def cancel(self):
-        self._wire_item = None
-        self._start_idx = None
-        self._end_idx = None
-        self._original_start = None
-        self._original_end = None
-        self._ghost_start = None
-        self._ghost_end = None
+        """Revert changes."""
+        if self.is_dragging and self.wire:
+            for idx, original_pos in self.initial_nodes.items():
+                self.wire.path_nodes[idx] = original_pos
+            
+            if hasattr(self.wire, 'ui_item') and self.wire.ui_item:
+                self.wire.ui_item.update_from_model(self.wire)
+                
+        self.is_dragging = False
+        self.wire = None
