@@ -74,6 +74,7 @@ class InputSystem(QObject):
                 registry.execute(action_id, self.api.context)
                 return True
             else:
+                pass
 
         # Tool Logic
         tool = self.api.tool_manager.active_tool
