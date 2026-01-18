@@ -4,6 +4,10 @@ from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QBrush, QPen, QColor
 
 class SegmentGripItem(ObservableGraphicsItemMixin, QGraphicsRectItem):
+        __test_scenario__ = {
+            'model_data': {'start_idx': 0, 'end_idx': 1, 'start_pos': (0, 0), 'end_pos': (1, 1)},
+            'expected_child_count': 0
+        }
     def __init__(self, wire_item, start_idx, end_idx, start_pos, end_pos, width=6.0, height=3.0, parent=None):
         # Center grip between elbows
         mid_x = (start_pos[0] + end_pos[0]) / 2

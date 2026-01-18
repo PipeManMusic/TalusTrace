@@ -7,6 +7,10 @@ from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 from ui.items.pin import PinItem
 
 class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRectItem):
+    __test_scenario__ = {
+        'model_data': {'meta': {'width_mm': 40.0, 'height_mm': 30.0}, 'x': 0, 'y': 0, 'rotation': 0.0, 'pins': []},
+        'expected_child_count': 0
+    }
     def __init__(self, device, is_ghost=False, parent=None):
         QGraphicsRectItem.__init__(self, parent)
         self.setZValue(10)  # Devices above wires

@@ -5,6 +5,10 @@ from PySide6.QtGui import QBrush, QPen, QColor
 from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 
 class ElbowGripItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
+        __test_scenario__ = {
+            'model_data': {'index': 0, 'pos': (0, 0)},
+            'expected_child_count': 0
+        }
     def __init__(self, wire_item, index, pos, radius=2.5, parent=None):
         QGraphicsEllipseItem.__init__(self, -radius, -radius, radius*2, radius*2, parent)
         self._observers = []
