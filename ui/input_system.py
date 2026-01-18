@@ -55,31 +55,25 @@ class InputSystem(QObject):
             print(f"DEBUG: Failed to load keymap: {e}")
 
     def eventFilter(self, obj, event):
-        print(f"!!! [InputSystem] eventFilter called. Type: {event.type()} (Int: {int(event.type())})")
         
         # PySide6 Event Type Matching
         if event.type() == QEvent.KeyPress:
-            print("!!! [InputSystem] Detected KeyPress")
             if self._handle_key(event):
                 return True
         return super().eventFilter(obj, event)
 
     def _handle_key(self, event):
         key = event.key()
-        print(f"!!! [InputSystem] Handling Key: {key}")
 
         if key in self.global_keymap:
             action_id = self.global_keymap[key]
             from api.actions import registry
             
-            print(f"!!! [InputSystem] Matched: {action_id}")
             
             if action_id in registry:
-                print(f"!!! [InputSystem] EXECUTING {action_id}")
                 registry.execute(action_id, self.api.context)
                 return True
             else:
-                print(f"!!! [InputSystem] FAILED: {action_id} not in registry")
 
         # Tool Logic
         tool = self.api.tool_manager.active_tool
@@ -115,7 +109,6 @@ class InputSystem(QObject):
 
         def eventFilter(self, obj, event):
             # DEBUG: Print event type
-            print(f"!!! [InputSystem] EventFilter Type: {event.type()} (Expected: {QEvent.KeyPress})")
             if event.type() == QEvent.KeyPress:
                 if self._handle_key(event):
                     return True

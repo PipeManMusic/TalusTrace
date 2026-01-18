@@ -37,6 +37,23 @@ class CanvasEvent:
         else:
             self.scene_item = None
 
+    @property
+    def button(self):
+        # Proxy to the underlying QEvent button if available
+        if hasattr(self.original_event, 'button'):
+            return self.original_event.button()
+        return None
+
+    @property
+    def buttons(self):
+        if hasattr(self.original_event, 'buttons'):
+            return self.original_event.buttons()
+        return None
+
+    @property
+    def type(self):
+        return self.original_event.type() if self.original_event else None
+
 class HarnessCanvas(QGraphicsView):
     def _resolve_pin_coords(self, device_id, pin_id):
         """
