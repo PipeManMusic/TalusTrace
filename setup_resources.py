@@ -143,7 +143,7 @@ structure = {
 }
 
 def build_resources():
-    print("Building Talus Trace Resource Architecture...")
+    # ...removed debug print...
     
     # 1. Create Directories
     dirs = [
@@ -156,16 +156,16 @@ def build_resources():
     ]
     for folder in dirs:
         os.makedirs(folder, exist_ok=True)
-        print(f"  [DIR]  {folder}")
+        # ...removed debug print...
 
     # 2. Write Defaults (Only if missing, to preserve user edits!)
     for filepath, data in structure.items():
         if not os.path.exists(filepath):
             with open(filepath, 'w') as f:
                 yaml.dump(data, f, sort_keys=False, default_flow_style=False)
-            print(f"  [NEW]  {filepath}")
+            # ...removed debug print...
         else:
-            print(f"  [SKIP] {filepath} (User file exists)")
+            # ...removed debug print...
 
     # 3. Update .gitignore
     gitignore_path = ".gitignore"
@@ -177,11 +177,11 @@ def build_resources():
         if ".cache/" not in content:
             with open(gitignore_path, "a") as f2:
                 f2.write(cache_entry)
-            print("  [UPD]  .gitignore")
+            # ...removed debug print...
     else:
         with open(gitignore_path, "w") as f:
             f.write(cache_entry)
-        print("  [NEW]  .gitignore")
+        # ...removed debug print...
 
 if __name__ == "__main__":
     build_resources()

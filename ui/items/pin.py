@@ -6,6 +6,7 @@ from ui.theme import ThemeManager
 class PinItem(QGraphicsEllipseItem):
     def __init__(self, pin_model, parent=None):
         super().__init__(-0.5, -0.5, 1.0, 1.0, parent)
+        self.setZValue(20)  # Pins above devices and wires
         self.pin = pin_model
         self.theme = ThemeManager()
         

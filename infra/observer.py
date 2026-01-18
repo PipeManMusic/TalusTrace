@@ -44,6 +44,7 @@ class Observer:
                         cb(data)
                         new_list.append((is_weak, ref))
                     except Exception as e:
-                        print(f"Error in observer callback for {event_type}: {e}")
+                        # ...removed debug print...
+                        pass
                 # else: dead weakref, do not keep
             self._subscribers[event_type] = new_list

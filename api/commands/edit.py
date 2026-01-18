@@ -43,11 +43,15 @@ class DeleteItemsCommand(BaseCommand):
         # Save for undo
         self.deleted_devices = [d for d in harness.devices if d.id in self.dev_ids]
         self.deleted_wires = [w for w in harness.wires if getattr(w, 'id', None) in self.wire_ids]
-        
+
         # Mutate
         harness.devices = [d for d in harness.devices if d.id not in self.dev_ids]
         harness.wires = [w for w in harness.wires if getattr(w, 'id', None) not in self.wire_ids]
-        
+
+        # Dispatch wire_removed for each deleted wire
+        for wire in self.deleted_wires:
+            self.api.dispatch("wire_removed", wire)
+
         SelectionManager().clear_selection()
         self.api.dispatch("model_changed", {"action": "delete"})
 

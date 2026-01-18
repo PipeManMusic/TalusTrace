@@ -11,7 +11,7 @@ class WorkbenchController:
         dev = Device(id=device_id, pos=(x, y))
         item = DeviceItem(dev, transformer=self.api.context.transformer)
         self.scene.addItem(item)
-        print(f"DEBUG: Spawned {device_id} at {x}, {y}")
+        # ...removed debug print...
 
     def test_bundle(self):
         """Force a bundle calculation and print the results."""

@@ -37,9 +37,13 @@ class WireTool(Tool):
         return None, None
 
     def on_mouse_press(self, event):
-        if event.original_event.button() != Qt.LeftButton: return
-
+        import datetime
+        ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
         pin, device = self._get_pin_at_pos(event.scene_pos)
+        # ...removed debug print...
+        if event.original_event.button() != Qt.LeftButton:
+            # ...removed debug print...
+            return
 
         if self.state == "IDLE":
             if pin and device:
@@ -58,18 +62,22 @@ class WireTool(Tool):
                 start_pos = self._get_pin_scene_pos(pin, device)
                 self.ghost_line.setLine(start_pos.x(), start_pos.y(), event.scene_pos.x(), event.scene_pos.y())
                 self.api.main_window.canvas.scene.addItem(self.ghost_line)
-                print(f">> Wire Started from {device.id}:{pin.id}")
+                # ...removed debug print...
+            else:
+                # ...removed debug print...
+                pass
 
         elif self.state == "DRAGGING":
             if pin and device:
                 if device == self.start_device and pin == self.start_pin:
-                    print(">> Cannot connect pin to itself")
+                    # ...removed debug print...
                     return
                 
                 self._create_wire(self.start_device, self.start_pin, device, pin)
                 self._reset()
             else:
-                print(">> Wire Cancelled (No target pin)")
+                # ...removed debug print...
+                # ...removed debug print...
                 self._reset()
 
     def on_mouse_move(self, event):
@@ -114,7 +122,7 @@ class WireTool(Tool):
         )
         cmd = AddWireCommand(new_wire)
         self.api.context.undo_stack.push(cmd)
-        print(f">> Wire Created: {wire_id}")
+        # ...removed debug print...
         # After wire creation, switch back to SelectTool
         self.api.tool_manager.set_tool('select')
 

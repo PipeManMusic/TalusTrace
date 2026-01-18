@@ -51,7 +51,8 @@ class SelectionManager:
             try:
                 callback(self.selected_models)
             except Exception as e:
-                print(f"[SelectionManager] Listener error: {e}")
+                # ...removed debug print...
+                pass
         from api.manager import APIManager
         
         # Guard against early calls before API is ready

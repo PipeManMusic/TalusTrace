@@ -22,7 +22,7 @@ def tool_move(context):
 def tool_add_generic_device(context):
     api = APIManager.get_instance()
     api.tool_manager.set_tool("placement")
-    print(">> PlacementTool activated for generic device placement.")
+    # ...removed debug print...
 
 @register_action("device.create_wizard")
 def device_create_wizard(context):

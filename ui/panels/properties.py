@@ -36,43 +36,65 @@ class PropertyPanel(QWidget):
     def on_selection_changed(self, data):
         # Use the event payload for selection
         sel = data.get('selection', [])
-        print(f"[PropertyPanel] on_selection_changed: selection={sel}")
+        import datetime
+        ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+        # ...removed debug print...
         self.current_item = sel[0] if sel else None
         self.refresh()
 
     def refresh(self, data=None):
-        print(f"[PropertyPanel] refresh: current_item={self.current_item}")
+        # ...removed debug print...
         # Clear existing rows
         while self.form.count():
             child = self.form.takeAt(0)
             if child.widget(): child.widget().deleteLater()
         if not self.current_item:
-            print("[PropertyPanel] refresh: No Selection")
+            # ...removed debug print...
             self.form.addRow(QLabel("No Selection"))
             self.content.adjustSize()
             self.scroll.ensureVisible(0, 0, 1, 1)
             return
         model = self.current_item
-        print(f"[PropertyPanel] refresh: model type={type(model).__name__}, model={model}")
+        # ...removed debug print...
         # Route to specific renderer
         if isinstance(model, Device):
-            print("[PropertyPanel] refresh: rendering Device")
+            # ...removed debug print...
             self._render_device(model)
         elif isinstance(model, Wire):
-            print("[PropertyPanel] refresh: rendering Wire")
+            # ...removed debug print...
             self._render_wire(model)
         elif isinstance(model, Pin):
-            print("[PropertyPanel] refresh: rendering Pin")
+            # ...removed debug print...
             self._render_pin(model) # <--- NEW HANDLER
         else:
-            print(f"[PropertyPanel] refresh: Unknown Item: {type(model).__name__}")
+            # ...removed debug print...
             self.form.addRow(QLabel(f"Unknown Item: {type(model).__name__}"))
 
     def _render_device(self, device):
+        from core.metadata import MetadataManager
+        meta_mgr = MetadataManager.get_instance()
+        schema = meta_mgr.schemas.get(device.meta.get('_type', 'generic'), meta_mgr.schemas.get('generic'))
         self._add_field("ID", device.id, read_only=True)
-        self._add_field("Label", device.label, lambda v: self._update_model(device, "label", v))
-        self._add_field("Type", device.type)
-        self._add_field("Library ID", device.library_id)
+        # Iterate over schema fields
+        for key, field_def in schema.get('fields', {}).items():
+            label = field_def.get('label', key)
+            value = device.meta.get(key, field_def.get('default'))
+            field_type = field_def.get('type', 'string')
+            read_only = field_def.get('read_only', False)
+            # Editor selection based on type (simple: string, float, int, select)
+            if field_type == 'select':
+                # For select fields, use a dropdown (QComboBox)
+                from PySide6.QtWidgets import QComboBox
+                combo = QComboBox()
+                options = field_def.get('options', [])
+                combo.addItems([str(opt) for opt in options])
+                combo.setCurrentText(str(value))
+                if not read_only:
+                    combo.currentTextChanged.connect(lambda v, k=key: self._update_model(device, k, v))
+                self.form.addRow(label, combo)
+            else:
+                # For other types, use QLineEdit
+                self._add_field(label, value, (lambda v, k=key: self._update_model(device, k, v)) if not read_only else None, read_only)
 
     def _render_wire(self, wire):
         self._add_field("ID", wire.id, read_only=True)

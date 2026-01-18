@@ -1,13 +1,15 @@
 from PySide6.QtWidgets import QGraphicsRectItem
+from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QBrush, QPen, QColor
 
-class SegmentGripItem(QGraphicsRectItem):
-    def __init__(self, wire_item, start_idx, end_idx, start_pos, end_pos, width=6.0, height=3.0):
+class SegmentGripItem(ObservableGraphicsItemMixin, QGraphicsRectItem):
+    def __init__(self, wire_item, start_idx, end_idx, start_pos, end_pos, width=6.0, height=3.0, parent=None):
         # Center grip between elbows
         mid_x = (start_pos[0] + end_pos[0]) / 2
         mid_y = (start_pos[1] + end_pos[1]) / 2
-        super().__init__(-width/2, -height/2, width, height)
+        QGraphicsRectItem.__init__(self, -width/2, -height/2, width, height, parent)
+        self._observers = []
         self.setPos(QPointF(mid_x, mid_y))
         self.setBrush(QBrush(QColor(0, 200, 255)))
         self.setPen(QPen(Qt.black, 0.5))
@@ -17,17 +19,45 @@ class SegmentGripItem(QGraphicsRectItem):
         self.wire_item = wire_item
         self.start_idx = start_idx
         self.end_idx = end_idx
+        # Subscribe to wire geometry changes
+        if hasattr(self.wire_item, 'subscribe'):
+            self.wire_item.subscribe('geometry_changed', self._on_wire_geometry_changed)
+
+    def _on_wire_geometry_changed(self, *args, **kwargs):
+        # Use the wire model's path_nodes if available for real-time updates
+        path_nodes = None
+        if hasattr(self.wire_item, 'model') and hasattr(self.wire_item.model, 'path_nodes'):
+            path_nodes = self.wire_item.model.path_nodes
+        elif hasattr(self.wire_item, 'path_nodes'):
+            path_nodes = self.wire_item.path_nodes
+        if path_nodes and len(path_nodes) > max(self.start_idx, self.end_idx):
+            start = path_nodes[self.start_idx]
+            end = path_nodes[self.end_idx]
+            mid_x = (start[0] + end[0]) / 2
+            mid_y = (start[1] + end[1]) / 2
+            self.setPos(QPointF(mid_x, mid_y))
 
     def mouseMoveEvent(self, event):
+        # Move both elbows by the delta of the mouse movement
+        delta = event.scenePos() - event.lastScenePos()
+        self.wire_item.path_nodes[self.start_idx][0] += delta.x()
+        self.wire_item.path_nodes[self.start_idx][1] += delta.y()
+        self.wire_item.path_nodes[self.end_idx][0] += delta.x()
+        self.wire_item.path_nodes[self.end_idx][1] += delta.y()
+        # Rebuild grips so segment grips follow in real time
+        self.wire_item._build_path_and_grips()
+        self.wire_item.notify_observers('geometry_changed')
+        self.wire_item.update()
+        # Forward to tool if needed
         from api.manager import APIManager
         api = APIManager.get_instance()
         tool = api.tool_manager.active_tool
         if hasattr(tool, 'on_mouse_move'):
             from ui.utils import get_scene_pos
-            scene_pos = get_scene_pos(event, api.input_system.canvas)
-            print(f"[SegmentGripItem] Forwarding mouseMove to SegmentMoveTool with scene_pos={scene_pos}")
+            scene_pos2 = get_scene_pos(event, api.input_system.canvas)
+            # ...removed debug print...
             from ui.canvas import CanvasEvent
-            canvas_event = CanvasEvent(event, scene_pos, api.input_system.canvas.scene if api.input_system.canvas else None)
+            canvas_event = CanvasEvent(event, scene_pos2, api.input_system.canvas.scene if api.input_system.canvas else None)
             tool.on_mouse_move(canvas_event)
         event.accept()
 
@@ -37,7 +67,7 @@ class SegmentGripItem(QGraphicsRectItem):
     def mousePressEvent(self, event):
         from PySide6.QtCore import Qt
         if event.button() == Qt.LeftButton:
-            print(f"[SegmentGripItem] Activating SegmentMoveTool for segment=({self.start_idx}, {self.end_idx})")
+            # ...removed debug print...
             from api.manager import APIManager
             api = APIManager.get_instance()
             from ui.utils import get_scene_pos
@@ -56,7 +86,7 @@ class SegmentGripItem(QGraphicsRectItem):
         if hasattr(tool, 'on_mouse_release'):
             from ui.utils import get_scene_pos
             scene_pos = get_scene_pos(event, api.input_system.canvas)
-            print(f"[SegmentGripItem] Forwarding mouseRelease to SegmentMoveTool with scene_pos={scene_pos}")
+            # ...removed debug print...
             from ui.canvas import CanvasEvent
             canvas_event = CanvasEvent(event, scene_pos, api.input_system.canvas.scene if api.input_system.canvas else None)
             tool.on_mouse_release(canvas_event)

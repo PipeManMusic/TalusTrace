@@ -43,12 +43,13 @@ class InputSystem(QObject):
                     keymap = config.get('keymap', {})
                     cancel_key = getattr(Qt, keymap.get('cancel', 'Key_Escape'), Qt.Key_Escape)
         except Exception as e:
-            print(f"[InputSystem] Could not load keymap from YAML: {e}")
+            # ...removed debug print...
+            pass
 
         if event.key() == cancel_key:
             tool = self.api.tool_manager.active_tool
             if tool and hasattr(tool, 'cancel'):
-                print("[InputSystem] Cancel key pressed, cancelling active tool.")
+                # ...removed debug print...
                 tool.cancel()
                 return True
 
@@ -59,13 +60,18 @@ class InputSystem(QObject):
         return False
 
     def handle_canvas_event(self, event):
-        # NOW SAFE: We access self.api only when a mouse event happens
+        # Centralized blank canvas click handling
         tool = self.api.tool_manager.active_tool
-        if not tool: return
+        if not tool:
+            return
 
         etype = event.original_event.type()
-        
+
+        # On mouse press, if no item is under cursor, always clear selection
         if etype == QEvent.MouseButtonPress:
+            if not event.scene_item:
+                # ...removed debug print...
+                self.api.clear_selection(tool_name="InputSystem")
             if hasattr(tool, 'on_mouse_press'):
                 tool.on_mouse_press(event)
         elif etype == QEvent.MouseButtonRelease:

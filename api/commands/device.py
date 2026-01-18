@@ -14,11 +14,13 @@ class AddDeviceCommand(BaseCommand):
 
     def execute(self):
         self.api.context.harness.devices.append(self.device)
+        self.api.dispatch("device_added", self.device)
         self.api.dispatch("model_changed", {"action": "add", "item": self.device})
 
     def undo(self):
         if self.device in self.api.context.harness.devices:
             self.api.context.harness.devices.remove(self.device)
+            self.api.dispatch("device_removed", self.device)
         self.api.dispatch("model_changed", {"action": "remove", "item": self.device})
 
 class AddWireCommand(BaseCommand):
@@ -29,11 +31,13 @@ class AddWireCommand(BaseCommand):
 
     def execute(self):
         self.api.context.harness.wires.append(self.wire)
+        self.api.dispatch("wire_added", self.wire)
         self.api.dispatch("model_changed", {"action": "add", "item": self.wire})
 
     def undo(self):
         if self.wire in self.api.context.harness.wires:
             self.api.context.harness.wires.remove(self.wire)
+            self.api.dispatch("wire_removed", self.wire)
         self.api.dispatch("model_changed", {"action": "remove", "item": self.wire})
 
 class AddPinCommand(BaseCommand):
@@ -45,17 +49,12 @@ class AddPinCommand(BaseCommand):
 
     def execute(self):
         width = self.device.meta.get("width_mm", 40.0) if hasattr(self.device, 'meta') else 40.0
-        
         count = len(self.device.pins)
         pin_spacing = 5.0
-        
         x = width
         y = 5.0 + (count * pin_spacing)
-        
         pin_id = f"PIN_{str(uuid.uuid4())[:8]}"
         pin_label = str(count + 1)
-        
-        # FIXED: Pin class now correctly accepts device_id
         self.new_pin = Pin(
             id=pin_id,
             label=pin_label,
@@ -64,12 +63,15 @@ class AddPinCommand(BaseCommand):
             device_id=self.device.id
         )
         self.device.pins.append(self.new_pin)
-        
+        self.api.dispatch("pin_added", self.new_pin)
+        self.api.dispatch("device_updated", self.device)
         self.api.dispatch("model_changed", {"action": "update", "item": self.device})
 
     def undo(self):
         if self.new_pin in self.device.pins:
             self.device.pins.remove(self.new_pin)
+            self.api.dispatch("pin_removed", self.new_pin)
+            self.api.dispatch("device_updated", self.device)
         self.api.dispatch("model_changed", {"action": "update", "item": self.device})
 
 # --- Actions ---

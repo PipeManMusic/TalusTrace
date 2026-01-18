@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import QGraphicsPathItem, QGraphicsItem
+from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 from ui.items.elbow_grip import ElbowGripItem
 from ui.items.segment_grip import SegmentGripItem
 from PySide6.QtGui import QPen, QBrush, QColor, QPainterPath, QPainter, QPainterPathStroker
@@ -13,25 +14,31 @@ except ImportError:
 from ui.theme import ThemeManager 
 from ui.items.base import SelectableItemMixin
 
-class WireItem(SelectableItemMixin, QGraphicsPathItem):
-    def cleanup(self):
-        """Explicitly unsubscribe from API events. Call before deleting/removing this item."""
-        try:
-            if hasattr(self, '_api') and hasattr(self, '_on_api_selection_changed') and self._on_api_selection_changed:
-                self._api.unsubscribe("selection_changed", self._on_api_selection_changed)
-                self._on_api_selection_changed = None
-        except Exception:
-            pass
+class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathItem):
+
+    def update_from_model(self, wire_model):
+        """
+        Update the wire UI from the model (path_nodes, color, etc).
+        """
+        self.path_nodes = list(getattr(wire_model, 'path_nodes', []))
+        self._build_path_and_grips()
+        self._apply_style()
+        self.update()
+
+    # cleanup now handled by ObservableGraphicsItemMixin
 
     # ...existing code...
     def update_elbow_scene(self, index, scene_pos):
-        # Update the path node using scene coordinates
-        self.path_nodes[index] = scene_pos
-        self._build_path_and_grips()
-        self.update()
+        # Route elbow move through APIManager
+        self._api.move_elbow(self.model, index, [scene_pos.x(), scene_pos.y()])
+        # UI will update via observer/event
 
-    def __init__(self, wire_model, parent=None):
+    def __init__(self, wire_model, parent=None, pin_lookup=None):
+        print(f"[WireItem.__init__] Creating WireItem for wire id={getattr(wire_model, 'id', None)} path_nodes={getattr(wire_model, 'path_nodes', None)}")
+        # Always build path and grips on creation
         QGraphicsPathItem.__init__(self, parent)
+        ObservableGraphicsItemMixin.__init__(self)
+        self.setZValue(0)  # Wires at base level
         self.theme = ThemeManager()
         raw_nodes = getattr(wire_model, 'path_nodes', [])
         self.path_nodes = raw_nodes
@@ -42,24 +49,49 @@ class WireItem(SelectableItemMixin, QGraphicsPathItem):
         self.stroke_width = calculate_bundle_diameter(self.wire_diameters)
         if self.stroke_width < 0.5:
             self.stroke_width = 0.5
+        self._pin_lookup = pin_lookup
         self._snap_endpoints_to_pins(wire_model)
         self.init_mixin(wire_model, is_ghost=False)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemIsMovable, False)  # Prevent wire from being moved
         self.elbow_grips = []
         self.segment_grips = []
-        # Register for selection change notifications via APIManager
         from api.manager import APIManager
         self._api = APIManager.get_instance()
         self._api.subscribe("selection_changed", self._on_api_selection_changed)
+        self.subscribe("selection_changed", self._on_api_selection_changed)
+        self._api.subscribe("wire_removed", self._on_wire_removed)
+        # If this wire is selected on creation, ensure grips are shown
+        if hasattr(self.model, 'id') and self.model.id in [m.id for m in getattr(self._api.context.selection_manager, 'selected_models', []) if hasattr(m, 'id')]:
+            self._build_path_and_grips()
+        else:
+            self._build_path_and_grips()
+        self.segment_grips = []
+        from api.manager import APIManager
+        self._api = APIManager.get_instance()
+        self._api.subscribe("selection_changed", self._on_api_selection_changed)
+        self.subscribe("selection_changed", self._on_api_selection_changed)
 
-    def __del__(self):
-        # __del__ is unreliable for QGraphicsItems, but keep as fallback
-        self.cleanup()
+        # Subscribe to wire_removed event for model-compliant deletion
+        self._api.subscribe("wire_removed", self._on_wire_removed)
+
+        # If this wire is selected on creation, ensure grips are shown
+        if hasattr(self.model, 'id') and self.model.id in [m.id for m in getattr(self._api.context.selection_manager, 'selected_models', []) if hasattr(m, 'id')]:
+            self._build_path_and_grips()
+
+    def _on_wire_removed(self, wire):
+        # Remove this item from the scene if its model is deleted
+        if hasattr(self, 'model') and hasattr(wire, 'id') and self.model and getattr(self.model, 'id', None) == wire.id:
+            if self.scene():
+                self.scene().removeItem(self)
+            self.cleanup()
+
+    # __del__ removed; rely on scene removal and parent/child destruction
     def itemChange(self, change, value):
         from PySide6.QtWidgets import QGraphicsItem
         from PySide6.QtCore import QTimer
-        import weakref
+        import weakref, datetime
+        # ...removed debug print...
         # Handle selection changes (show/hide grips and update visuals)
         if change == QGraphicsItem.ItemSelectedChange:
             # Use weakref to guard against deleted self in the callback
@@ -70,6 +102,7 @@ class WireItem(SelectableItemMixin, QGraphicsPathItem):
                     try:
                         import sip
                         if sip.isdeleted(obj):
+                            # ...removed debug print...
                             return
                     except ImportError:
                         pass
@@ -78,6 +111,7 @@ class WireItem(SelectableItemMixin, QGraphicsPathItem):
             QTimer.singleShot(0, safe_rebuild)
         # Handle scene removal (unsubscribe from API events)
         if change == QGraphicsItem.ItemSceneChange and value is None:
+            # ...removed debug print...
             self.cleanup()
         # Always call base mixin's itemChange
         return super().itemChange(change, value)
@@ -100,15 +134,15 @@ class WireItem(SelectableItemMixin, QGraphicsPathItem):
         self._build_path_and_grips()
 
     def on_deselected(self):
-        # Remove grips
+        # Remove grips (parented, so Qt will handle deletion)
         for grip in self.elbow_grips + self.segment_grips:
             try:
+                if hasattr(grip, 'cleanup'):
+                    grip.cleanup()
                 grip.setParentItem(None)
-                scene = grip.scene()
-                if scene and grip in scene.items():
-                    scene.removeItem(grip)
             except Exception as e:
-                print(f"[WireItem] Grip removal error: {e}")
+                # ...removed debug print...
+                pass
         self.elbow_grips = []
         self.segment_grips = []
 
@@ -121,19 +155,36 @@ class WireItem(SelectableItemMixin, QGraphicsPathItem):
         self._build_path_and_grips()
 
     def _build_path_and_grips(self, path_nodes_override=None):
-        # Remove old grips safely
+        print(f"[WireItem._build_path_and_grips] Called for wire id={getattr(self.model, 'id', None)} path_nodes={self.path_nodes}")
+        qpath = QPainterPath()
+        if self.path_nodes:
+            qpath.moveTo(self.path_nodes[0][0], self.path_nodes[0][1])
+            for node in self.path_nodes[1:]:
+                qpath.lineTo(node[0], node[1])
+        print(f"[WireItem._build_path_and_grips] QPainterPath: {qpath}")
+        self.setPath(qpath)
+        print(f"[WireItem._build_path_and_grips] setPath called for wire id={getattr(self.model, 'id', None)} path={self.path()}")
+        # Remove old grips from scene and parent
         for grip in self.elbow_grips + self.segment_grips:
             try:
-                grip.setParentItem(None)
-                scene = grip.scene()
-                if scene and grip in scene.items():
+                scene = grip.scene() if hasattr(grip, 'scene') else None
+                if scene is not None:
+                    print(f"[DEBUG] Removing grip {grip} from scene {scene}")
                     scene.removeItem(grip)
+                grip.setParentItem(None)
             except Exception as e:
-                print(f"[WireItem] Grip removal error: {e}")
+                print(f"[DEBUG] Exception removing grip: {e}")
         self.elbow_grips = []
         self.segment_grips = []
-        # Use override if provided, else self.path_nodes
-        nodes = path_nodes_override if path_nodes_override is not None else self.path_nodes
+
+        # Use override if provided, else self.model.path_nodes if available, else self.path_nodes
+        if path_nodes_override is not None:
+            nodes = path_nodes_override
+        elif hasattr(self, 'model') and hasattr(self.model, 'path_nodes'):
+            nodes = self.model.path_nodes
+        else:
+            nodes = self.path_nodes
+
         # Build path
         qpath = QPainterPath()
         if nodes:
@@ -141,45 +192,76 @@ class WireItem(SelectableItemMixin, QGraphicsPathItem):
             for node in nodes[1:]:
                 qpath.lineTo(node[0], node[1])
         self.setPath(qpath)
-        # Only show grips if selected
-        if not self.isSelected():
-            return
+
+        # Always update grips for real-time feedback, but only show them if selected
+        show_grips = self.isSelected()
+
         # Add elbow grips (not endpoints)
+        for grip in self.elbow_grips + self.segment_grips:
+            try:
+                scene = grip.scene() if hasattr(grip, 'scene') else None
+                if scene is not None:
+                    print(f"[DEBUG] Removing grip {grip} from scene {scene}")
+                    scene.removeItem(grip)
+                grip.setParentItem(None)
+                grip.deleteLater()
+            except Exception as e:
+                print(f"[DEBUG] Exception removing grip: {e}")
+        self.elbow_grips = []
+        self.segment_grips = []
+
         for i in range(1, len(nodes)-1):
-            grip = ElbowGripItem(self, i, nodes[i])
-            if self.scene():
-                self.scene().addItem(grip)
+            grip = ElbowGripItem(self, i, nodes[i], parent=None)
             self.elbow_grips.append(grip)
+            if not show_grips:
+                grip.setVisible(False)
+            else:
+                grip.setVisible(True)
+            if self.scene() is not None:
+                if grip.scene() is not None:
+                    print(f"[DEBUG][WARN] Attempt to add grip already in scene: {grip} (scene={grip.scene()})")
+                elif grip in self.scene().items():
+                    print(f"[DEBUG][WARN] Attempt to add grip already present in scene.items(): {grip}")
+                else:
+                    print(f"[DEBUG] Adding elbow grip {grip} to scene {self.scene()}")
+                    self.scene().addItem(grip)
+
         # Add segment grips if at least two elbows
         if len(self.elbow_grips) >= 2:
             for i in range(len(self.elbow_grips)-1):
                 idx_a = self.elbow_grips[i].index
                 idx_b = self.elbow_grips[i+1].index
-                grip = SegmentGripItem(self, idx_a, idx_b, self.path_nodes[idx_a], self.path_nodes[idx_b])
-                grip.setParentItem(self)
+                grip = SegmentGripItem(self, idx_a, idx_b, nodes[idx_a], nodes[idx_b], parent=None)
                 self.segment_grips.append(grip)
+                if not show_grips:
+                    grip.setVisible(False)
+                else:
+                    grip.setVisible(True)
+                if self.scene() is not None:
+                    if grip.scene() is not None:
+                        print(f"[DEBUG][WARN] Attempt to add segment grip already in scene: {grip} (scene={grip.scene()})")
+                    elif grip in self.scene().items():
+                        print(f"[DEBUG][WARN] Attempt to add segment grip already present in scene.items(): {grip}")
+                    else:
+                        print(f"[DEBUG] Adding segment grip {grip} to scene {self.scene()}")
+                        self.scene().addItem(grip)
 
     def update_elbow(self, index, pos):
-        self.path_nodes[index] = pos
-        self._build_path_and_grips()
-        self.update()
+        # Route elbow move through APIManager
+        self._api.move_elbow(self.model, index, pos)
+        # UI will update via observer/event
 
     def delete_elbow(self, index):
-        # Clean up grips before deleting elbow
+        # Route elbow deletion through APIManager
         self.on_deselected()
         if index > 0 and index < len(self.path_nodes)-1:
-            self.path_nodes.pop(index)
-            self._build_path_and_grips()
-            self.update()
+            self._api.remove_elbow(self.model, index)
+        # UI will update via observer/event
 
     def move_segment(self, start_idx, end_idx, dx, dy):
-        # Move both elbows by dx, dy
-        self.path_nodes[start_idx][0] += dx
-        self.path_nodes[start_idx][1] += dy
-        self.path_nodes[end_idx][0] += dx
-        self.path_nodes[end_idx][1] += dy
-        self._build_path_and_grips()
-        self.update()
+        # Route segment move through APIManager
+        self._api.move_segment(self.model, start_idx, end_idx, dx, dy)
+        # UI will update via observer/event
 
     def mouseDoubleClickEvent(self, event):
         # Add elbow at click position (not on grip)
@@ -206,29 +288,33 @@ class WireItem(SelectableItemMixin, QGraphicsPathItem):
                 min_dist = dist
                 insert_idx = i+1
         if insert_idx is not None:
-            from tools.elbow_commands import AddElbowCommand
             new_pos = [pos.x(), pos.y()]
-            cmd = AddElbowCommand(self.model, insert_idx, new_pos)
-            setattr(self.model, 'ui_item', self)
-            from api.manager import APIManager
-            api = APIManager.get_instance()
-            api.context.undo_stack.push(cmd)
+            self._api.add_elbow(self.model, insert_idx, new_pos)
             # Reselect the wire after adding the elbow
             if hasattr(self.model, 'id'):
-                api.select([self.model.id])
+                self._api.select([self.model.id])
         event.accept()
 
     def mousePressEvent(self, event):
         # Only allow context menu on wire if not on grip
-        for grip in self.elbow_grips + self.segment_grips:
-            if grip.contains(grip.mapFromScene(event.scenePos())):
-                event.ignore()
-                return
+        scene_item = self.scene().itemAt(event.scenePos(), self.scene().views()[0].transform())
+        from ui.items.elbow_grip import ElbowGripItem
+        from ui.items.segment_grip import SegmentGripItem
+        if isinstance(scene_item, (ElbowGripItem, SegmentGripItem)):
+            # Let the grip handle the event (do not consume it here)
+            return
         if event.button() == Qt.RightButton:
             # Forward to parent for context menu
             self.scene().views()[0].contextMenuEvent(event)
             event.accept()
         else:
+            # On left click, ensure both QGraphics selection and global selection are in sync
+            if not self.isSelected():
+                # Select in scene (triggers grips, etc.)
+                self.setSelected(True)
+                # Select globally (triggers property panel)
+                if hasattr(self.model, 'id'):
+                    self._api.select([self.model.id])
             super().mousePressEvent(event)
 
     def _snap_endpoints_to_pins(self, wire_model):
@@ -236,22 +322,18 @@ class WireItem(SelectableItemMixin, QGraphicsPathItem):
         Snap the first and last path_nodes to the positions of their associated pins.
         Only elbows/segments are editable.
         """
-        # Find pin positions from wire_model (requires access to device/pin registry)
-        # This is a stub; actual implementation should query the scene for pin positions
         from_pin_pos = self._get_pin_position(wire_model.from_conn, wire_model.from_pin)
         to_pin_pos = self._get_pin_position(wire_model.to_conn, wire_model.to_pin)
+        # Route endpoint snap through APIManager if needed
         if self.path_nodes:
             if from_pin_pos:
-                self.path_nodes[0] = list(from_pin_pos)
+                self._api.move_elbow(self.model, 0, list(from_pin_pos))
             if to_pin_pos:
-                self.path_nodes[-1] = list(to_pin_pos)
+                self._api.move_elbow(self.model, len(self.path_nodes)-1, list(to_pin_pos))
 
     def _get_pin_position(self, device_id, pin_id):
-        """
-        Stub: Should query the scene for the pin's position by device_id and pin_id.
-        """
-        # TODO: Implement actual lookup from scene/device registry
-        # For now, return None to avoid breaking
+        if self._pin_lookup:
+            return self._pin_lookup(device_id, pin_id)
         return None
 
     @property
@@ -267,29 +349,34 @@ class WireItem(SelectableItemMixin, QGraphicsPathItem):
         # 1. Determine Color
         color_hex = getattr(self.model, 'color', None)
         if not color_hex or len(color_hex) < 2:
-             color = self.theme.get_color("bundle_standard")
+            color = self.theme.get_color("bundle_standard")
         else:
-             color = QColor(color_hex)
-            
+            color = QColor(color_hex)
         # 2. Draw Physical Width
         pen = QPen(color, self.stroke_width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
-        pen.setCosmetic(False) 
+        pen.setCosmetic(False)
+        print(f"[WireItem._apply_style] wire id={getattr(self.model, 'id', None)} color={color.name()} width={self.stroke_width}")
         self.setPen(pen)
 
     def shape(self):
-        # Hitbox: Thicker (4mm) for easier clicking
+        # Hitbox: Use only the actual stroke width, so grips get mouse events
         stroker = QPainterPathStroker()
-        stroker.setWidth(max(self.stroke_width, 4.0)) 
+        stroker.setWidth(self.stroke_width)
         return stroker.createStroke(self.path())
 
     def paint(self, painter, option, widget):
         super().paint(painter, option, widget)
         if self.isSelected() and self.path_nodes:
+            # Draw blue dot at each elbow (bend) point (not endpoints), but only if not covered by a grip
             painter.setBrush(QBrush(QColor(0, 200, 255)))
             painter.setPen(Qt.NoPen)
-            radius = 0.5 
-            for pt in self.path_nodes:
-                painter.drawEllipse(QPointF(pt[0], pt[1]), radius, radius)
+            radius = 0.5
+            elbow_indices = set(grip.index for grip in getattr(self, 'elbow_grips', []))
+            for i in range(1, len(self.path_nodes) - 1):
+                # Only draw if not covered by a grip (avoid double dot under grip)
+                if i not in elbow_indices:
+                    pt = self.path_nodes[i]
+                    painter.drawEllipse(QPointF(pt[0], pt[1]), radius, radius)
 
 class TwistedPairItem(QGraphicsItem):
     def __init__(self, path_nodes, gauge_mm=0.65, parent=None):

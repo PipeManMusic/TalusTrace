@@ -15,20 +15,10 @@ class MoveSegmentCommand(BaseCommand):
         self.api = APIManager.get_instance()
 
     def execute(self):
-        self.wire.path_nodes[self.start_idx] = self.new_start[:]
-        self.wire.path_nodes[self.end_idx] = self.new_end[:]
-        if hasattr(self.wire, 'ui_item') and self.wire.ui_item:
-            self.wire.ui_item._build_path_and_grips()
-            self.wire.ui_item.update()
-        self.api.dispatch("model_changed", {"action": "move_segment", "item": self.wire, "indices": (self.start_idx, self.end_idx)})
+        self.api.move_segment(self.wire, self.start_idx, self.end_idx, self.new_start[0] - self.old_start[0], self.new_start[1] - self.old_start[1])
 
     def undo(self):
-        self.wire.path_nodes[self.start_idx] = self.old_start[:]
-        self.wire.path_nodes[self.end_idx] = self.old_end[:]
-        if hasattr(self.wire, 'ui_item') and self.wire.ui_item:
-            self.wire.ui_item._build_path_and_grips()
-            self.wire.ui_item.update()
-        self.api.dispatch("model_changed", {"action": "move_segment", "item": self.wire, "indices": (self.start_idx, self.end_idx)})
+        self.api.move_segment(self.wire, self.start_idx, self.end_idx, self.old_start[0] - self.new_start[0], self.old_start[1] - self.new_start[1])
 
 
 class SegmentMoveTool:
@@ -54,7 +44,6 @@ class SegmentMoveTool:
         return APIManager.get_instance()
 
     def start(self, wire_item, start_idx, end_idx, event=None):
-        print(f"[SegmentMoveTool] start: wire_item={wire_item}, start_idx={start_idx}, end_idx={end_idx}")
         self._wire_item = wire_item
         self._start_idx = start_idx
         self._end_idx = end_idx
@@ -69,7 +58,6 @@ class SegmentMoveTool:
             self.on_mouse_press(event)
 
     def on_mouse_move(self, scene_pos):
-        print(f"[SegmentMoveTool] on_mouse_move: scene_pos={scene_pos}")
         if self._wire_item and self._start_idx is not None and self._end_idx is not None:
             # scene_pos is a CanvasEvent, use its .scene_pos attribute (QPointF)
             x = scene_pos.scene_pos.x()
@@ -93,28 +81,16 @@ class SegmentMoveTool:
             # Robustly check if WireItem is deleted before calling methods
             try:
                 if self._wire_item is not None:
-                    # For PyQt: use sip.isdeleted, for PySide: use wasDeleted if available
-                    deleted = False
-                    try:
-                        import sip
-                        deleted = sip.isdeleted(self._wire_item)
-                    except ImportError:
-                        # PySide6: wasDeleted method
-                        deleted = hasattr(self._wire_item, 'wasDeleted') and self._wire_item.wasDeleted()
+                    # Only check for PySide6's wasDeleted if available
+                    deleted = hasattr(self._wire_item, 'wasDeleted') and self._wire_item.wasDeleted() if hasattr(self._wire_item, 'wasDeleted') else False
                     if not deleted:
                         self._wire_item._build_path_and_grips()
-                    else:
-                        print('[SegmentMoveTool] WireItem already deleted, skipping _build_path_and_grips')
-                else:
-                    print('[SegmentMoveTool] WireItem is None, skipping _build_path_and_grips')
-            except RuntimeError as e:
-                print(f'[SegmentMoveTool] RuntimeError accessing WireItem: {e}')
+            except RuntimeError:
+                pass
             self._wire_item.update()
 
     def on_mouse_release(self, scene_pos):
-        print(f"[SegmentMoveTool] on_mouse_release: scene_pos={scene_pos}")
         if self._wire_item is None:
-            print("[SegmentMoveTool] WARNING: on_mouse_release called with no active wire item.")
             return
         # Use the actual grip position (no snapping), but elbows snap
         x = scene_pos.scene_pos.x()
@@ -129,7 +105,6 @@ class SegmentMoveTool:
         new_end_x, new_end_y = api.snap_to_grid(self._original_end[0] + dx, self._original_end[1] + dy)
         new_start = [new_start_x, new_start_y]
         new_end = [new_end_x, new_end_y]
-        print(f"[SegmentMoveTool] Committing MoveSegmentCommand from {self._original_start, self._original_end} to {new_start, new_end}")
         cmd = MoveSegmentCommand(self._wire_item.model, self._start_idx, self._end_idx, self._original_start, self._original_end, new_start, new_end)
         self._wire_item.model.ui_item = self._wire_item
         api.context.undo_stack.push(cmd)
@@ -148,7 +123,6 @@ class SegmentMoveTool:
         api.tool_manager.set_tool('select')
 
     def cancel(self):
-        print("[SegmentMoveTool] Cancelled move operation.")
         self._wire_item = None
         self._start_idx = None
         self._end_idx = None

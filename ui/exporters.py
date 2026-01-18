@@ -35,7 +35,7 @@ class SVGExporter:
                 f.write(svg_content)
             return True
         except Exception as e:
-            print(f"SVG export failed: {e}")
+            # ...removed debug print...
             return False
 from typing import List, Tuple
 

@@ -39,9 +39,9 @@ def test_marquee_selection_logic():
     
     # Debug info if fails
     if d1 not in hits:
-        print(f"Item Rect: {item.sceneBoundingRect()}")
-        print(f"Query Rect: {enclosing_rect}")
-        print(f"Items Found: {scene.items(enclosing_rect)}")
+        # ...removed debug print...
+        # ...removed debug print...
+        # ...removed debug print...
         
     assert d1 in hits
 

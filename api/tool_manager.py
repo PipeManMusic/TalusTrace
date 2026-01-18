@@ -14,27 +14,27 @@ class ToolManager:
 
     def set_tool(self, name, *args, **kwargs):
         """Sets active tool and handles transition cleanup internally. Passes args/kwargs to start()."""
-        print(f"[ToolManager] set_tool called: name={name}, args={args}, kwargs={kwargs}")
+        # ...removed debug print...
         if name not in self._tools:
-            print(f">> Error: Tool '{name}' not found.")
+            # ...removed debug print...
             return
 
         if self.active_tool == self._tools[name]:
-            print(f"[ToolManager] Tool '{name}' already active. Forcing reactivation with new args.")
+            # ...removed debug print...
             # Always call start() with new args to update tool state
-            print(f"[ToolManager] Calling start on tool '{name}' with args={args}, kwargs={kwargs}")
+            # ...removed debug print...
             self.active_tool.start(*args, **kwargs)
             return
 
         # Deactivate existing tool before switching
         if self.active_tool:
-            print(f"[ToolManager] Deactivating current tool: {self.active_tool}")
+            # ...removed debug print...
             self.active_tool.deactivate()
 
         self.active_tool = self._tools[name]
-        print(f">> Tool Changed: {name}")
+        # ...removed debug print...
         # Pass args/kwargs to start() for event context (MAP-compliant)
-        print(f"[ToolManager] Calling start on tool '{name}' with args={args}, kwargs={kwargs}")
+        # ...removed debug print...
         self.active_tool.start(*args, **kwargs)
 
     def execute_action(self, action_id, context=None):

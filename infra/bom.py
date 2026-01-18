@@ -55,10 +55,10 @@ class BOMGenerator:
                 writer.writerow(["Part Number", "Description", "Qty"])
                 for part, qty in counts.items():
                     writer.writerow([part, "Connector / Device", qty])
-            print(f">> BOM Exported: {file_path}")
+            # ...removed debug print...
             return True
         except Exception as e:
-            print(f">> BOM Export Failed: {e}")
+            # ...removed debug print...
             return False
 
     def generate_wire_list(self, file_path):
@@ -92,8 +92,8 @@ class BOMGenerator:
                         length,
                         wire.color
                     ])
-            print(f">> Wire List Exported: {file_path}")
+            # ...removed debug print...
             return True
         except Exception as e:
-            print(f">> Wire List Export Failed: {e}")
+            # ...removed debug print...
             return False

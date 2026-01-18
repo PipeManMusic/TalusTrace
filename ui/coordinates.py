@@ -37,7 +37,8 @@ class CoordinateTransformer:
                     self.grid_size_mm = float(dims["grid_size_mm"])
                     
         except Exception as e:
-            print(f"Failed to load theme from {path}: {e}")
+            # ...removed debug print...
+            pass
 
     # --- Coordinate Math ---
     def mm_to_px(self, mm):

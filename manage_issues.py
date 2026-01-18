@@ -34,9 +34,9 @@ def update_status(task_id, new_status):
             break
     if updated:
         save_issues(tasks)
-        print(f"SUCCESS: {task_id} -> {new_status.upper()}")
+        # ...removed debug print...
     else:
-        print(f"ERROR: Task {task_id} not found")
+        # ...removed debug print...
 
 def list_tasks_raw(filter_status=None):
     """Clean, pipe-delimited output for AI context parsing."""
@@ -44,7 +44,7 @@ def list_tasks_raw(filter_status=None):
     for t in tasks:
         if filter_status and t.get('status') != filter_status.upper():
             continue
-        print(f"{t['id']}|{t['status']}|{t['task']}")
+        # ...removed debug print...
 
 # --- HUMAN / INTERACTIVE INTERFACE ---
 
@@ -52,10 +52,10 @@ def interactive_menu():
     """Rich UI for human navigation with selection IDs."""
     while True:
         tasks = load_issues()
-        print(f"\n{'#':<4} {'ID':<10} {'PH':<3} {'STATUS':<12} {'TASK'}")
-        print("-" * 75)
+        # ...removed debug print...
+        # ...removed debug print...
         for idx, t in enumerate(tasks, 1):
-            print(f"[{idx:<2}] {t['id']:<10} {t.get('phase','-'):<3} {t['status']:<12} {t['task']}")
+            # ...removed debug print...
         
         choice = input("\nEnter # to Edit, 'q' to Quit: ").strip().lower()
         if choice == 'q': break
@@ -63,9 +63,9 @@ def interactive_menu():
             idx = int(choice) - 1
             if 0 <= idx < len(tasks):
                 task = tasks[idx]
-                print(f"\n--- {task['id']}: {task['task']} ---")
-                print(f"Notes: {task.get('notes')}")
-                print("[1] DONE  [2] IN_PROGRESS  [3] OPEN  [0] CANCEL")
+                # ...removed debug print...
+                # ...removed debug print...
+                # ...removed debug print...
                 s = input("Select Status: ")
                 mapping = {"1": "DONE", "2": "IN_PROGRESS", "3": "OPEN"}
                 if s in mapping:
@@ -89,7 +89,7 @@ def main():
             t_id, status = args.update.split(':')
             update_status(t_id, status)
         except ValueError:
-            print("Usage: --update ID:STATUS")
+            # ...removed debug print...
     else:
         interactive_menu()
 

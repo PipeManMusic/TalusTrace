@@ -19,7 +19,8 @@ class SystemSettings:
                 self.grid_size_mm = float(ws.get("grid_size_mm", 5.0))
                 self.pixels_per_inch = float(ws.get("pixels_per_inch", 96.0))
         except Exception as e:
-            print(f">> Error loading settings: {e}")
+            # ...removed debug print...
+            pass
 
     def snap(self, value_mm):
         """Snaps a millimeter value to the nearest grid line."""

@@ -3,11 +3,13 @@ from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
 from ui.coordinates import THEME_FALLBACK
 from ui.items.base import SelectableItemMixin
+from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 from ui.items.pin import PinItem
 
-class DeviceItem(SelectableItemMixin, QGraphicsRectItem):
+class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRectItem):
     def __init__(self, device, is_ghost=False, parent=None):
         QGraphicsRectItem.__init__(self, parent)
+        self.setZValue(10)  # Devices above wires
         
         # ARCHITECTURE UPDATE: Use MM dimensions directly
         width_mm = device.meta.get("width_mm", 40.0)

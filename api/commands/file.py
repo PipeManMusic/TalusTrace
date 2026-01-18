@@ -31,9 +31,10 @@ def file_save(context):
     api = APIManager.get_instance()
     try:
         api.context.save_as(path)
-        print(f">> Saved to {path}")
+        # ...removed debug print...
     except Exception as e:
-        print(f">> Error saving: {e}")
+        # ...removed debug print...
+        pass
 
 @register_action("file.open")
 def file_open(context):
@@ -44,17 +45,18 @@ def file_open(context):
     try:
         api.context.load(path)
         api.dispatch("model_changed", {"action": "load"})
-        print(f">> Loaded {path}")
+        # ...removed debug print...
     except Exception as e:
-        print(f">> Error opening: {e}")
+        # ...removed debug print...
+        pass
 
 @register_action("file.export_bom")
 def file_export_bom(context):
-    print(">> Export BOM stub")
+    pass
 
 @register_action("file.export_wirelist")
 def file_export_wirelist(context):
-    print(">> Export Wirelist stub")
+    pass
 
 @register_action("file.exit")
 def file_exit(context):

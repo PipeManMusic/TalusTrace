@@ -14,6 +14,9 @@ class AddElbowCommand(BaseCommand):
         if hasattr(self.wire, 'ui_item') and self.wire.ui_item:
             self.wire.ui_item._build_path_and_grips()
             self.wire.ui_item.update()
+            # Ensure grips are visible by reselecting the wire
+            if hasattr(self.wire, 'id'):
+                self.api.select([self.wire.id])
         self.api.dispatch("model_changed", {"action": "add_elbow", "item": self.wire, "index": self.insert_idx})
 
     def undo(self):
@@ -35,13 +38,18 @@ class DeleteElbowCommand(BaseCommand):
     def execute(self):
         self.wire.path_nodes.pop(self.index)
         if hasattr(self.wire, 'ui_item') and self.wire.ui_item:
+            self.wire.ui_item.setSelected(True)  # Ensure grips are rebuilt and visible
             self.wire.ui_item._build_path_and_grips()
             self.wire.ui_item.update()
+            # Ensure grips are visible by reselecting the wire
+            if hasattr(self.wire, 'id'):
+                self.api.select([self.wire.id])
         self.api.dispatch("model_changed", {"action": "remove_elbow", "item": self.wire, "index": self.index})
 
     def undo(self):
         self.wire.path_nodes.insert(self.index, self.old_pos)
         if hasattr(self.wire, 'ui_item') and self.wire.ui_item:
+            self.wire.ui_item.setSelected(True)  # Ensure grips are rebuilt and visible
             self.wire.ui_item._build_path_and_grips()
             self.wire.ui_item.update()
         self.api.dispatch("model_changed", {"action": "add_elbow", "item": self.wire, "index": self.index})

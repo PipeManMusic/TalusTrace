@@ -24,7 +24,7 @@ class LibraryManager:
             target_path = os.path.join(base_dir, self.library_path)
 
         if not os.path.exists(target_path):
-            print(f">> [CORE] WARNING: Library not found at {self.library_path}")
+            # ...removed debug print...
             return
 
         # 2. Parse YAML
@@ -32,9 +32,10 @@ class LibraryManager:
             with open(target_path, 'r') as f:
                 data = yaml.safe_load(f) or {}
                 self._parts_cache = self._normalize_data(data)
-                print(f">> [CORE] Library Loaded: {len(self._parts_cache)} parts.")
+                # ...removed debug print...
         except Exception as e:
-            print(f">> [CORE] ERROR: Failed to load library: {e}")
+            # ...removed debug print...
+            pass
 
     def get_parts(self) -> Dict[str, Any]:
         """Returns the dictionary of parts. {part_id: part_data}"""

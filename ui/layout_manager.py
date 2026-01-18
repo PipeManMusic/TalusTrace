@@ -13,13 +13,13 @@ class LayoutManager:
 
     def _load_yaml(self, path):
         if not os.path.exists(path):
-            print(f">> Warning: Config file not found: {path}")
+            # ...removed debug print...
             return {}
         try:
             with open(path, 'r') as f:
                 return yaml.safe_load(f) or {}
         except Exception as e:
-            print(f">> Error loading {path}: {e}")
+            # ...removed debug print...
             return {}
 
     def _load_actions_map(self, path):

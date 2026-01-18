@@ -4,6 +4,31 @@ from core.library_manager import LibraryManager
 from ui.input_system import InputSystem
 
 class APIManager:
+    def move_segment(self, wire, start_idx, end_idx, new_start, new_end):
+        """Move a wire segment (two points) to new positions via the undo stack."""
+        from tools.segment_move_tool import MoveSegmentCommand
+        # Find old positions for undo (not needed here, command already has them)
+        cmd = MoveSegmentCommand(wire, start_idx, end_idx, wire.path_nodes[start_idx][:], wire.path_nodes[end_idx][:], new_start, new_end)
+        self.context.undo_stack.push(cmd)
+    def add_elbow(self, wire, insert_idx, pos):
+        """Add an elbow to a wire at the given index and position."""
+        from tools.elbow_commands import AddElbowCommand
+        cmd = AddElbowCommand(wire, insert_idx, pos)
+        self.context.undo_stack.push(cmd)
+
+    def remove_elbow(self, wire, index):
+        """Remove an elbow from a wire at the given index."""
+        from tools.elbow_commands import DeleteElbowCommand
+        cmd = DeleteElbowCommand(wire, index)
+        self.context.undo_stack.push(cmd)
+
+    def move_elbow(self, wire, index, new_pos):
+        """Move an elbow to a new position."""
+        from tools.elbow_move_tool import MoveElbowCommand
+        # Find old_pos for undo
+        old_pos = wire.path_nodes[index][:] if 0 <= index < len(wire.path_nodes) else None
+        cmd = MoveElbowCommand(wire, index, old_pos, new_pos)
+        self.context.undo_stack.push(cmd)
     _instance = None
 
     def select(self, ids, tool_name=None):
@@ -18,11 +43,16 @@ class APIManager:
         for wire in getattr(harness, 'wires', []):
             if hasattr(wire, 'id') and wire.id in ids:
                 models.append(wire)
-        print(f"[APIManager.select] ids={ids} -> models={[type(m).__name__ + ':' + str(getattr(m, 'id', None)) for m in models]}")
+        import datetime
+        ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+        # ...removed debug print...
         SelectionManager().set_selection(models)
         self.dispatch("selection_changed", {"selection": models, "tool": tool_name})
 
     def deselect(self, ids, tool_name=None):
+        import datetime
+        ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+        # ...removed debug print...
         """Deselects items by ID, updates SelectionManager, and broadcasts selection_changed."""
         from core.selection import SelectionManager
         mgr = SelectionManager()
@@ -31,6 +61,9 @@ class APIManager:
         self.dispatch("selection_changed", {"selection": models, "tool": tool_name})
 
     def clear_selection(self, tool_name=None):
+        import datetime
+        ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
+        # ...removed debug print...
         """Clears selection, updates SelectionManager, and broadcasts selection_changed."""
         from core.selection import SelectionManager
         SelectionManager().clear_selection()
@@ -88,9 +121,35 @@ class APIManager:
         self.tool_manager.register_tool("elbow_move", ElbowMoveTool())
         self.tool_manager.register_tool("segment_move", SegmentMoveTool())
 
+    # --- Scene Object Registry ---
+    def register_scene_item(self, model_id, item):
+        if not hasattr(self, '_scene_registry'):
+            self._scene_registry = {}
+        self._scene_registry[model_id] = item
+
+    def unregister_scene_item(self, model_id):
+        if hasattr(self, '_scene_registry') and model_id in self._scene_registry:
+            del self._scene_registry[model_id]
+
+    def get_scene_item(self, model_id):
+        if hasattr(self, '_scene_registry'):
+            return self._scene_registry.get(model_id)
+        return None
+
+    def find_pin_item(self, device_id, pin_id):
+        # Look up PinItem by device_id and pin_id
+        if not hasattr(self, '_scene_registry'):
+            return None
+        for item in self._scene_registry.values():
+            # PinItem: has .model with .device_id and .id
+            model = getattr(item, 'model', None)
+            if model and getattr(model, 'device_id', None) == device_id and getattr(model, 'id', None) == pin_id:
+                return item
+        return None
     def subscribe(self, event_type, callback):
         self.context.observer.subscribe(event_type, callback)
 
     def dispatch(self, event_type, data=None):
         if data is None: data = {}
+        print(f"[APIManager.dispatch] Event: {event_type}, Data: {data}")
         self.context.observer.dispatch(event_type, data)

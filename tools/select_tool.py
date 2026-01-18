@@ -39,9 +39,11 @@ class SelectTool(Tool):
             self._restore_selection_later(event.scene)
             return
         if isinstance(item, ElbowGripItem) and not is_multi:
-            self.api.tool_manager.set_tool('elbow_move', item.wire_item, item.index, event)
-            self._restore_selection_later(event.scene)
-            return
+            if event.original_event.button() == Qt.LeftButton:
+                self.api.tool_manager.set_tool('elbow_move', item.wire_item, item.index, event)
+                self._restore_selection_later(event.scene)
+                return
+            # For right-click, let the grip handle it (do not consume event)
         if isinstance(item, SegmentGripItem) and not is_multi:
             self.api.tool_manager.set_tool('segment_move', item.wire_item, item.start_idx, item.end_idx, event)
             self._restore_selection_later(event.scene)

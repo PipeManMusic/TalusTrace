@@ -40,7 +40,8 @@ class UndoStack:
             try:
                 cb(event_type)
             except Exception as e:
-                print(f"UndoStack callback error: {e}")
+                # ...removed debug print...
+                pass
 
     def push(self, command: BaseCommand):
         self.do(command)

@@ -24,24 +24,159 @@ class HarnessCanvas(QGraphicsView):
         super().__init__(parent)
         self.api = APIManager.get_instance()
         self.theme = ThemeManager() 
-        
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
         self._update_view_scale()
-        
         self.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
         self.setMouseTracking(True)
         self.viewport().setMouseTracking(True)
         self.scene.setSceneRect(-50000, -50000, 100000, 100000)
-        
         self._apply_theme()
         self.context_menu_config = self._load_context_menu_config()
-        
+
+        # Model ID to QGraphicsItem mapping for incremental updates
+        self.device_items = {}  # device_id -> DeviceItem
+        self.wire_items = {}    # wire_id -> WireItem
+        self.pin_items = {}     # pin_id -> PinItem
+
+        # Subscribe to fine-grained model events
+        self.api.subscribe("device_added", self.on_device_added)
+        self.api.subscribe("device_removed", self.on_device_removed)
+        self.api.subscribe("device_updated", self.on_device_updated)
+        self.api.subscribe("wire_added", self.on_wire_added)
+        self.api.subscribe("wire_removed", self.on_wire_removed)
+        self.api.subscribe("wire_updated", self.on_wire_updated)
+        self.api.subscribe("pin_added", self.on_pin_added)
+        self.api.subscribe("pin_removed", self.on_pin_removed)
+    def on_pin_added(self, pin):
+        # Find parent device item
+        parent_device_id = getattr(pin, 'device_id', None)
+        parent_item = self.device_items.get(parent_device_id)
+        if parent_item:
+            pin_item = PinItem(pin, parent_item)
+            pin_item.setPos(pin.x, pin.y)
+            self.pin_items[pin.id] = pin_item
+            # No need to add to scene; parented to device
+
+    def on_pin_removed(self, pin):
+        pin_item = self.pin_items.pop(pin.id, None)
+        if pin_item:
+            if pin_item.scene():
+                pin_item.scene().removeItem(pin_item)
+            pin_item.setParentItem(None)
+            if hasattr(pin_item, 'cleanup'):
+                pin_item.cleanup()
+
+    def on_device_updated(self, device):
+        dev_item = self.device_items.get(device.id)
+        if dev_item:
+            # Remove all old PinItems (use API registry)
+            for pin_id in list(self.pin_items.keys()):
+                pin_item = self.pin_items[pin_id]
+                if getattr(pin_item, 'parentItem', lambda: None)() == dev_item:
+                    if pin_item.scene():
+                        pin_item.scene().removeItem(pin_item)
+                    pin_item.setParentItem(None)
+                    if hasattr(pin_item, 'cleanup'):
+                        pin_item.cleanup()
+                    self.api.unregister_scene_item(pin_id)
+                    self.pin_items.pop(pin_id, None)
+            # Re-add pins from device model
+            if hasattr(device, 'pins'):
+                for pin in device.pins:
+                    pin_item = PinItem(pin, dev_item)
+                    pin_item.setPos(pin.x, pin.y)
+                    self.pin_items[pin.id] = pin_item
+                    self.api.register_scene_item(pin.id, pin_item)
+            # Optionally update device visuals here
+            if hasattr(dev_item, 'update_from_model'):
+                dev_item.update_from_model(device)
+
+        # Fallback: full reload on generic model change
         self.api.subscribe("model_changed", self.refresh)
         self.api.subscribe("theme_changed", self._on_theme_changed)
         self.api.subscribe("settings_changed", self._on_settings_changed)
+
+    # --- Event-driven handlers ---
+    def on_device_added(self, device):
+        from ui.items.device import DeviceItem
+        dev_item = DeviceItem(device)
+        self.scene.addItem(dev_item)
+        self.device_items[device.id] = dev_item
+        # Register in API scene registry
+        self.api.register_scene_item(device.id, dev_item)
+
+    def on_device_removed(self, device):
+        dev_item = self.device_items.pop(device.id, None)
+        if dev_item:
+            self.scene.removeItem(dev_item)
+            dev_item.cleanup() if hasattr(dev_item, 'cleanup') else None
+            self.api.unregister_scene_item(device.id)
+    def on_device_updated(self, device):
+        dev_item = self.device_items.get(device.id)
+        if dev_item:
+            dev_item.update_from_model(device) if hasattr(dev_item, 'update_from_model') else None
+
+    def on_wire_added(self, wire):
+        print(f"[HarnessCanvas.on_wire_added] Called for wire: {getattr(wire, 'id', None)}")
+        from ui.items.wire import WireItem, TwistedPairItem
+        api = self.api
+        if not (wire.from_conn and wire.to_conn):
+            print(f"[ERROR] Wire {getattr(wire, 'id', None)} missing endpoints: from_conn={wire.from_conn}, to_conn={wire.to_conn}")
+            return
+        def pin_lookup(device_id, pin_id):
+            pin_item = api.find_pin_item(device_id, pin_id)
+            if pin_item:
+                pos = pin_item.scenePos()
+                return [pos.x(), pos.y()]
+            return None
+        # Ensure path_nodes is valid
+        if not getattr(wire, 'path_nodes', None) or len(wire.path_nodes) < 2:
+            from_pos = pin_lookup(wire.from_conn, wire.from_pin)
+            to_pos = pin_lookup(wire.to_conn, wire.to_pin)
+            if from_pos and to_pos:
+                wire.path_nodes = [from_pos, to_pos]
+                print(f"[INFO] Auto-generated path_nodes for wire {getattr(wire, 'id', None)}: {wire.path_nodes}")
+            else:
+                print(f"[ERROR] Could not determine endpoints for wire {getattr(wire, 'id', None)}; not adding to scene.")
+                return
+        item = TwistedPairItem(wire.path_nodes, getattr(wire, 'diameter_mm', 1.0)) if getattr(wire, 'type', 'STANDARD') == 'TWISTED_PAIR' else WireItem(wire, pin_lookup=pin_lookup)
+        if item:
+            self.scene.addItem(item)
+            self.wire_items[wire.id] = item
+            # Register in API scene registry
+            self.api.register_scene_item(wire.id, item)
+            if hasattr(item, 'update_endpoints'):
+                item.update_endpoints()
+            # Subscribe to model update events for this wire
+            def wire_update_handler(updated_wire):
+                if hasattr(item, 'update_from_model'):
+                    item.update_from_model(updated_wire)
+                elif hasattr(item, 'update_endpoints'):
+                    item.update_endpoints()
+                if hasattr(item, 'update'):
+                    item.update()
+            # Use a unique handler per wire to avoid cross-updates
+            handler_name = f"_wire_update_handler_{wire.id}"
+            setattr(self, handler_name, wire_update_handler)
+            self.api.subscribe("wire_updated", getattr(self, handler_name))
+
+    def on_wire_removed(self, wire):
+        item = self.wire_items.pop(wire.id, None)
+        if item:
+            self.scene.removeItem(item)
+            item.cleanup() if hasattr(item, 'cleanup') else None
+
+    def on_wire_updated(self, wire):
+        item = self.wire_items.get(wire.id)
+        if item and hasattr(item, 'update_from_model'):
+            item.update_from_model(wire)
+        elif item and hasattr(item, 'update_endpoints'):
+            item.update_endpoints()
+
+    # TODO: Add similar handlers for pins, etc.
 
     # ... (Load methods remain the same) ...
     def _load_context_menu_config(self):

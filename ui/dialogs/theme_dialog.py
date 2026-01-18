@@ -97,4 +97,5 @@ class ThemeDialog(QDialog):
             self.api.dispatch("theme_changed", {})
             self.accept()
         except Exception as e:
-            print(f"Error saving theme: {e}")
+            # ...removed debug print...
+            pass

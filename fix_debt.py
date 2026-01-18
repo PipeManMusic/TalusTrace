@@ -52,12 +52,12 @@ def patch_file(path):
         )
 
     if content != original:
-        print(f"Fixed: {path}")
+        # ...removed debug print...
         with open(path, 'w') as f:
             f.write(content)
 
 # Walk directory
-print("Starting Phase 6 Debt Cleanup...")
+# ...removed debug print...
 for root, dirs, files in os.walk("."):
     if "venv" in root or ".git" in root:
         continue
@@ -65,4 +65,4 @@ for root, dirs, files in os.walk("."):
         if file.endswith(".py"):
             patch_file(os.path.join(root, file))
             
-print("Cleanup Complete.")
+# ...removed debug print...

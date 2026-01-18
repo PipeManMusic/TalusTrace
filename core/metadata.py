@@ -19,17 +19,17 @@ class MetadataManager:
 
     def _load_schemas(self) -> Dict[str, Any]:
         if not os.path.exists(self.config_path):
-            print(f">> WARNING: Metadata spec NOT FOUND at {self.config_path}")
+            # ...removed debug print...
             return {}
         
         try:
             with open(self.config_path, 'r') as f:
                 data = yaml.safe_load(f)
                 schemas = data.get("schemas", {})
-                print(f">> SUCCESS: Loaded {len(schemas)} device schemas from YAML.")
+                # ...removed debug print...
                 return schemas
         except Exception as e:
-            print(f">> ERROR: Failed to load metadata schemas: {e}")
+            # ...removed debug print...
             return {}
 
     def get_default_metadata(self, device_type: str) -> Dict[str, Any]:
