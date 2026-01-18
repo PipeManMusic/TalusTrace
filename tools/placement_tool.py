@@ -1,103 +1,88 @@
 import uuid
-from PySide6.QtCore import Qt
-from ui.items import DeviceItem
+from PySide6.QtCore import Qt, QPointF
+from tools.base_tool import BaseTool
 from core.device import Device
-from tools.base_tool import Tool
 from core.metadata import MetadataManager
 
-class PlacementTool(Tool):
-    def __init__(self, canvas=None):
+# Strict Headless Controller implementation ONLY
+class PlacementTool(BaseTool):
+    __guide__ = {
+        "name": "Placement Tool",
+        "description": "Place devices on the canvas.",
+        "shortcuts": {}
+    }
+
+    def __init__(self):
         super().__init__()
-        self.canvas = canvas
-        self.ghost_item = None
         self.active_type = "generic"
-    __guide__ = "PlacementTool: Handles device placement and drag logic."
+        self.ghost_item = None
+        self.current_pos = QPointF(0, 0)
 
     @property
-    def api(self):
-        from api.manager import APIManager
-        return APIManager.get_instance()
+    def scene(self):
+        """Robust scene access for Headless/UI modes."""
+        if hasattr(self.api, 'scene') and self.api.scene:
+            return self.api.scene
+        if hasattr(self.api, 'main_window') and self.api.main_window:
+            return self.api.main_window.canvas.scene
+        return None
 
-    def start(self):
-        if not self.canvas:
-            if hasattr(self.api, 'main_window'):
-                self.canvas = self.api.main_window.canvas
-
-        if not self.canvas: return
-
-        self.canvas.setFocus()
-        self.canvas.viewport().setMouseTracking(True)
-
-        # Initialize Ghost at (0,0) - logic will update position on first move
-        meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
-        ghost_model = Device(id="GHOST", x=0, y=0, meta=meta_defaults)
-
-        self.ghost_item = DeviceItem(ghost_model, is_ghost=True)
-        self.ghost_item.setZValue(2000)
-        self.canvas.scene.addItem(self.ghost_item)
+    def start(self, *args, **kwargs):
+        """Called when tool is activated."""
+        if self.scene:
+            # Create Ghost Item (View Logic)
+            from ui.items.device import DeviceItem
+            meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
+            ghost_model = Device(id="GHOST", x=0, y=0, meta=meta_defaults)
+            self.ghost_item = DeviceItem(ghost_model, is_ghost=True)
+            self.ghost_item.setZValue(2000)
+            self.scene.addItem(self.ghost_item)
+            if hasattr(self.api, 'main_window') and self.api.main_window:
+                self.api.main_window.canvas.setFocus()
 
     def on_mouse_move(self, event):
-        if not self.ghost_item: return
-        try:
-            # 1. Get Raw Position from Scene (already in MM)
-            raw_x = event.scene_pos.x()
-            raw_y = event.scene_pos.y()
-            
-            # 2. Ask API to apply Constraints (Snap to Grid)
-            # This works regardless of what the grid size currently is
-            x = self.api.settings.snap(raw_x)
-            y = self.api.settings.snap(raw_y)
-            
-            self.ghost_item.setPos(x, y)
-        except:
-            self.ghost_item = None
-
-    def on_mouse_press(self, event):
-        if event.original_event.button() != Qt.LeftButton: return
-
-        # 1. Get Snap Coordinates
-        raw_x = event.scene_pos.x()
-        raw_y = event.scene_pos.y()
-        
-        x = self.api.settings.snap(raw_x)
-        y = self.api.settings.snap(raw_y)
-        
-        from api.commands.device import AddDeviceCommand
-        
-        dev_id = f"DEV_{str(uuid.uuid4())[:8]}"
-        meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
-        
-        # Model stores MM directly
-        new_device = Device(id=dev_id, x=x, y=y, meta=meta_defaults)
-        
-        cmd = AddDeviceCommand(new_device)
-        self.api.context.undo_stack.push(cmd)
-
-        # Select the new device in the core and update PropertyPanel
-        from core.selection import SelectionManager
-        SelectionManager().set_selection([new_device])
-        self.api.dispatch("selection_changed", {"selection": [new_device], "tool": "PlacementTool"})
-
-        # Also set Qt selection on the corresponding DeviceItem in the scene
-        if self.canvas and self.canvas.scene:
-            for item in self.canvas.scene.items():
-                # DeviceItem has .model pointing to the device model
-                if hasattr(item, 'model') and item.model is new_device:
-                    if hasattr(item, 'setSelected'):
-                        item.setSelected(True)
-                        break
-
-        self.api.tool_manager.set_tool("select")
-
-    def on_mouse_release(self, event): pass
-
-    def deactivate(self):
+        # 1. Get Position
+        pos = getattr(event, 'scene_pos', None) or (event.pos() if hasattr(event, 'pos') else QPointF(0,0))
+        # 2. Logic: Snap to Grid (Model Logic)
+        if hasattr(self.api, 'settings'):
+            x = self.api.settings.snap(pos.x())
+            y = self.api.settings.snap(pos.y())
+        else:
+            x, y = pos.x(), pos.y()
+        self.current_pos = QPointF(x, y)
+        # 3. View Update: Move Ghost
         if self.ghost_item:
             try:
-                if self.canvas and self.canvas.scene:
-                    self.canvas.scene.removeItem(self.ghost_item)
-            except: pass
+                self.ghost_item.setPos(x, y)
+            except RuntimeError:
+                self.ghost_item = None
+
+    def on_mouse_press(self, event):
+        # Button check (Headless safety)
+        btn = getattr(event, 'button', None)
+        if hasattr(event, 'original_event'):
+            btn = event.original_event.button()
+        if btn is not None and btn != Qt.LeftButton:
+            return
+        # 1. Commit to Model
+        from api.commands.device import AddDeviceCommand
+        dev_id = f"DEV_{str(uuid.uuid4())[:8]}"
+        meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
+        # Use stored current_pos which is already snapped
+        new_device = Device(id=dev_id, x=self.current_pos.x(), y=self.current_pos.y(), meta=meta_defaults)
+        cmd = AddDeviceCommand(new_device)
+        if hasattr(self.api.context, 'undo_stack'):
+            self.api.context.undo_stack.push(cmd)
+        # 2. Reset / Switch Tool
+        if hasattr(self.api.tool_manager, 'set_tool'):
+            self.api.tool_manager.set_tool("select")
+
+    def deactivate(self):
+        # Cleanup View
+        if self.ghost_item:
+            try:
+                if self.scene:
+                    self.scene.removeItem(self.ghost_item)
+            except RuntimeError:
+                pass
             self.ghost_item = None
-        if self.canvas:
-            self.canvas.setMouseTracking(True)
-            self.canvas.scene.update()
