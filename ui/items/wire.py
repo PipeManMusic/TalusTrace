@@ -3,8 +3,8 @@ def generate_helix_points(path_nodes, pitch=10.0, amplitude=1.5, num_points=200)
     return [path_nodes for _ in range(2)]
 
 from PySide6.QtWidgets import QGraphicsPathItem, QGraphicsItem
-from PySide6.QtGui import QPen, QColor, QPainterPath, QPainterPathStroker
-from PySide6.QtCore import Qt
+from PySide6.QtGui import QPen, QColor, QPainterPath, QPainterPathStroker, QBrush
+from PySide6.QtCore import Qt, QPointF
 from ui.theme import ThemeManager
 from ui.items.base import SelectableItemMixin
 from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
@@ -22,6 +22,10 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         self.setZValue(0)
         self._model = wire_model
         self.pin_lookup = pin_lookup
+        
+        # New flag for compliance
+        self.is_violation = False
+        
         self.update_from_model(wire_model)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemIsMovable, False)
@@ -46,13 +50,25 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         self.setPath(qpath)
         self._apply_style()
 
+    def update_compliance_visuals(self, is_violation=True):
+        """Called by Audit System to highlight violations."""
+        self.is_violation = is_violation
+        self._apply_style()
+
     def _apply_style(self):
-        color_hex = getattr(self.model, 'color', None)
-        color = QColor(color_hex) if color_hex else self.theme.get_color("bundle_standard")
+        # 1. Determine Color
+        if self.is_violation:
+            color = self.theme.get_color("bundle_violation")
+        else:
+            color_hex = getattr(self.model, 'color', None)
+            color = QColor(color_hex) if color_hex else self.theme.get_color("bundle_standard")
+            
+        # 2. Determine Width
         gauge_mm = getattr(self.model, 'gauge', 1.0)
         stroke_width = calculate_bundle_diameter([gauge_mm]) if gauge_mm else 1.0
         if stroke_width < 0.5:
             stroke_width = 0.5
+            
         pen = QPen(color, stroke_width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
         pen.setCosmetic(False)
         self.setPen(pen)

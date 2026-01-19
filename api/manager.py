@@ -179,11 +179,30 @@ class APIManager:
             if model and getattr(model, 'device_id', None) == device_id and getattr(model, 'id', None) == pin_id:
                 return item
         return None
-    def subscribe(self, callback, event_type="state_changed"):
+    def subscribe(self, arg1, arg2=None):
         """
-        Subscribe to state changes or a specific event. For test compatibility, allow callback as first arg.
+        Subscribe to events. Handles flexible signatures:
+        1. subscribe(event_type: str, callback: callable) -> Standard
+        2. subscribe(callback: callable) -> defaults to "state_changed"
         """
-        self.context.observer.subscribe(event_type, callback)
+        event_type = "state_changed"
+        callback = None
+
+        if isinstance(arg1, str):
+            # Case 1: subscribe("event_name", callback)
+            event_type = arg1
+            callback = arg2
+        elif callable(arg1):
+            # Case 2: subscribe(callback, [event_type]) - Legacy/Test compat
+            callback = arg1
+            if arg2 is not None:
+                event_type = arg2
+        else:
+            # Fallback (mostly for robustness)
+            callback = arg1
+            
+        if callback:
+            self.context.observer.subscribe(event_type, callback)
 
     def dispatch(self, event_type, data=None):
         if data is None:
