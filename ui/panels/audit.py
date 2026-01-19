@@ -5,8 +5,10 @@ class AuditPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.layout = QVBoxLayout(self)
+        from ui.i18n import I18N
         self.list = QListWidget()
         self.layout.addWidget(self.list)
+        # Optionally set header if needed
 
     def add_violation(self, violation):
         """Adds a violation to the list (used by Controller)."""

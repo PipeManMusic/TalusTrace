@@ -5,7 +5,8 @@ class PinMappingDialog(QDialog):
     DialogCode = QDialog.DialogCode
     def __init__(self, wire_id, connector_id, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(f"Map Wire {wire_id} to Connector {connector_id}")
+        from ui.i18n import I18N
+        self.setWindowTitle(I18N.get('pin_mapping_dialog_title', wire_id=wire_id, connector_id=connector_id))
         self.selected_pin = None
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel(f"Select pin for wire {wire_id} on connector {connector_id}:"))

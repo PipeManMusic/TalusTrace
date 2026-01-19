@@ -3,15 +3,16 @@ from PySide6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QPushButton, QLab
 class DeviceWizard(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Device Wizard")
+        from ui.i18n import I18N
+        self.setWindowTitle(I18N.get('device_wizard_title'))
         layout = QVBoxLayout(self)
 
-        self.name_label = QLabel("Device Name:")
+        self.name_label = QLabel(I18N.get('device_name_label'))
         layout.addWidget(self.name_label)
         self.name_input = QLineEdit()
         layout.addWidget(self.name_input)
 
-        self.accept_button = QPushButton("Create")
+        self.accept_button = QPushButton(I18N.get('create_button'))
         self.accept_button.setEnabled(False)
         layout.addWidget(self.accept_button)
 

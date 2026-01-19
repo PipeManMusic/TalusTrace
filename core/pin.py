@@ -13,11 +13,10 @@ class Pin(BaseModel):
     device_id: Optional[str] = None
     signal: Optional[str] = None  # Added for properties panel compatibility
 
-    @root_validator(pre=True)
-    def set_label_default(cls, values):
-        if values.get('label') is None:
-            values['label'] = values.get('id')
-        return values
+    def __init__(self, **data):
+        if data.get('label') is None:
+            data['label'] = data.get('id')
+        super().__init__(**data)
     x: float = 0.0
     y: float = 0.0
     device_id: Optional[str] = None

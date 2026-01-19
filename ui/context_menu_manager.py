@@ -19,7 +19,8 @@ class ContextMenuManager:
             elif 'command' in entry:
                 cmd_id = entry['command']
                 meta = self.actions_map.get(cmd_id, {})
-                label = meta.get('label', cmd_id.split('.')[-1].replace('_', ' ').title())
+                from ui.i18n import I18N
+                label = I18N.get(cmd_id, meta.get('label', cmd_id.split('.')[-1].replace('_', ' ').title()))
                 action = QAction(label, menu)
                 action.setData(cmd_id)
                 if 'tooltip' in meta:

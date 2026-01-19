@@ -13,7 +13,7 @@ def test_zoom_extents(qtbot):
     canvas = HarnessCanvas()
     qtbot.add_widget(canvas)
     canvas.show()
-    qtbot.waitForWindowShown(canvas)
+    qtbot.waitExposed(canvas)
     
     # Add items far apart
     harness = Harness()

@@ -11,6 +11,7 @@ def test_move_tool_realtime_model_sync(qtbot):
     api.context.undo_stack = UndoStack()
     
     dev = Device(id="SYNC_DEV", x=0, y=0)
+    api.context.harness.devices.append(dev)
     item = DeviceItem(dev)
 
     tool = MoveTool()

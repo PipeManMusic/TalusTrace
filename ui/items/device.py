@@ -13,28 +13,46 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
     }
     def __init__(self, device, is_ghost=False, parent=None):
         QGraphicsRectItem.__init__(self, parent)
+        ObservableGraphicsItemMixin.__init__(self)
         self.setZValue(10)  # Devices above wires
-        
+
         # ARCHITECTURE UPDATE: Use MM dimensions directly
         width_mm = device.meta.get("width_mm", 40.0)
         height_mm = device.meta.get("height_mm", 30.0)
-        
+
         self.setRect(0, 0, width_mm, height_mm)
         self.setTransformOriginPoint(width_mm / 2, height_mm / 2)
-        
+
         # No conversion needed. Model x/y is MM. Scene is MM.
         self.setPos(device.x, device.y)
-        
+
         rotation = getattr(device, 'rotation', 0.0)
         self.setRotation(rotation)
-        
+
         self.init_mixin(device, is_ghost)
-        
+
         if not self.is_ghost and hasattr(device, 'pins'):
             for pin in device.pins:
                 pin_item = PinItem(pin, self)
                 # Pin positions in model are relative MM. Use directly.
                 pin_item.setPos(pin.x, pin.y)
+
+        # Subscribe to model_changed events for this device
+        from api.manager import APIManager
+        self._api = APIManager.get_instance()
+        self._api.subscribe(self._on_model_changed)
+
+        # Debug output for hit test diagnosis
+        print(f'[DeviceItem] Created: id={getattr(device, "id", None)}, scenePos={self.scenePos()}, pos={self.pos()}, rect={self.rect()}, boundingRect={self.boundingRect()}')
+
+    def _on_model_changed(self, data):
+        # Only update if this device moved
+        if not data or 'item' not in data:
+            return
+        item = data['item']
+        if hasattr(item, 'id') and hasattr(self.model, 'id') and item.id == self.model.id:
+            # Update position to match model
+            self.setPos(self.model.x, self.model.y)
 
     @property
     def device(self):

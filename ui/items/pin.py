@@ -10,11 +10,12 @@ class PinItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
         'expected_child_count': 0
     }
     def __init__(self, pin_model, parent=None):
-        super().__init__(-0.5, -0.5, 1.0, 1.0, parent)
+        QGraphicsEllipseItem.__init__(self, -0.5, -0.5, 1.0, 1.0, parent)
+        ObservableGraphicsItemMixin.__init__(self)
         self.setZValue(20)  # Pins above devices and wires
         self.pin = pin_model
         self.theme = ThemeManager()
-        
+
         color = self.theme.get_color("pin_fill")
         self.setBrush(QBrush(color))
         self.setPen(Qt.NoPen)

@@ -30,7 +30,8 @@ class ColorButton(QPushButton):
 class ThemeDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Theme Editor")
+        from ui.i18n import I18N
+        self.setWindowTitle(I18N.get('theme_dialog_title'))
         self.resize(450, 500)
         self.api = APIManager.get_instance()
         

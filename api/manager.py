@@ -4,6 +4,31 @@ from core.library_manager import LibraryManager
 from ui.input_system import InputSystem
 
 class APIManager:
+    def move_device(self, device_id, new_x, new_y):
+        """Move a device by id, push MoveDeviceCommand, and dispatch model_changed."""
+        device = None
+        for dev in getattr(self.context.harness, 'devices', []):
+            if hasattr(dev, 'id') and dev.id == device_id:
+                device = dev
+                break
+        if device is None:
+            print(f"[APIManager.move_device] Device {device_id} not found.")
+            return
+        from api.commands.move import MoveDeviceCommand
+        old_x, old_y = device.x, device.y
+        cmd = MoveDeviceCommand(device, old_x, old_y, new_x, new_y)
+        if hasattr(self.context, 'undo_stack'):
+            self.context.undo_stack.push(cmd)
+        else:
+            cmd.execute()
+    def open_context_menu(self, event):
+        """Opens the context menu via the main window's canvas if available."""
+        if hasattr(self, 'main_window') and hasattr(self.main_window, 'canvas'):
+            self.main_window.canvas.contextMenuEvent(event)
+
+    def deselect_all(self):
+        """Clears all selection for SelectTool compatibility."""
+        self.clear_selection()
     def add_wire(self, pin1, pin2):
         """Headless/test-compatible wire creation: create a Wire and push a mock command to the undo stack."""
         from core.wire import Wire

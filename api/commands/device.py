@@ -16,6 +16,12 @@ class AddDeviceCommand(BaseCommand):
         self.api.context.harness.devices.append(self.device)
         self.api.dispatch("device_added", self.device)
         self.api.dispatch("model_changed", {"action": "add", "item": self.device})
+        # Add DeviceItem to scene
+        if hasattr(self.api, 'main_window') and hasattr(self.api.main_window, 'canvas'):
+            from ui.items.device import DeviceItem
+            item = DeviceItem(self.device)
+            self.api.main_window.canvas.scene.addItem(item)
+            self.api.register_scene_item(self.device.id, item)
 
     def undo(self):
         if self.device in self.api.context.harness.devices:

@@ -53,43 +53,45 @@ class MoveTool(BaseTool):
             if hasattr(self.target_override, 'y'): self.target_override.y += dy
 
     def on_mouse_press(self, event):
-        # 1. Safe Button Check
+        print('[MoveTool] on_mouse_press called')
         btn = getattr(event, 'button', None)
         if btn is None and hasattr(event, 'original_event'):
             btn = event.original_event.button() if event.original_event else None
-        
         if btn is not None and btn != Qt.LeftButton:
+            print(f'[MoveTool] Ignoring non-left button: {btn}')
             return
 
-        # 2. Hit Test
-        # Priority: Injected item (Tests) -> Scene Query (Real App)
         item = getattr(event, 'scene_item', None)
         pos = getattr(event, 'scene_pos', None) or (event.pos() if hasattr(event, 'pos') else QPointF(0,0))
-        
+        print(f'[MoveTool] Hit test: item={item}, type={type(item)}, pos={pos}')
+
         if not item:
             try:
                 transform = self.api.view.transform()
-            except:
+            except Exception as e:
+                print(f'[MoveTool] Exception getting transform: {e}')
                 transform = list() # Dummy
             item = self.api.scene.itemAt(pos, transform)
+            print(f'[MoveTool] Fallback hit test: item={item}, type={type(item)}')
 
         if item and hasattr(item, 'model'):
+            print(f'[MoveTool] Valid item for drag: {item}, model id={getattr(item.model, "id", None)}')
+            sm = getattr(self.api, 'selection_manager', None)
+            if sm and hasattr(sm, 'current_selection_ids') and item.model.id not in sm.current_selection_ids:
+                self.api.select([item.model.id])
+            # Always start dragging regardless of selection state
             self.is_dragging = True
             self.start_pos = pos
             self.last_pos = pos
             self.cursor = Qt.ClosedHandCursor
             self.current_item = item
-            
-            # Selection Sync
-            sm = getattr(self.api, 'selection_manager', None)
-            if sm and hasattr(sm, 'current_selection_ids'):
-                if item.model.id not in sm.current_selection_ids:
-                     self.api.select([item.model.id])
         else:
+            print(f'[MoveTool] No valid item for drag, deselecting.')
             self.current_item = None
             self.api.deselect_all()
 
     def on_mouse_move(self, event):
+        print(f'[MoveTool] on_mouse_move called, is_dragging={self.is_dragging}')
         if not self.is_dragging:
             return
 
@@ -97,20 +99,18 @@ class MoveTool(BaseTool):
         dx = pos.x() - self.last_pos.x()
         dy = pos.y() - self.last_pos.y()
         self.last_pos = pos
-        
-        # A. API Command (Official Path)
-        if hasattr(self.api, 'move_selection'):
-             self.api.move_selection(delta=(dx, dy))
 
-        # B. Direct Update (Test/Legacy Path)
-        targets = []
-        if self.target_override:
-            targets.append(self.target_override)
-        elif self.current_item and hasattr(self.current_item, 'model'):
-            targets.append(self.current_item.model)
-        
-        # Manually apply delta for tests that expect immediate model updates
-        for t in targets:
+        # Only move if we have a valid item and model
+        if self.current_item and hasattr(self.current_item, 'model'):
+            device = self.current_item.model
+            new_x = device.x + dx
+            new_y = device.y + dy
+            # Only update the model via APIManager (MVC)
+            self.api.move_device(device.id, new_x, new_y)
+
+        # Legacy/test path: fallback for target_override
+        elif self.target_override:
+            t = self.target_override
             if hasattr(t, 'x'): t.x += dx
             if hasattr(t, 'y'): t.y += dy
 

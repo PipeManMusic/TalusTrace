@@ -1,3 +1,9 @@
+def dispatch_action(action_id, context=None):
+    """
+    Dispatches an action by ID using the global registry.
+    """
+    print(f"dispatch_action called for: {action_id}")
+    registry.execute(action_id, context)
 import logging
 from typing import Callable, Dict, Optional, List
 from PySide6.QtGui import QAction, QKeySequence

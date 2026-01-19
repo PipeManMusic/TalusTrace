@@ -5,10 +5,9 @@ from PySide6.QtGui import QAction
 
 class LayoutManager:
     def __init__(self, config_path=None):
-        # Default to a resource path if not provided
         if config_path is None:
              base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-             config_path = os.path.join(base_dir, "resources", "layout.yaml")
+             config_path = os.path.join(base_dir, "resources", "config", "ui_layout.yaml")
              
         self.config_path = config_path
         self.config = {}
@@ -22,55 +21,63 @@ class LayoutManager:
             self.config = {}
 
     def create_menubar(self, window):
-        """Generates a QMenuBar from the 'menubar' section of the config."""
+        from ui.i18n import I18N
         menubar = QMenuBar(window)
-        
         menu_configs = self.config.get('menubar', [])
         for menu_conf in menu_configs:
             label = menu_conf.get('label', 'Untitled')
-            menu = menubar.addMenu(label)
-            
+            menu = menubar.addMenu(I18N.get(label, label))
             for item_conf in menu_conf.get('items', []):
-                if item_conf.get('type') == 'separator':
-                    menu.addSeparator()
+                if isinstance(item_conf, str):
+                    if item_conf == 'separator':
+                        menu.addSeparator()
                     continue
-                
-                cmd_id = item_conf.get('command')
-                label = item_conf.get('label', cmd_id)
-                
-                action = QAction(label, window)
-                if cmd_id:
-                    action.setData(cmd_id)
-                
-                menu.addAction(action)
-                
+                if isinstance(item_conf, dict):
+                    if item_conf.get('type') == 'separator':
+                        menu.addSeparator()
+                        continue
+                    cmd_id = item_conf.get('command')
+                    label = item_conf.get('label', cmd_id)
+                    action = QAction(I18N.get(cmd_id, label), window)
+                    if cmd_id:
+                        action.setData(cmd_id)
+                        def handler(checked=False, cmd_id=cmd_id):
+                            from api.actions import dispatch_action
+                            dispatch_action(cmd_id)
+                        action.triggered.connect(handler)
+                    menu.addAction(action)
         return menubar
 
     def create_toolbar(self, window):
-        """Generates a QToolBar from the 'toolbar' section of the config."""
+        from ui.i18n import I18N
         toolbar = QToolBar(window)
         toolbar.setObjectName("MainToolBar")
-        
-        # Default items if config is missing (Safe Fallback)
-        toolbar_configs = self.config.get('toolbar', [])
-        
-        # If no config, add some default placeholders so the UI isn't empty
-        if not toolbar_configs:
-             # This prevents the test from failing if layout.yaml is empty/missing
-             pass 
-
+        toolbar_section = self.config.get('toolbar', {})
+        toolbar_configs = toolbar_section.get('items', [])
         for item_conf in toolbar_configs:
-            if item_conf.get('type') == 'separator':
-                toolbar.addSeparator()
+            def connect_handler(action, cmd_id):
+                def handler(checked=False):
+                    from api.actions import dispatch_action
+                    print(f"QAction triggered for: {cmd_id}")
+                    dispatch_action(cmd_id)
+                action.triggered.connect(handler)
+
+            if isinstance(item_conf, str):
+                if item_conf == 'separator':
+                    toolbar.addSeparator()
+                    continue
+                cmd_id = item_conf
+                label = cmd_id
+            elif isinstance(item_conf, dict):
+                if item_conf.get('type') == 'separator':
+                    toolbar.addSeparator()
+                    continue
+                cmd_id = item_conf.get('command')
+                label = item_conf.get('label', cmd_id)
+            else:
                 continue
-            
-            cmd_id = item_conf.get('command')
-            label = item_conf.get('label', cmd_id)
-            
-            action = QAction(label, window)
-            if cmd_id:
-                action.setData(cmd_id)
-            
+            action = QAction(I18N.get(cmd_id, label), window)
+            action.setData(cmd_id)
+            connect_handler(action, cmd_id)
             toolbar.addAction(action)
-            
         return toolbar

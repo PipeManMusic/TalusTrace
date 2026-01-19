@@ -1,10 +1,10 @@
 colors:
-  canvas_bg: "#23272e"
-  grid_color: "#3a3f4b"
-  device_body: "#4e5d6c"
-  device_outline: "#bfc9d1"
-  pin_fill: "#e0e0e0"
-  bundle_standard: "#8ecae6"
-  bundle_violation: "#ffb703"
-  wire_a: "#0000FF"
-  wire_b: "#FFA500"
+  bundle_standard: '#8ecae6'
+  bundle_violation: '#ffb703'
+  canvas_bg: '#23272e'
+  device_body: '#4e5d6c'
+  device_outline: '#bfc9d1'
+  grid_color: '#3a3f4b'
+  pin_fill: '#e0e0e0'
+  wire_a: '#0000FF'
+  wire_b: '#FFA500'

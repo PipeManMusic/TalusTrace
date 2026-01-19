@@ -4,6 +4,8 @@ from tools.base_tool import BaseTool
 from ui.items.wire import WireItem
 
 class SelectTool(BaseTool):
+    def start(self, *args, **kwargs):
+        pass
     def add_bend_point(self, wire_id, location):
         # Minimal stub for test compatibility
         harness = getattr(self, '_get_harness', lambda: None)()

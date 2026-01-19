@@ -22,8 +22,9 @@ class LibraryPanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0,0,0,0)
         
+        from ui.i18n import I18N
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabel("Component Library")
+        self.tree.setHeaderLabel(I18N.get('library_panel_header'))
         self.tree.header().setVisible(False)
         self.tree.setDragEnabled(True) # Allow dragging parts
         layout.addWidget(self.tree)

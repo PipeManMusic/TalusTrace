@@ -64,11 +64,19 @@ class PlacementTool(BaseTool):
             btn = event.original_event.button()
         if btn is not None and btn != Qt.LeftButton:
             return
+        # Set current_pos from event if not already set
+        pos = getattr(event, 'scene_pos', None) or (event.pos() if hasattr(event, 'pos') else None)
+        if pos is not None:
+            if hasattr(self.api, 'settings'):
+                x = self.api.settings.snap(pos.x())
+                y = self.api.settings.snap(pos.y())
+            else:
+                x, y = pos.x(), pos.y()
+            self.current_pos = QPointF(x, y)
         # 1. Commit to Model
         from api.commands.device import AddDeviceCommand
         dev_id = f"DEV_{str(uuid.uuid4())[:8]}"
         meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
-        # Use stored current_pos which is already snapped
         new_device = Device(id=dev_id, x=self.current_pos.x(), y=self.current_pos.y(), meta=meta_defaults)
         cmd = AddDeviceCommand(new_device)
         if hasattr(self.api.context, 'undo_stack'):

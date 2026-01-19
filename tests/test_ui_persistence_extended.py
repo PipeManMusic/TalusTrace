@@ -12,7 +12,7 @@ def test_dock_persistence(qtbot):
     # 2. Create Initial Window
     window = MainWindow()
     window.show()
-    qtbot.waitForWindowShown(window)
+    qtbot.waitExposed(window)
     
     # Allow layout to stabilize
     qtbot.wait(100)
@@ -36,7 +36,7 @@ def test_dock_persistence(qtbot):
     # 5. Restore State in New Window
     new_window = MainWindow()
     new_window.show()
-    qtbot.waitForWindowShown(new_window)
+    qtbot.waitExposed(new_window)
     
     new_window.restore_state(settings)
     qtbot.wait(100) # Allow layout to re-apply

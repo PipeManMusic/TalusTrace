@@ -13,34 +13,36 @@ def test_move_tool_calculates_delta_and_calls_api(fresh_api, create_test_wire):
     Verifies that the MoveTool calculates the drag distance (delta)
     and sends a move command to the API.
     """
-    # 1. Setup: Create a wire and select it
-    wire = create_test_wire()
-    fresh_api.select([wire.id])
+    # 1. Setup: Create a device and select it
+    from core.models import Device
+    device = Device(id="D_TEST", x=0.0, y=0.0, meta={})
+    fresh_api.context.harness.devices.append(device)
+    fresh_api.select([device.id])
     
     # 2. Setup Tool
     from tools.move_tool import MoveTool
     tool = MoveTool()
     tool._api_instance = fresh_api  # Inject headless API
     
-    # Mock the API move method to verify it gets called
-    fresh_api.move_selection = MagicMock()
+    # Mock the API move_device method to verify it gets called
+    fresh_api.move_device = MagicMock()
     
     # 3. Act: Start Drag at (0,0)
     start_evt = MockEvent(0, 0)
     # Mock scene.itemAt to return a mock with .model for hit test
     mock_item = MagicMock()
-    mock_item.model = wire
+    mock_item.model = device
     fresh_api.scene.itemAt.return_value = mock_item
-    
+
     tool.on_mouse_press(start_evt)
-    
+
     # 4. Act: Move to (10, 5)
     move_evt = MockEvent(10, 5)
     tool.on_mouse_move(move_evt)
     
     # 5. Assert: API was called with the correct delta
     # Delta = Current(10, 5) - Start(0, 0) = (10, 5)
-    fresh_api.move_selection.assert_called_with(delta=(10.0, 5.0))
+    fresh_api.move_device.assert_called_with('D_TEST', 10.0, 5.0)
     
     # Verify internal state updated for continuous dragging
     assert tool.last_pos.x() == 10

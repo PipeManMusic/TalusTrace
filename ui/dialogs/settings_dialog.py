@@ -6,7 +6,8 @@ from api.manager import APIManager
 class SettingsDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("System Settings")
+        from ui.i18n import I18N
+        self.setWindowTitle(I18N.get('settings_dialog_title'))
         self.resize(400, 200)
         self.api = APIManager.get_instance()
         
@@ -19,7 +20,7 @@ class SettingsDialog(QDialog):
         self.spin_grid.setSingleStep(0.5)
         self.spin_grid.setSuffix(" mm")
         self.spin_grid.setValue(self.api.settings.grid_size_mm)
-        self.form.addRow("Grid Size:", self.spin_grid)
+        self.form.addRow(I18N.get('grid_size_label'), self.spin_grid)
         
         # 2. Monitor Calibration Input
         self.spin_dpi = QDoubleSpinBox()
@@ -27,7 +28,7 @@ class SettingsDialog(QDialog):
         self.spin_dpi.setSuffix(" px/in")
         self.spin_dpi.setValue(self.api.settings.pixels_per_inch)
         self.spin_dpi.setToolTip("Adjust this if 100mm on screen != 100mm on ruler")
-        self.form.addRow("Screen PPI:", self.spin_dpi)
+        self.form.addRow(I18N.get('screen_ppi_label'), self.spin_dpi)
         
         self.layout.addLayout(self.form)
         

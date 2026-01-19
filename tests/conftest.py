@@ -1,4 +1,13 @@
 import pytest
+import sys
+import importlib
+
+@pytest.fixture
+def enforce_device_mvc_fixture():
+    # Import context manager from mvc_enforce.py
+    sys.path.append('.')
+    mvc_enforce = importlib.import_module('tests.mvc_enforce')
+    return mvc_enforce.enforce_device_mvc
 from unittest.mock import MagicMock
 from infra.context import ProjectContext
 from core.harness import Harness

@@ -3,11 +3,12 @@ import os
 from PySide6.QtCore import QObject, QEvent, Qt
 
 class InputSystem(QObject):
-    def __init__(self, config_path=None):
+    def __init__(self, config_path=None, move_tool=None):
         super().__init__()
         self.canvas = None
         self.config_path = config_path
         self.global_keymap = {}  # {Qt.Key: action_id}
+        self._move_tool = move_tool  # Allow injection for testing
 
         if self.config_path:
             self._load_keymap()
@@ -29,17 +30,40 @@ class InputSystem(QObject):
             self.canvas.installEventFilter(self)
 
     def handle_canvas_event(self, event):
-        """Routes mouse events from the Canvas to the Active Tool."""
+        """Routes mouse events from the Canvas to the Active Tool, or MoveTool for device drag."""
         tool = self.api.tool_manager.active_tool
-        if not tool:
-            return
-
         etype = event.original_event.type()
-        
+
         # 1. Auto-deselect if clicking empty space
         if etype == QEvent.MouseButtonPress:
             if not event.scene_item:
-                 self.api.clear_selection(tool_name="InputSystem")
+                self.api.clear_selection(tool_name="InputSystem")
+
+        # --- Always route drag events on device items to MoveTool and block native propagation ---
+        from tools.move_tool import MoveTool
+        if not hasattr(self, '_move_tool') or self._move_tool is None:
+            self._move_tool = MoveTool()
+        self._move_tool.api = self.api
+        move_tool = self._move_tool
+
+        is_device = hasattr(event.scene_item, 'model')
+        is_drag_event = etype in (QEvent.MouseButtonPress, QEvent.MouseMove, QEvent.MouseButtonRelease)
+
+        # If a drag is in progress, always route to MoveTool until drag ends
+        if getattr(move_tool, 'is_dragging', False):
+            if etype == QEvent.MouseMove and hasattr(move_tool, 'on_mouse_move'):
+                move_tool.on_mouse_move(event)
+                return True
+            elif etype == QEvent.MouseButtonRelease and hasattr(move_tool, 'on_mouse_release'):
+                move_tool.on_mouse_release(event)
+                return True
+
+        # Start drag on device item
+        if is_device and is_drag_event:
+            if etype == QEvent.MouseButtonPress and hasattr(move_tool, 'on_mouse_press'):
+                move_tool.on_mouse_press(event)
+                return True
+            # If drag is not in progress, do not handle move/release here
 
         # 2. Forward to tool
         if etype == QEvent.MouseButtonPress and hasattr(tool, 'on_mouse_press'):
@@ -48,6 +72,7 @@ class InputSystem(QObject):
             tool.on_mouse_release(event)
         elif etype == QEvent.MouseMove and hasattr(tool, 'on_mouse_move'):
             tool.on_mouse_move(event)
+        return False
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.KeyPress:
@@ -90,7 +115,10 @@ class InputSystem(QObject):
 
     def _load_keymap(self):
         """Parses the YAML config to build the global keymap."""
-        if not self.config_path or not os.path.exists(self.config_path):
+        # Only proceed if config_path is a valid path type
+        if not self.config_path or not isinstance(self.config_path, (str, bytes, os.PathLike)):
+            return
+        if not os.path.exists(self.config_path):
             return
 
         try:

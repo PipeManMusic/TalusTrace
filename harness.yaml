@@ -1,0 +1,19 @@
+revision: 2
+meta:
+  name: New Harness
+  trunk_length_mm: 1000
+devices:
+- id: be38de45-9ef8-4b08-b31e-104801c3ebf4
+  x: 0.0
+  y: 0.0
+  rotation: 0.0
+  meta: {}
+  label: asdf
+  pins: []
+  library_id: null
+  revision: 0
+  is_ghost: false
+  promotion_source_id: null
+  service_slack_mm: 0.0
+wires: []
+twisted_pairs: []
