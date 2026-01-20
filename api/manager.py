@@ -4,6 +4,55 @@ from core.library_manager import LibraryManager
 from ui.input_system import InputSystem
 
 class APIManager:
+    def handle_drop(self, event):
+        """Handle drop events for the canvas, supporting library:// device insertion."""
+        # Only handle QDropEvent with text starting with library://
+        mime = event.mimeData() if hasattr(event, 'mimeData') else None
+        if not mime or not mime.hasText():
+            return
+        text = mime.text()
+        if not text.startswith("library://"):
+            return
+        part_id = text[len("library://"):]
+        # Get part definition from library
+        part_def = None
+        if hasattr(self, 'library') and self.library:
+            parts = self.library.get_parts()
+            part_def = parts.get(part_id)
+        if not part_def:
+            print(f"[APIManager.handle_drop] Part {part_id} not found in library.")
+            return
+        # Create device model and add to harness
+        Device = self._get_device_model_class()
+        # Get drop position in scene coordinates
+        pos = event.position() if hasattr(event, 'position') else event.pos() if hasattr(event, 'pos') else None
+        x, y = 0.0, 0.0
+        if pos is not None:
+            try:
+                x, y = float(pos.x()), float(pos.y())
+            except Exception:
+                pass
+        device = Device(
+            id=part_id,
+            library_id=part_id,
+            x=x,
+            y=y,
+            pins=[{'id': p['id'], 'device_id': part_id, 'x': x, 'y': y} for p in part_def.get('pins', [])],
+            meta=part_def
+        )
+        self.context.harness.devices.append(device)
+        # Optionally, trigger scene update if needed
+        if hasattr(self, 'main_window') and self.main_window and hasattr(self.main_window, 'canvas'):
+            self.main_window.canvas.load_harness(self.context.harness)
+
+    def _get_device_model_class(self):
+        # Helper to get the Device model class
+        try:
+            from core.device import Device
+            return Device
+        except ImportError:
+            # Fallback: create a minimal Device class
+            return lambda **kwargs: type('Device', (), kwargs)()
     def move_device(self, device_id, new_x, new_y):
         """Move a device by id, push MoveDeviceCommand, and dispatch model_changed."""
         device = None

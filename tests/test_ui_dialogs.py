@@ -14,6 +14,7 @@ def test_device_wizard_validation(qtbot):
     # Initial state: Invalid (Name empty)
     assert dlg.validate() is False
     assert dlg.accept_button.isEnabled() is False
-    # Enter Name
+    # Enter ID and Name
+    dlg.id_input.setText("TEST-001")
     dlg.name_input.setText("Test Connector")
     assert dlg.validate() is True
