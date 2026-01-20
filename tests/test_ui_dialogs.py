@@ -10,7 +10,7 @@ def test_device_wizard_validation(qtbot):
     if app is None:
         app = QApplication([])
     dlg = DeviceWizard()
-    qtbot.add_widget(dlg)
+    qtbot.addWidget(dlg)
     # Initial state: Invalid (Name empty)
     assert dlg.validate() is False
     assert dlg.accept_button.isEnabled() is False

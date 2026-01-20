@@ -3,8 +3,21 @@ import pytest
 from unittest.mock import patch
 
 # Global fixture to patch modal dialogs for hands-free test automation
-@pytest.fixture(autouse=True, scope="session")
-def patch_modal_dialogs():
+
+# Safer fixture: Only patch dialogs for tests marked with 'patch_dialogs', function scope
+import pytest
+from unittest.mock import patch
+
+def pytest_configure(config):
+    config.addinivalue_line(
+        "markers", "patch_dialogs: patch exec_ and show for dialogs/panels in this test"
+    )
+
+@pytest.fixture(autouse=True)
+def patch_modal_dialogs(request):
+    if 'patch_dialogs' not in request.keywords:
+        yield
+        return
     is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
     if is_headless:
         patches = [
