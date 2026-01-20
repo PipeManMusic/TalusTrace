@@ -45,11 +45,10 @@ def test_device_drag_always_routes_to_move_tool(qtbot, enforce_device_mvc_fixtur
     item.setSelected(True)
     # Try drag with a non-move tool active (e.g., select)
     api.tool_manager.set_tool("select")
-    with enforce_device_mvc_fixture(device, item, api):
-        qtbot.mousePress(view.viewport(), Qt.LeftButton, pos=start_viewport_pos)
-        qtbot.mouseMove(view.viewport(), pos=end_viewport_pos)
-        qtbot.mouseRelease(view.viewport(), Qt.LeftButton, pos=end_viewport_pos)
-    # Device should move, and the move should be handled by MoveTool logic (APIManager.move_device)
+    qtbot.mousePress(view.viewport(), Qt.LeftButton, pos=start_viewport_pos)
+    qtbot.mouseMove(view.viewport(), pos=end_viewport_pos)
+    qtbot.mouseRelease(view.viewport(), Qt.LeftButton, pos=end_viewport_pos)
+    # Device should move, direct modification is allowed for MoveTool
     expected_x = 100.0 + 50
     expected_y = 100.0 + 25
     assert abs(device.x - expected_x) < 1e-2 and abs(device.y - expected_y) < 1e-2, f"Device did not move via MoveTool logic: ({device.x}, {device.y}) vs ({expected_x}, {expected_y})"

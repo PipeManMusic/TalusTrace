@@ -1,49 +1,70 @@
 import pytest
 from unittest.mock import MagicMock
 from PySide6.QtCore import QPointF, Qt
+from tools.move_tool import MoveTool
+from ui.canvas import CanvasEvent
+from core.device import Device
+from api.manager import APIManager
 
-class MockEvent:
-    """Simulates a QGraphicsSceneMouseEvent for headless testing."""
-    def __init__(self, pos_x, pos_y, button=Qt.LeftButton):
-        self.scene_pos = QPointF(pos_x, pos_y)
-        self.button = button
-
-def test_move_tool_calculates_delta_and_calls_api(fresh_api, create_test_wire):
-    """
-    Verifies that the MoveTool calculates the drag distance (delta)
-    and sends a move command to the API.
-    """
-    # 1. Setup: Create a device and select it
-    from core.models import Device
-    device = Device(id="D_TEST", x=0.0, y=0.0, meta={})
-    fresh_api.context.harness.devices.append(device)
-    fresh_api.select([device.id])
-    
-    # 2. Setup Tool
-    from tools.move_tool import MoveTool
-    tool = MoveTool()
-    tool._api_instance = fresh_api  # Inject headless API
-    
-    # Mock the API move_device method to verify it gets called
-    fresh_api.move_device = MagicMock()
-    
-    # 3. Act: Start Drag at (0,0)
-    start_evt = MockEvent(0, 0)
-    # Mock scene.itemAt to return a mock with .model for hit test
+def make_mock_graphics_item_for_device(device):
     mock_item = MagicMock()
     mock_item.model = device
-    fresh_api.scene.itemAt.return_value = mock_item
+    mock_item.parentItem.return_value = None
+    mock_item.setPos = MagicMock()
+    mock_item.pos.return_value = QPointF(device.x, device.y)
+    return mock_item
 
-    tool.on_mouse_press(start_evt)
-
-    # 4. Act: Move to (10, 5)
-    move_evt = MockEvent(10, 5)
-    tool.on_mouse_move(move_evt)
+def test_move_tool_calculates_delta_and_calls_api(clean_api_singleton):
+    """
+    Verifies that the MoveTool:
+    1. Updates the device model DIRECTLY during the drag (Real-time sync).
+    2. Pushes a MoveCommand to the UndoStack on release.
+    """
+    # 1. Setup
+    api = clean_api_singleton
+    api.context.undo_stack.clear()
     
-    # 5. Assert: API was called with the correct delta
-    # Delta = Current(10, 5) - Start(0, 0) = (10, 5)
-    fresh_api.move_device.assert_called_with('D_TEST', 10.0, 5.0)
+    # Create a dummy device
+    device = Device(id="d1", x=0.0, y=0.0)
+    api.context.harness.devices.append(device)
     
-    # Verify internal state updated for continuous dragging
-    assert tool.last_pos.x() == 10
-    assert tool.last_pos.y() == 5
+    # Initialize Tool
+    tool = MoveTool()
+    
+    # Create a mock QGraphicsItem wrapper for the device
+    mock_item = make_mock_graphics_item_for_device(device)
+    
+    # 2. Simulate Drag: (0,0) -> (10, 10)
+    
+    # PRESS
+    evt_press = MagicMock()
+    evt_press.scene_pos = QPointF(0, 0)
+    evt_press.button.return_value = Qt.LeftButton
+    tool.on_mouse_press(CanvasEvent(evt_press, QPointF(0, 0), scene_item=mock_item, item_at=mock_item))
+    
+    # Verify dragging started
+    assert tool.is_dragging is True, "MoveTool failed to enter drag state on press."
+    
+    # MOVE
+    evt_move = MagicMock()
+    evt_move.scene_pos = QPointF(10, 10)
+    evt_move.buttons.return_value = Qt.LeftButton
+    tool.on_mouse_move(CanvasEvent(evt_move, QPointF(10, 10), scene_item=mock_item, item_at=mock_item))
+    
+    # 3. Assert Real-Time Model Update (The bundling logic)
+    # The tool should have updated device.x/y directly
+    assert device.x == 10.0, f"Real-time update failed. Expected x=10.0, got {device.x}"
+    assert device.y == 10.0, f"Real-time update failed. Expected y=10.0, got {device.y}"
+    
+    # RELEASE
+    evt_release = MagicMock()
+    evt_release.scene_pos = QPointF(10, 10)
+    evt_release.button.return_value = Qt.LeftButton
+    tool.on_mouse_release(CanvasEvent(evt_release, QPointF(10, 10), scene_item=mock_item, item_at=mock_item))
+    
+    # 4. Assert Command Push
+    assert len(api.context.undo_stack) == 1, "MoveTool failed to push command on release."
+    
+    cmd = api.context.undo_stack._undo_stack[0]
+    # Ensure command uses the final position
+    assert cmd.new_pos == (10.0, 10.0), f"Command stored wrong position: {cmd.new_pos}"

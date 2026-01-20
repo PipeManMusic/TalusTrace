@@ -16,10 +16,16 @@ def api_manager():
 
 class DummyEvent:
     def __init__(self, mime_data=None, pos=None):
+        self._pos = pos or MagicMock()
         self.mimeData = lambda: mime_data or MagicMock()
-        self.pos = lambda: pos or MagicMock()
+        self.pos = lambda: self._pos
+        self.position = lambda: self._pos  # For compatibility with HarnessCanvas._dispatch
         self.accept = MagicMock()
         self.ignore = MagicMock()
+        self._type = 0  # Default event type
+
+    def type(self):
+        return self._type
 
 # Contract: Canvas must dispatch dragEnterEvent and dropEvent to APIManager
 # and enforce event contract (mimeData, pos, accept/ignore)

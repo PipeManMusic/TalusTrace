@@ -1,72 +1,66 @@
 import pytest
-from api.manager import APIManager
-from core.device import Device
-from ui.items.device import DeviceItem
+from PySide6.QtCore import QPointF, Qt
+from unittest.mock import MagicMock
 from tools.move_tool import MoveTool
-from infra.undo_stack import UndoStack
+from ui.canvas import CanvasEvent
+from core.device import Device
+from api.manager import APIManager
 
-def test_move_tool_realtime_model_sync(qtbot):
-    """PH6-EVT.3: Device model coordinates must update during dragging."""
-    api = APIManager.get_instance()
-    api.context.undo_stack = UndoStack()
+def test_move_command_bundling(qtbot, clean_api_singleton):
+    """
+    PH5-UI: Verify that a drag operation results in exactly ONE Undo Command.
+    """
+    # 1. Setup (Uses the clean singleton from fixture)
+    api = clean_api_singleton
     
-    dev = Device(id="SYNC_DEV", x=0, y=0)
+    # Create a device and add it
+    dev = Device(id="D1", x=0, y=0)
     api.context.harness.devices.append(dev)
-    item = DeviceItem(dev)
-
-    tool = MoveTool()
-    # Inject API
-    tool.api = api
-    if not hasattr(api, 'tool_manager') or isinstance(api.tool_manager, tuple):
-        from api.tool_manager import ToolManager
-        api.tool_manager = ToolManager()
-        
-    api.tool_manager.register_tool("move", tool)
-    api.tool_manager.set_tool("move")
-
-    from unittest.mock import MagicMock
-    from ui.canvas import CanvasEvent
-    from PySide6.QtCore import QPointF, Qt
-
-    mock_view_event = MagicMock()
-    mock_view_event.button.return_value = Qt.LeftButton
-    mock_view_event.pos.return_value = QPointF(0,0)
-
-    # FIX: Pass 'item' as the 3rd argument (scene_item) so MoveTool detects it immediately
-    # CanvasEvent(original_event, scene_pos, scene_item, item_at)
-    press_event = CanvasEvent(mock_view_event, QPointF(0,0), item, item)
-    tool.on_mouse_press(press_event)
-
-    # Drag to new position
-    move_event = CanvasEvent(mock_view_event, QPointF(50, 50), item, item)
-    tool.on_mouse_move(move_event)
-
-    # Verify Model is updated
-    assert dev.x == 50.0
-
-def test_move_command_bundling(qtbot):
-    """PH6-EVT.4: Multiple move events should result in one Undo command."""
-    api = APIManager.get_instance()
-    api.context.undo_stack = UndoStack()
     
-    dev = Device(id="BUNDLE_DEV", x=0, y=0)
-    item = DeviceItem(dev)
+    # Mock required API attributes for MoveTool hit testing
+    api.scene = MagicMock()
+    api.view = MagicMock()
+    api.view.transform.return_value = MagicMock()
+    api.scene.itemAt.return_value = None  # No fallback item
+
+    # 2. ISOLATION: Clear the stack to ignore setup commands
+    api.context.undo_stack.clear()
+    assert len(api.context.undo_stack) == 0, "Stack failed to clear before test"
+
+    # 3. Initialize Tool
     tool = MoveTool()
-    tool.api = api
+    
+    # Create a DeviceItem for the device
+    from ui.items.device import DeviceItem
+    item = DeviceItem(dev)
 
-    from ui.canvas import CanvasEvent
-    from PySide6.QtCore import QPointF, QEvent, Qt
-    from unittest.mock import MagicMock
+    # 4. Simulate Drag Interaction (0,0 -> 100,100)
+    # PRESS
+    press_evt = MagicMock()
+    press_evt.scene_pos = QPointF(0, 0)
+    press_evt.button.return_value = Qt.LeftButton
+    tool.on_mouse_press(CanvasEvent(press_evt, QPointF(0, 0), scene_item=item, item_at=dev))
+    
+    # MOVE
+    move_evt = MagicMock()
+    move_evt.scene_pos = QPointF(50, 50)
+    move_evt.buttons.return_value = Qt.LeftButton
+    tool.on_mouse_move(CanvasEvent(move_evt, QPointF(50, 50), scene_item=item, item_at=dev))
+    
+    # RELEASE
+    release_evt = MagicMock()
+    release_evt.scene_pos = QPointF(100, 100)
+    release_evt.button.return_value = Qt.LeftButton
+    tool.on_mouse_release(CanvasEvent(release_evt, QPointF(100, 100), scene_item=item, item_at=dev))
+    
+    # 5. Verification
+    # Debug print using _undo_stack (safe internal list)
+    stack_content = [type(c).__name__ for c in getattr(api.context.undo_stack, '_undo_stack', [])]
+    
+    assert len(api.context.undo_stack) == 1, \
+        f"Bundling Failed: Expected 1 command, found {len(api.context.undo_stack)}. Stack: {stack_content}"
 
-    mock_view = MagicMock()
-    mock_view.type.return_value = QEvent.MouseButtonPress
-    mock_view.button.return_value = Qt.LeftButton
-    mock_view.pos.return_value = QPointF(0,0)
-
-    # FIX: Pass 'item' as 3rd arg here too
-    tool.on_mouse_press(CanvasEvent(mock_view, QPointF(0,0), item, item))
-    tool.on_mouse_move(CanvasEvent(mock_view, QPointF(10,10), item, item))
-    tool.on_mouse_move(CanvasEvent(mock_view, QPointF(20,20), item, item))
-    tool.on_mouse_release(CanvasEvent(mock_view, QPointF(20,20), item, item))
-
-    assert len(api.context.undo_stack) == 1
+    # Verify the command is actually a Move logic
+    # Use _undo_stack directly or peek() if available
+    cmd = api.context.undo_stack._undo_stack[0]
+    assert cmd.new_pos == (100.0, 100.0)

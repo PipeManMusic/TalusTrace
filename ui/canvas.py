@@ -4,11 +4,17 @@ from PySide6.QtGui import QPainter, QMouseEvent
 from api.manager import APIManager
 
 class CanvasEvent:
-    def __init__(self, original_event, scene_pos, scene_item=None, item_at=None):
+    def __init__(self, original_event, scene_pos, scene_item=None, item_at=None, type=None):
         self.original_event = original_event
         self.scene_pos = scene_pos
         self.scene_item = scene_item
         self.item_at = item_at
+        self.type = type
+        # Add mime_data for drag/drop events
+        if hasattr(original_event, 'mimeData') and callable(getattr(original_event, 'mimeData', None)):
+            self.mime_data = original_event.mimeData()
+        else:
+            self.mime_data = None
         # Add button attribute if present in original_event
         if hasattr(original_event, 'button'):
             self.button = original_event.button()
@@ -26,16 +32,19 @@ class HarnessCanvas(QGraphicsView):
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         self._dispatch(event)
         super().mouseDoubleClickEvent(event)
+
     def dragEnterEvent(self, event):
         api = APIManager.get_instance()
         if hasattr(api, 'handle_drag_enter'):
             api.handle_drag_enter(event)
+        self._dispatch(event, event_type="DRAG_ENTER")
         event.accept()
 
     def dropEvent(self, event):
         api = APIManager.get_instance()
         if hasattr(api, 'handle_drop'):
             api.handle_drop(event)
+        self._dispatch(event, event_type="DROP")
         event.accept()
     def wheelEvent(self, event):
         # Zoom factor per wheel step
@@ -138,7 +147,7 @@ class HarnessCanvas(QGraphicsView):
         self._dispatch(event)
         super().mouseReleaseEvent(event)
 
-    def _dispatch(self, qt_event):
+    def _dispatch(self, qt_event, event_type=None):
         """Forward event to InputSystem. Route right-clicks on device items to API for context menu."""
         api = APIManager.get_instance()
         if not api.input_system:
@@ -155,7 +164,7 @@ class HarnessCanvas(QGraphicsView):
 
         item = self.scene.itemAt(scene_pos, self.transform())
         print(f'[HarnessCanvas._dispatch] scene_pos={scene_pos}, item={item}, type={type(item)}')
-        evt = CanvasEvent(qt_event, scene_pos, scene_item=item, item_at=item)
+        evt = CanvasEvent(qt_event, scene_pos, scene_item=item, item_at=item, type=event_type)
         if hasattr(qt_event, 'button'):
             evt.button = qt_event.button()
 

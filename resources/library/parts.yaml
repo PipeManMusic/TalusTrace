@@ -1,6 +1,32 @@
 parts:
-  CONN-DT-2S:
+# --- Example of a Complex Device with Internal Routing ---
+  SPLICE-4W-SEALED:
     manufacturer: TE Connectivity
-    part_number: DT06-2S
-    description: 2-Way Plug, Deutsch DT
-    ip_rating: IP68
+    part_number: D-406-0002
+    description: "Duraseal Splice, 4-Way, Blue, 16-14 AWG"
+    category: "Splices"
+    
+    # Physical footprint for the canvas (optional but good for full definition)
+    width_mm: 15.0
+    height_mm: 8.0
+    
+    # Pin definitions
+    pins:
+      - id: "1"
+        x: -7.5
+        y: 0.0
+      - id: "2"
+        x: -2.5
+        y: 0.0
+      - id: "3"
+        x: 2.5
+        y: 0.0
+      - id: "4"
+        x: 7.5
+        y: 0.0
+        
+    # The Logic: All pins connect to each other internally
+    internal_routes:
+      - type: "common"
+        pins: ["1", "2", "3", "4"]
+        max_current_amps: 15.0

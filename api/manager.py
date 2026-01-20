@@ -81,9 +81,9 @@ class APIManager:
         """Clears all selection for SelectTool compatibility."""
         self.clear_selection()
     def add_wire(self, pin1, pin2):
-        """Headless/test-compatible wire creation: create a Wire and push a mock command to the undo stack."""
+        """Create a Wire and push a real AddWireCommand to the undo stack."""
         from core.wire import Wire
-        from infra.undo_stack import BaseCommand
+        from api.commands.device import AddWireCommand
         # Create a minimal wire model
         wire = Wire(
             id=f"W_{pin1.id}_{pin2.id}",
@@ -93,17 +93,7 @@ class APIManager:
             to_pin=pin2.id,
             path_nodes=[[pin1.x, pin1.y], [pin2.x, pin2.y]]
         )
-        # Add to harness
-        self.context.harness.wires.append(wire)
-        # Push a mock command to the undo stack for test compatibility
-        class AddWireCommand(BaseCommand):
-            def __init__(self, wire):
-                super().__init__("AddWireCommand")
-                self.wire = wire
-            def execute(self):
-                pass
-            def undo(self):
-                pass
+        # Push a real AddWireCommand to the undo stack
         self.context.undo_stack.push(AddWireCommand(wire))
     @classmethod
     def reset(cls):

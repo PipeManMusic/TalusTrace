@@ -14,7 +14,7 @@ def pytest_configure(config):
     )
 
 @pytest.fixture(autouse=True)
-def patch_modal_dialogs(request):
+def patch_modal_dialogs(request: pytest.FixtureRequest):
     if 'patch_dialogs' not in request.keywords:
         yield
         return
@@ -73,7 +73,7 @@ def fresh_harness():
     return Harness()
 
 @pytest.fixture
-def fresh_api(fresh_harness):
+def fresh_api(fresh_harness: Harness):
     # Reset Singleton
     APIManager._instance = None
     
@@ -90,7 +90,7 @@ def fresh_api(fresh_harness):
     return api
 
 @pytest.fixture
-def create_test_wire(fresh_api):
+def create_test_wire(fresh_api: APIManager):
     def _factory(nodes=None, **kwargs):
         # If path_nodes is passed in kwargs, use it as nodes
         if 'path_nodes' in kwargs:
@@ -105,3 +105,25 @@ def create_test_wire(fresh_api):
         fresh_api.context.harness.wires.append(wire)
         return wire
     return _factory
+
+@pytest.fixture(autouse=True)
+def clean_api_singleton():
+    """
+    Force-resets the APIManager singleton before EVERY test.
+    This prevents 'ghost commands' from previous tests appearing in the Undo Stack.
+    """
+    # 1. Nuke the instance
+    APIManager._instance = None
+    
+    # 2. Re-initialize to ensure a fresh Context and UndoStack
+    api = APIManager.get_instance()
+    
+    # 3. Explicitly clear sub-components (Double Tap)
+    if hasattr(api, 'context'):
+        if hasattr(api.context, 'undo_stack'):
+            api.context.undo_stack.clear()
+        if hasattr(api.context, 'harness'):
+            api.context.harness.devices.clear()
+            api.context.harness.wires.clear()
+            
+    return api

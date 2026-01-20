@@ -1,13 +1,66 @@
 wires:
-  TXL-18:
-    family: SAE J1128 TXL
-    gauge: 18AWG
-    od_mm: 2.18
-    resistance_ohm_m: 0.021
-    weight_g_m: 9.6
-  TXL-20:
-    family: SAE J1128 TXL
-    gauge: 20AWG
-    od_mm: 1.9
-    resistance_ohm_m: 0.033
-    weight_g_m: 7.2
+  # ... (Keep existing TXL definitions if needed) ...
+
+  # --- DIN 72551-6 / ISO 6722 (FLRY-B Thin Wall) ---
+  FLRY-0.35:
+    label: "0.35mm² Signal (22 AWG equiv)"
+    description: "Low current sensor signals, ECU logic, and LED indicators."
+    family: DIN 72551 FLRY-B
+    gauge: 0.35mm2
+    od_mm: 1.30
+    resistance_ohm_m: 0.0520
+    weight_g_m: 5.0
+    
+  FLRY-0.50:
+    label: "0.50mm² General (20 AWG equiv)"
+    description: "Standard relay triggers, sensors, and instrument cluster wiring."
+    family: DIN 72551 FLRY-B
+    gauge: 0.50mm2
+    od_mm: 1.60
+    resistance_ohm_m: 0.0371
+    weight_g_m: 6.6
+
+  FLRY-0.75:
+    label: "0.75mm² Lighting (18 AWG equiv)"
+    description: "Side markers, license plate lights, and interior dome lights."
+    family: DIN 72551 FLRY-B
+    gauge: 0.75mm2
+    od_mm: 1.90
+    resistance_ohm_m: 0.0247
+    weight_g_m: 9.0
+
+  FLRY-1.0:
+    label: "1.0mm² Power/Signal (17 AWG equiv)"
+    description: "Turn signals, brake lights, and standard 10A fused circuits."
+    family: DIN 72551 FLRY-B
+    gauge: 1.0mm2
+    od_mm: 2.10
+    resistance_ohm_m: 0.0185
+    weight_g_m: 11.0
+
+  FLRY-1.5:
+    label: "1.5mm² High Load (15 AWG equiv)"
+    description: "Headlights (Low/High Beam), Wipers, Fuel Pump, and Horn."
+    family: DIN 72551 FLRY-B
+    gauge: 1.5mm2
+    od_mm: 2.40
+    resistance_ohm_m: 0.0127
+    weight_g_m: 16.0
+
+  FLRY-2.5:
+    label: "2.5mm² Main Power (13 AWG equiv)"
+    description: "Heater blowers, radiator fans, and main fuse box feeds."
+    family: DIN 72551 FLRY-B
+    gauge: 2.5mm2
+    od_mm: 3.00
+    resistance_ohm_m: 0.0076
+    weight_g_m: 26.0
+
+  FLRY-4.0:
+    label: "4.0mm² Heavy Power (11 AWG equiv)"
+    description: "Alternator charging, main battery distribution."
+    family: DIN 72551 FLRY-B
+    gauge: 4.0mm2
+    od_mm: 3.70
+    resistance_ohm_m: 0.0047
+    weight_g_m: 42.0

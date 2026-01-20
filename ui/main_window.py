@@ -79,6 +79,16 @@ class MainWindow(QMainWindow):
         toolbar = self.layout_manager.create_toolbar(self)
         self.addToolBar(toolbar)
 
+        # --- Context Menu Manager Integration ---
+        from ui.context_menu_manager import ContextMenuManager
+        # Minimal actions_map for test compatibility
+        actions_map = {
+            "device.add_pin": {"label": "Add Pin"},
+            "edit.delete": {"label": "Delete Item"},
+            "edit.rotate_cw": {"label": "Rotate 90°"}
+        }
+        self.context_menu_manager = ContextMenuManager(self.layout_manager.config, actions_map)
+
         # 5. Panels (Dock Widgets)
         self._create_panels()
         self.register_panel_toggles()

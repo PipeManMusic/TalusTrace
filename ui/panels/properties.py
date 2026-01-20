@@ -91,7 +91,7 @@ class PropertiesPanel(QWidget):
         self.id_edit = QLineEdit(str(getattr(device, 'id', '')))
         self.id_edit.setReadOnly(False)
         def update_id():
-            device.id = self.id_edit.text()
+            self._update_model(device, 'id', self.id_edit.text())
         self.id_edit.editingFinished.connect(update_id)
         from ui.i18n import I18N
         self.form.addRow(I18N.get('id_label'), self.id_edit)

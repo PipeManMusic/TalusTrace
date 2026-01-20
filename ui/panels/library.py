@@ -33,24 +33,27 @@ class LibraryPanel(QWidget):
 
     def refresh(self):
         self.tree.clear()
-        
         # PHASE 5 FIX: Ask API for data, don't read files here.
         if hasattr(self.api, 'library'):
             parts = self.api.library.get_parts()
-            
+            # If parts is a dict, iterate over its values
+            if isinstance(parts, dict):
+                parts_iter = parts.values()
+            elif isinstance(parts, list):
+                parts_iter = parts
+            else:
+                parts_iter = []
             # Group by Category (e.g. connectors, splices)
             categories = {}
-            
-            for part_id, part_data in parts.items():
-                cat = part_data.get('category', 'Uncategorized')
+            for part in parts_iter:
+                cat = part.get('category', 'Uncategorized')
                 if cat not in categories:
                     categories[cat] = QTreeWidgetItem(self.tree, [cat.title()])
                     categories[cat].setExpanded(True)
-                
-                name = part_data.get('name', part_id)
+                name = part.get('name', part.get('id', 'Unknown'))
                 item = QTreeWidgetItem(categories[cat], [name])
                 # Store Part ID in UserRole
-                item.setData(0, Qt.UserRole, part_id)
+                item.setData(0, Qt.UserRole, part.get('id', ''))
         else:
             # Fallback if library didn't load
             err = QTreeWidgetItem(self.tree, ["Library Offline"])
