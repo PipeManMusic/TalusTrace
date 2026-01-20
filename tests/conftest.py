@@ -1,3 +1,44 @@
+import os
+import pytest
+from unittest.mock import patch
+
+# Global fixture to patch modal dialogs for hands-free test automation
+@pytest.fixture(autouse=True, scope="session")
+def patch_modal_dialogs():
+    is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
+    if is_headless:
+        patches = [
+            patch("ui.dialogs.settings_dialog.SettingsDialog.exec_", return_value=0),
+            patch("ui.dialogs.theme_dialog.ThemeDialog.exec_", return_value=0),
+            patch("ui.dialogs.device_wizard.DeviceWizard.exec_", return_value=0),
+            patch("ui.panels.mapping.PinMappingDialog.exec_", return_value=0),
+            patch("ui.dialogs.settings_dialog.SettingsDialog.show", return_value=None),
+            patch("ui.dialogs.theme_dialog.ThemeDialog.show", return_value=None),
+            patch("ui.dialogs.device_wizard.DeviceWizard.show", return_value=None),
+            patch("ui.panels.mapping.PinMappingDialog.show", return_value=None),
+            patch("ui.panels.properties.PropertiesPanel.show", return_value=None),
+            patch("ui.panels.project_browser.ProjectBrowser.show", return_value=None),
+            patch("ui.panels.library.LibraryPanel.show", return_value=None),
+            patch("ui.panels.audit.AuditPanel.show", return_value=None),
+        ]
+        for p in patches:
+            p.start()
+        yield
+        for p in patches:
+            p.stop()
+    else:
+        yield
+
+import pytest
+from ui.main_window import MainWindow
+
+# Shared main_window fixture for UI tests
+@pytest.fixture
+def main_window(qtbot):
+    win = MainWindow()
+    qtbot.addWidget(win)
+    win.show()
+    return win
 import pytest
 import sys
 import importlib

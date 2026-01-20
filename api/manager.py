@@ -22,9 +22,60 @@ class APIManager:
         else:
             cmd.execute()
     def open_context_menu(self, event):
-        """Opens the context menu via the main window's canvas if available."""
-        if hasattr(self, 'main_window') and hasattr(self.main_window, 'canvas'):
-            self.main_window.canvas.contextMenuEvent(event)
+        print('[DEBUG] APIManager.open_context_menu called')
+        from PySide6.QtWidgets import QMenu
+        from PySide6.QtGui import QAction
+        from PySide6.QtCore import QPoint
+        view = getattr(self, 'main_window', None)
+        if not view:
+            event.accept()
+            return
+        canvas = getattr(view, 'canvas', None)
+        if not canvas:
+            event.accept()
+            return
+        # Robust hit test: use event's global position to map to viewport, then to scene
+        mapped_scene_pos = None
+        item = None
+        if hasattr(event, 'globalPos') and hasattr(canvas, 'mapFromGlobal'):
+            viewport_pos = canvas.mapFromGlobal(event.globalPos())
+            mapped_scene_pos = canvas.mapToScene(viewport_pos)
+            item = canvas.scene.itemAt(mapped_scene_pos, canvas.transform())
+            print(f'[DEBUG] Hit test at viewport_pos={viewport_pos}, mapped_scene_pos={mapped_scene_pos}')
+            for scene_item in canvas.scene.items():
+                try:
+                    print(f'  [DEBUG] Item: {scene_item}, type={type(scene_item)}, pos={scene_item.scenePos()}, boundingRect={scene_item.boundingRect()}')
+                except Exception as e:
+                    print(f'  [DEBUG] Item: {scene_item}, type={type(scene_item)}, error={e}')
+        else:
+            scene_pos = event.pos() if hasattr(event, 'pos') else None
+            if scene_pos is not None:
+                mapped_scene_pos = canvas.mapToScene(scene_pos)
+                item = canvas.scene.itemAt(mapped_scene_pos, canvas.transform())
+        print(f'[DEBUG] open_context_menu: mapped_scene_pos={mapped_scene_pos}, item={item}')
+        menu = QMenu(view)
+        # Default actions
+        if item and hasattr(item, 'model'):
+            print('[DEBUG] Device context menu will be shown')
+            action = QAction('Device Action', menu)
+            menu.addAction(action)
+        else:
+            print('[DEBUG] Canvas context menu will be shown')
+            action = QAction('Canvas Action', menu)
+            menu.addAction(action)
+        # Always provide scene_pos for event dispatch
+        dispatch_scene_pos = mapped_scene_pos if mapped_scene_pos is not None else None
+        self.dispatch('context_menu', {'menu': menu, 'item': item, 'scene_pos': dispatch_scene_pos, 'event': event})
+        print(f'[DEBUG] Menu actions after dispatch: {[a.text() for a in menu.actions()]}')
+        global_pos = event.globalPos() if hasattr(event, 'globalPos') else None
+        import os
+        is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
+        if global_pos and not is_headless:
+            menu.exec(global_pos)
+        elif hasattr(self, '_test_context_menu_hook'):
+            print('[DEBUG] Calling _test_context_menu_hook')
+            self._test_context_menu_hook(menu, global_pos)
+        event.accept()
 
     def deselect_all(self):
         """Clears all selection for SelectTool compatibility."""

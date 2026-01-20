@@ -3,6 +3,7 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QPointF, Qt
 from ui.main_window import MainWindow
 from api.manager import APIManager
+import os
 
 
 def test_device_drag_always_routes_to_move_tool(qtbot, enforce_device_mvc_fixture):
@@ -10,11 +11,19 @@ def test_device_drag_always_routes_to_move_tool(qtbot, enforce_device_mvc_fixtur
     Contract: Click and drag on a device should always route to MoveTool logic via the API,
     regardless of the active tool. The model must be updated via MoveTool, and undo/redo must work.
     """
-    app = QApplication.instance() or QApplication([])
+    from PySide6.QtWidgets import QApplication
+    app = QApplication.instance()
+    print(f"[DEBUG] QApplication instance: {app}")
+    assert app is not None, "QApplication instance should exist (provided by qtbot)"
     window = MainWindow()
     qtbot.addWidget(window)
-    window.show()
+    is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
+    if not is_headless:
+        window.show()
     api = APIManager.get_instance()
+    # ...existing code...
+    window.close()
+    qtbot.waitExposed(window)
     # Add a device to the model and scene, and reset its position to avoid state leakage
     device = api.context.harness.devices[0] if api.context.harness.devices else None
     if device is None:

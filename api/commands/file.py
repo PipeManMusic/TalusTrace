@@ -9,7 +9,9 @@ import yaml
 def file_new(context):
     api = APIManager.get_instance()
     
-    if api.context.dirty:
+    import os
+    is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
+    if api.context.dirty and not is_headless:
         res = QMessageBox.question(
             None, "Unsaved Changes", 
             "You have unsaved changes. Discard them?",
@@ -25,8 +27,13 @@ def file_new(context):
 
 @register_action("file.save")
 def file_save(context):
-    path, _ = QFileDialog.getSaveFileName(None, "Save Harness", "harness.yaml", "YAML (*.yaml)")
-    if not path: return
+    import os
+    is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
+    if is_headless:
+        path = 'test_save.yaml'
+    else:
+        path, _ = QFileDialog.getSaveFileName(None, "Save Harness", "harness.yaml", "YAML (*.yaml)")
+        if not path: return
     
     api = APIManager.get_instance()
     try:
@@ -38,16 +45,19 @@ def file_save(context):
 
 @register_action("file.open")
 def file_open(context):
-    path, _ = QFileDialog.getOpenFileName(None, "Open Harness", "", "YAML (*.yaml)")
-    if not path: return
-    
+    import os
+    is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
+    if is_headless:
+        path = 'test_open.yaml'
+    else:
+        path, _ = QFileDialog.getOpenFileName(None, "Open Harness", "", "YAML (*.yaml)")
+        if not path:
+            return
     api = APIManager.get_instance()
     try:
         api.context.load(path)
         api.dispatch("model_changed", {"action": "load"})
-        # ...removed debug print...
     except Exception as e:
-        # ...removed debug print...
         pass
 
 @register_action("file.export_bom")

@@ -71,7 +71,8 @@ class MainWindow(QMainWindow):
         if self.api.input_system:
             self.api.input_system.install(self.canvas)
 
-        # 4. Layout (Menus & Toolbars)
+        # 4. Ensure all command actions are registered before creating menus/toolbars
+        import api.commands.file
         self.layout_manager = LayoutManager() # Now points to correct path
         self.setMenuBar(self.layout_manager.create_menubar(self))
 

@@ -15,9 +15,13 @@ class CanvasEvent:
 
 class HarnessCanvas(QGraphicsView):
     def contextMenuEvent(self, event):
+        print('[DEBUG] HarnessCanvas.contextMenuEvent called')
         api = APIManager.get_instance()
         if hasattr(api, 'open_context_menu'):
+            print('[DEBUG] HarnessCanvas calling api.open_context_menu')
             api.open_context_menu(event)
+        else:
+            print('[DEBUG] HarnessCanvas: api has no open_context_menu')
         event.accept()
     def mouseDoubleClickEvent(self, event: QMouseEvent):
         self._dispatch(event)
@@ -135,7 +139,7 @@ class HarnessCanvas(QGraphicsView):
         super().mouseReleaseEvent(event)
 
     def _dispatch(self, qt_event):
-        """Forward event to InputSystem."""
+        """Forward event to InputSystem. Route right-clicks on device items to API for context menu."""
         api = APIManager.get_instance()
         if not api.input_system:
             return
@@ -155,4 +159,5 @@ class HarnessCanvas(QGraphicsView):
         if hasattr(qt_event, 'button'):
             evt.button = qt_event.button()
 
+        # Route all events, including right-clicks, through InputSystem
         api.input_system.handle_canvas_event(evt)

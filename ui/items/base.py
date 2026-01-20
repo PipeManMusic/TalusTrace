@@ -55,6 +55,13 @@ class SelectableItemMixin:
             return QPointF(x, y)
 
         if change == QGraphicsItem.ItemSelectedChange:
+            # Prevent deselection on right-click (context menu)
+            from PySide6.QtWidgets import QApplication
+            mouse_event = QApplication.mouseButtons()
+            is_right_click = mouse_event & Qt.RightButton
+            if not value and is_right_click:
+                # Ignore deselection if right-click is active
+                return True
             self.update_visual_state()
             # Sync selection to core SelectionManager if selected
             try:

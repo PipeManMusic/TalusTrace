@@ -44,16 +44,11 @@ class ActionRegistry(QObject):
         Trigger the logic associated with an ID.
         """
         if action_id in self._actions:
-            # ...removed info log...
             try:
                 self._actions[action_id](context)
                 self.action_triggered.emit(action_id, context)
             except Exception as e:
-                # ...removed error log...
-                pass
-        else:
-            # ...removed warning log...
-            pass
+                raise
 
     def get_qt_action(self, action_id: str) -> Optional[QAction]:
         return self._ui_actions.get(action_id)

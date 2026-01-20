@@ -41,9 +41,11 @@ class LayoutManager:
                     action = QAction(I18N.get(cmd_id, label), window)
                     if cmd_id:
                         action.setData(cmd_id)
-                        def handler(checked=False, cmd_id=cmd_id):
+                        def handler(checked=False, cmd_id=cmd_id, window=window):
                             from api.actions import dispatch_action
-                            dispatch_action(cmd_id)
+                            # Pass the APIManager context for MVC compliance
+                            context = getattr(window, 'api', None)
+                            dispatch_action(cmd_id, context)
                         action.triggered.connect(handler)
                     menu.addAction(action)
         return menubar

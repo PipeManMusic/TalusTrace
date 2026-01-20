@@ -34,10 +34,21 @@ class InputSystem(QObject):
         tool = self.api.tool_manager.active_tool
         etype = event.original_event.type()
 
-        # 1. Auto-deselect if clicking empty space
+        # 1. Auto-deselect if left-clicking empty space (not right-click)
         if etype == QEvent.MouseButtonPress:
-            if not event.scene_item:
+            is_right_click = hasattr(event, 'button') and event.button == Qt.RightButton
+            if not event.scene_item and not is_right_click:
                 self.api.clear_selection(tool_name="InputSystem")
+
+        # 1b. Show context menu if right-clicking on a device
+        if etype == QEvent.MouseButtonPress:
+            is_right_click = hasattr(event, 'button') and event.button == Qt.RightButton
+            is_device = hasattr(event.scene_item, 'model')
+            print(f'[InputSystem] MouseButtonPress: is_right_click={is_right_click}, is_device={is_device}')
+            if is_right_click and is_device:
+                print('[InputSystem] Calling api.open_context_menu for device')
+                self.api.open_context_menu(event.original_event)
+                return True
 
         # --- Always route drag events on device items to MoveTool and block native propagation ---
         from tools.move_tool import MoveTool
