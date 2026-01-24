@@ -1,3 +1,7 @@
+"""
+File-related command actions for Talus Trace.
+Provides new, save, open, export, and exit commands for project files.
+"""
 from PySide6.QtWidgets import QFileDialog, QApplication, QMessageBox
 from api.actions import register_action
 from api.manager import APIManager
@@ -7,6 +11,11 @@ import yaml
 
 @register_action("file.new")
 def file_new(context):
+    """
+    Create a new project file.
+    Args:
+        context: The action context.
+    """
     api = APIManager.get_instance()
     
     import os
@@ -27,6 +36,11 @@ def file_new(context):
 
 @register_action("file.save")
 def file_save(context):
+    """
+    Save the current project file.
+    Args:
+        context: The action context.
+    """
     import os
     is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
     if is_headless:
@@ -38,13 +52,16 @@ def file_save(context):
     api = APIManager.get_instance()
     try:
         api.context.save_as(path)
-        # ...removed debug print...
     except Exception as e:
-        # ...removed debug print...
         pass
 
 @register_action("file.open")
 def file_open(context):
+    """
+    Open a project file.
+    Args:
+        context: The action context.
+    """
     import os
     is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
     if is_headless:
@@ -62,12 +79,27 @@ def file_open(context):
 
 @register_action("file.export_bom")
 def file_export_bom(context):
+    """
+    Export the Bill of Materials (BOM).
+    Args:
+        context: The action context.
+    """
     pass
 
 @register_action("file.export_wirelist")
 def file_export_wirelist(context):
+    """
+    Export the wire list for the project.
+    Args:
+        context: The action context.
+    """
     pass
 
 @register_action("file.exit")
 def file_exit(context):
+    """
+    Exit the application.
+    Args:
+        context: The action context.
+    """
     QApplication.quit()

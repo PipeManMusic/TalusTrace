@@ -1,4 +1,9 @@
-from PySide6.QtWidgets import QMainWindow, QDockWidget
+"""
+Main application window for Talus Trace UI.
+
+Handles window setup, toolbars, menus, panels, and state persistence.
+"""
+from PySide6.QtWidgets import QMainWindow, QDockWidget, QMessageBox
 from PySide6.QtCore import QSettings
 from api.manager import APIManager
 from ui.canvas import HarnessCanvas
@@ -7,39 +12,50 @@ from ui.panels.project_browser import ProjectBrowser
 from ui.panels.library import LibraryPanel
 from ui.panels.properties import PropertiesPanel
 from ui.panels.audit import AuditPanel
+# --- FIX: Import the Dialog ---
+from ui.dialogs.device_wizard import DeviceWizard
 
 class MainWindow(QMainWindow):
+    """Main application window for Talus Trace, managing UI layout and state."""
     def register_toolbar_commands(self):
+        """Register toolbar command actions for tools and undo/redo."""
         from api.actions import register_action
-        # Register toolbar commands with real logic
-        def activate_move_tool(ctx):
-            api = self.api
-            api.tool_manager.set_tool("move")
-        register_action("tool.move")(activate_move_tool)
-        def activate_placement_tool(ctx):
-            api = self.api
-            api.tool_manager.set_tool("placement")
-        register_action("tool.add_generic_device")(activate_placement_tool)
-        def activate_device_wizard(ctx):
-            # TODO: Implement device wizard logic
-            print("Device wizard activated")
-        register_action("device.create_wizard")(activate_device_wizard)
-        def undo(ctx):
-            api = self.api
-            if hasattr(api.context, 'undo_stack'):
-                api.context.undo_stack.undo()
-        register_action("edit.undo")(undo)
-        def redo(ctx):
-            api = self.api
-            if hasattr(api.context, 'undo_stack'):
-                api.context.undo_stack.redo()
-        register_action("edit.redo")(redo)
-        # Register tool.measure for coverage
+
+        # --- Existing Tools ---
+        register_action("tool.move")(lambda ctx=None: self.api.tool_manager.set_tool("move"))
+        register_action("tool.add_generic_device")(lambda ctx=None: self.api.tool_manager.set_tool("placement"))
+
+        # Register device wizard, undo, redo with correct context handling
+        register_action("device.create_wizard")(lambda ctx: ctx.activate_device_wizard() if hasattr(ctx, "activate_device_wizard") else None)
+        register_action("edit.undo")(lambda ctx=None: self.api.context.undo_stack.undo())
+        register_action("edit.redo")(lambda ctx=None: self.api.context.undo_stack.redo())
+        # Stub for coverage
         register_action("tool.measure")(lambda ctx: None)
+
+    def activate_device_wizard(self):
+        """Open the device wizard dialog and handle completion."""
+        dialog = DeviceWizard(self)
+        if dialog.exec():
+            print("[MainWindow] Device Wizard completed successfully.")
+            if hasattr(self, 'library_panel'):
+                self.library_panel.refresh()
+
+    def undo(self):
+        """Undo the last action using the context's undo stack."""
+        if getattr(self, 'api', None) and getattr(self.api, 'context', None) and hasattr(self.api.context, 'undo_stack'):
+            self.api.context.undo_stack.undo()
+
+    def redo(self):
+        """Redo the last undone action using the context's undo stack."""
+        if getattr(self, 'api', None) and getattr(self.api, 'context', None) and hasattr(self.api.context, 'undo_stack'):
+            self.api.context.undo_stack.redo()
+
     def register_panel_toggles(self):
+        """Register actions to toggle visibility of dock panels."""
         from api.actions import register_action
         # Helper to toggle dock widget visibility
         def toggle_dock(dock):
+            """Toggle the visibility of a given dock widget."""
             if dock:
                 dock.setVisible(not dock.isVisible())
         register_action("view.toggle_project_browser")(lambda ctx: toggle_dock(self.project_browser_dock))
@@ -48,6 +64,7 @@ class MainWindow(QMainWindow):
         register_action("view.toggle_audit_panel")(lambda ctx: toggle_dock(self.audit_panel_dock))
 
     def __init__(self, parent=None):
+        """Initialize the main window, UI layout, panels, and restore state."""
         super().__init__(parent)
         from ui.i18n import I18N
         self.setWindowTitle(I18N.get('window_title'))
@@ -61,44 +78,48 @@ class MainWindow(QMainWindow):
         # CRITICAL: Must be set BEFORE layout manager to ensure it exists
         self.canvas = HarnessCanvas(self)
         self.setCentralWidget(self.canvas)
+        
         # Set APIManager.scene and APIManager.view for tool compatibility
         self.api.scene = self.canvas.scene
         self.api.view = self.canvas
         # Load the current harness into the canvas
         self.canvas.load_harness(self.api.context.harness)
 
-        # 3. Input System
+        # 3. Input System (Wired in app.py, now installed here)
         if self.api.input_system:
             self.api.input_system.install(self.canvas)
 
-        # 4. Ensure all command actions are registered before creating menus/toolbars
+        # 4. Menus & Toolbars
         import api.commands.file
-        self.layout_manager = LayoutManager() # Now points to correct path
+        self.layout_manager = LayoutManager()
         self.setMenuBar(self.layout_manager.create_menubar(self))
 
         toolbar = self.layout_manager.create_toolbar(self)
         self.addToolBar(toolbar)
 
-        # --- Context Menu Manager Integration ---
+        # --- FIX 3: Wire up Context Menu ---
         from ui.context_menu_manager import ContextMenuManager
-        # Minimal actions_map for test compatibility
+        # Map actions to labels/IDs
         actions_map = {
-            "device.add_pin": {"label": "Add Pin"},
-            "edit.delete": {"label": "Delete Item"},
-            "edit.rotate_cw": {"label": "Rotate 90°"}
+            "device.add_pin": {"label": "Add Pin", "action": "device.add_pin"},
+            "edit.delete": {"label": "Delete Item", "action": "edit.delete"},
+            "edit.rotate_cw": {"label": "Rotate 90°", "action": "edit.rotate_cw"}
         }
         self.context_menu_manager = ContextMenuManager(self.layout_manager.config, actions_map)
+        
+        # CRITICAL: Tell API how to open menus (Canvas calls this!)
+        self.api.open_context_menu = self.context_menu_manager.show_context_menu
 
         # 5. Panels (Dock Widgets)
         self._create_panels()
         self.register_panel_toggles()
-        self.register_toolbar_commands()
         self.register_toolbar_commands()
 
         # 6. Restore State (if saved)
         self._restore_state()
 
     def restore_state(self, settings=None):
+        """Restore window geometry and state from QSettings or provided settings."""
         from PySide6.QtCore import QSettings
         if settings is None:
             settings = QSettings("TalusTrace", "MainWindow")
@@ -108,6 +129,7 @@ class MainWindow(QMainWindow):
             self.restoreState(settings.value("windowState"))
 
     def update_title(self, is_dirty=False):
+        """Update the window title, appending '*' if the state is dirty."""
         from ui.i18n import I18N
         title = I18N.get('window_title')
         if is_dirty:
@@ -115,6 +137,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(title)
 
     def save_state(self, settings=None):
+        """Save window geometry and state to QSettings or provided settings."""
         from PySide6.QtCore import QSettings
         if settings is None:
             settings = QSettings("TalusTrace", "MainWindow")
@@ -123,10 +146,11 @@ class MainWindow(QMainWindow):
 
     @property
     def prop_dock(self):
-        # Return the properties panel dock widget for test compatibility
+        """Return the property dock widget for the main window."""
         return getattr(self, 'properties_panel_dock', None)
 
     def _create_panels(self):
+        """Create and add all dock panels (project browser, library, properties, audit)."""
         from PySide6.QtCore import Qt
         # Project Browser (Left)
         self.project_browser = ProjectBrowser(self)
@@ -158,6 +182,7 @@ class MainWindow(QMainWindow):
         self.addDockWidget(Qt.BottomDockWidgetArea, self.audit_panel_dock)
 
     def _restore_state(self):
+        """Restore window geometry and state from QSettings."""
         settings = QSettings("TalusTrace", "App")
         if settings.value("geometry"):
             self.restoreGeometry(settings.value("geometry"))
@@ -165,10 +190,8 @@ class MainWindow(QMainWindow):
             self.restoreState(settings.value("windowState"))
 
     def closeEvent(self, event):
+        """Save window state on close and call the base closeEvent."""
         settings = QSettings("TalusTrace", "App")
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())
         super().closeEvent(event)
-
-# Needed for Qt constants
-from PySide6.QtCore import Qt

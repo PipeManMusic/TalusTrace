@@ -1,11 +1,22 @@
+"""
+Selection module for Talus Trace.
+Manages selection state and listener notification for models.
+"""
+
 # REMOVED top-level import to fix circular dependency
 # from api.manager import APIManager 
 
 
 class SelectionManager:
+    """
+    Singleton manager for model selection and listener notification.
+    """
     _instance = None
 
     def __new__(cls):
+        """
+        Create or return the singleton instance of SelectionManager.
+        """
         if cls._instance is None:
             cls._instance = super(SelectionManager, cls).__new__(cls)
             cls._instance.selected_models = []
@@ -23,11 +34,21 @@ class SelectionManager:
             self._listeners.append(callback)
 
     def remove_listener(self, callback):
+        """
+        Remove a registered selection change listener.
+        Args:
+            callback (callable): Listener to remove.
+        """
         if callback in self._listeners:
             self._listeners.remove(callback)
 
     @property
     def current_selection_ids(self):
+        """
+        Get the set of IDs for currently selected models.
+        Returns:
+            set: Set of selected model IDs.
+        """
         return set(item.id for item in self.selected_models if hasattr(item, 'id'))
 
 
@@ -41,6 +62,9 @@ class SelectionManager:
         self._notify()
         if on_complete:
             def _after():
+                """
+                Restore previous selection and notify listeners after completion callback.
+                """
                 if restore_previous:
                     self.selected_models = prev_selection
                     self._notify()
@@ -48,6 +72,9 @@ class SelectionManager:
         # If no on_complete, nothing else to do
 
     def clear_selection(self):
+        """
+        Clear all selected models and notify listeners.
+        """
         self.selected_models = []
         self._notify()
 

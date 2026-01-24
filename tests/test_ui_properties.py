@@ -19,7 +19,8 @@ def test_property_panel_loads_selection(qtbot):
     panel.show() 
     
     # 2. Create Dummy Device
-    dev = Device(id="TEST-01", label="Test Device")
+    import uuid
+    dev = Device(id=str(uuid.uuid4()), label="Test Device")
     
     # 3. Simulate Selection Event via API
     api.dispatch("selection_changed", {
@@ -27,10 +28,10 @@ def test_property_panel_loads_selection(qtbot):
     })
 
     # 4. Wait for UI Update
-    qtbot.waitUntil(lambda: hasattr(panel, 'id_edit') and panel.id_edit.text() == "TEST-01", timeout=3000)
+    qtbot.waitUntil(lambda: hasattr(panel, 'id_edit') and panel.id_edit.text() == dev.id, timeout=3000)
     
     # 5. Assertions
-    assert panel.id_edit.text() == "TEST-01"
+    assert panel.id_edit.text() == dev.id
     assert panel.label_edit.text() == "Test Device"
 
 def test_property_panel_clears_on_deselect(qtbot):
@@ -59,7 +60,8 @@ def test_property_panel_apply_changes(qtbot):
     qtbot.add_widget(panel)
     panel.show()
     
-    dev = Device(id="ORIGINAL")
+    import uuid
+    dev = Device(id=str(uuid.uuid4()))
     panel.load_item(dev) 
     
     assert hasattr(panel, 'id_edit')

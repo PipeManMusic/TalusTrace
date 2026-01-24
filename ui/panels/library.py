@@ -1,9 +1,26 @@
+"""
+LibraryPanel and LibraryLoader: UI and data loader for the parts library panel.
+Provides a tree view of available parts grouped by category.
+"""
 # Minimal LibraryLoader for test compatibility
 class LibraryLoader:
+    """
+    Loads parts library data from a YAML file for test compatibility.
+    """
     def __init__(self, library_path=None):
+        """
+        Initialize the LibraryLoader.
+        Args:
+            library_path (str): Path to the library YAML file.
+        """
         self.library_path = library_path
 
     def get_items(self):
+        """
+        Load and return parts from the YAML library file.
+        Returns:
+            dict: Dictionary of parts from the library file.
+        """
         import yaml
         if not self.library_path:
             return {}
@@ -15,7 +32,15 @@ from PySide6.QtCore import Qt
 from api.manager import APIManager
 
 class LibraryPanel(QWidget):
+    """
+    QWidget panel that displays the parts library in a tree view grouped by category.
+    """
     def __init__(self, parent=None):
+        """
+        Initialize the LibraryPanel UI and load the parts tree.
+        Args:
+            parent: Optional parent QWidget.
+        """
         super().__init__(parent)
         self.api = APIManager.get_instance()
         
@@ -32,6 +57,10 @@ class LibraryPanel(QWidget):
         self.refresh()
 
     def refresh(self):
+        """
+        Refresh the parts tree from the API's library data.
+        Groups parts by category and populates the tree view.
+        """
         self.tree.clear()
         # PHASE 5 FIX: Ask API for data, don't read files here.
         if hasattr(self.api, 'library'):

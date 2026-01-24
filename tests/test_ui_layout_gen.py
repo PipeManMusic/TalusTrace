@@ -3,6 +3,7 @@ from ui.layout_manager import LayoutManager
 from PySide6.QtWidgets import QMainWindow, QMenuBar, QMenu
 
 # @pytest.mark.skip(reason="Menu logic pending refactor") # REMOVED
+@pytest.mark.gui
 def test_menubar_generation(qtbot, tmp_path):
     """PH5-SHELL.1: Should generate QMenuBar from YAML."""
     # Create Mock Config

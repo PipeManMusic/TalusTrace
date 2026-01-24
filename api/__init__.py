@@ -1,15 +1,33 @@
+
+"""
+Talus Trace API package.
+
+Provides the main TalusAPI singleton for interacting with the core harness, wire, and pin models, and for importing netlists.
+"""
+
 from core.wire import Wire
 
 
 class TalusAPI:
+    """
+    Main API singleton for Talus Trace.
+
+    Provides access to the core harness, wire, and pin models, and supports netlist import and harness retrieval.
+    """
     _instance = None
 
     def __new__(cls, *args, **kwargs):
+        """
+        Singleton instance creator for TalusAPI.
+        """
         if cls._instance is None:
             cls._instance = super().__new__(cls)
         return cls._instance
 
     def __init__(self):
+        """
+        Initialize the TalusAPI singleton, importing required models and setting up the API manager.
+        """
         # Only initialize once
         if not hasattr(self, '_initialized'):
             self._initialized = True
@@ -17,7 +35,6 @@ class TalusAPI:
             from core.pin import Pin
             from core.wire import Wire
             from core.models import Harness
-            Harness.model_rebuild()
             from api.manager import APIManager
             self._manager = APIManager.get_instance()
 

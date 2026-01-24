@@ -1,7 +1,15 @@
+"""
+Device wizard dialog for Talus Trace UI.
+
+Allows users to create a new device by entering ID and name.
+"""
+
 from PySide6.QtWidgets import QDialog, QVBoxLayout, QLineEdit, QPushButton, QLabel
 
 class DeviceWizard(QDialog):
+    """Dialog for creating a new device with ID and name."""
     def __init__(self, parent=None):
+        """Initialize the device wizard dialog and build the UI."""
         super().__init__(parent)
         from ui.i18n import I18N
         self.setWindowTitle(I18N.get('device_wizard_title'))
@@ -27,12 +35,15 @@ class DeviceWizard(QDialog):
         self.accept_button.clicked.connect(self.accept)
 
     def _on_name_changed(self, text):
+        """Enable the accept button if both fields are valid."""
         self.accept_button.setEnabled(self.validate())
 
     def validate(self):
+        """Return True if both ID and name fields are non-empty."""
         return bool(self.id_input.text().strip()) and bool(self.name_input.text().strip())
 
     def accept(self):
+        """Create the device, add it to the context, and refresh the canvas."""
         from api.manager import APIManager
         from core.device import Device
         from api.commands.device import AddDeviceCommand

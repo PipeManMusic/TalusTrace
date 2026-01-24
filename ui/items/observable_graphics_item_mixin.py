@@ -1,3 +1,8 @@
+
+"""
+ObservableGraphicsItemMixin: Adds observer pattern support to QGraphicsItems.
+Manages observer callbacks with weak references and handles cleanup on scene removal.
+"""
 import weakref
 from PySide6.QtWidgets import QGraphicsItem
 
@@ -9,11 +14,19 @@ class ObservableGraphicsItemMixin:
     - Provides a cleanup() method for subclasses to extend.
     """
     def __init__(self, *args, **kwargs):
-        # Do NOT call super().__init__() to avoid double QGraphicsItem init
+        """
+        Initialize the mixin and set up the observer list.
+        Note: Does not call super().__init__() to avoid double QGraphicsItem init.
+        """
         self._observers = []  # List of (event, weakref callback)
 
     def subscribe(self, event, callback):
-        # Use WeakMethod for bound methods, weakref.ref for functions
+        """
+        Subscribe a callback to an event. Uses weak references for callbacks.
+        Args:
+            event: The event name or type.
+            callback: The function or method to call when the event occurs.
+        """
         if hasattr(callback, '__self__') and callback.__self__ is not None:
             ref = weakref.WeakMethod(callback)
         else:
@@ -21,7 +34,12 @@ class ObservableGraphicsItemMixin:
         self._observers.append((event, ref))
 
     def unsubscribe(self, event, callback):
-        # Remove matching observer
+        """
+        Unsubscribe a callback from an event.
+        Args:
+            event: The event name or type.
+            callback: The function or method to remove.
+        """
         to_remove = []
         for i, (ev, ref) in enumerate(self._observers):
             cb = ref()
@@ -31,7 +49,13 @@ class ObservableGraphicsItemMixin:
             self._observers.pop(i)
 
     def notify_observers(self, event, *args, **kwargs):
-        # Call all live observers for the event
+        """
+        Notify all observers subscribed to the given event.
+        Args:
+            event: The event name or type.
+            *args: Positional arguments to pass to the callback.
+            **kwargs: Keyword arguments to pass to the callback.
+        """
         dead = []
         for i, (ev, ref) in enumerate(self._observers):
             if ev == event:
@@ -44,11 +68,20 @@ class ObservableGraphicsItemMixin:
             self._observers.pop(i)
 
     def cleanup(self):
-        # Unsubscribe all observers
+        """
+        Unsubscribe all observers and clear the observer list.
+        """
         self._observers.clear()
 
     def itemChange(self, change, value):
-        # Cleanup on scene removal
+        """
+        Handle QGraphicsItem itemChange events. Cleans up observers on scene removal.
+        Args:
+            change: The type of change.
+            value: The value associated with the change.
+        Returns:
+            The result of the base class itemChange.
+        """
         if change == QGraphicsItem.ItemSceneChange and value is None:
             self.cleanup()
         return super().itemChange(change, value)

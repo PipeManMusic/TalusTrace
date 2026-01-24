@@ -5,7 +5,6 @@ from core.device import Device
 from core.pin import Pin
 from infra.routing import RoutingEngine
 
-Harness.model_rebuild()
 
 def test_ph4_2_1_auto_route_generation():
     """
@@ -15,10 +14,11 @@ def test_ph4_2_1_auto_route_generation():
     # 1. Setup Harness with Devices
     harness = Harness()
     
+    import uuid
     # Device J1 with 2 pins
-    j1 = Device(id="J1", rows=1, cols=2, pitch_mm=10.0) 
+    j1 = Device(id=str(uuid.uuid4()), rows=1, cols=2, pitch_mm=10.0)
     # Device J2 with 2 pins
-    j2 = Device(id="J2", rows=1, cols=2, pitch_mm=10.0)
+    j2 = Device(id=str(uuid.uuid4()), rows=1, cols=2, pitch_mm=10.0)
     
     # Industrial Positioning (PH1-4.2)
     j1.meta["x"] = 50.0

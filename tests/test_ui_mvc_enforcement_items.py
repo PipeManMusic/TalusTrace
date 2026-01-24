@@ -29,7 +29,7 @@ def api_manager():
 # DeviceItem MVC enforcement
 
 def test_deviceitem_uses_api_manager(app, api_manager):
-    device = Device(id="D1", x=10, y=20, meta={"width_mm": 40, "height_mm": 30}, pins=[])
+    device = Device(id="11111111-1111-1111-1111-111111111111", x=10, y=20, meta={"width_mm": 40, "height_mm": 30}, pins=[])
     item = DeviceItem(device)
     # Simulate selection or interaction
     if hasattr(item, 'subscribe'):
@@ -40,7 +40,7 @@ def test_deviceitem_uses_api_manager(app, api_manager):
 # WireItem MVC enforcement
 
 def test_wireitem_uses_api_manager(app, api_manager):
-    wire = Wire(id="W1", from_conn="D1", from_pin="P1", to_conn="D2", to_pin="P2", path_nodes=[(0,0),(100,0)])
+    wire = Wire(id="22222222-2222-2222-2222-222222222222", from_conn="11111111-1111-1111-1111-111111111111", from_pin="33333333-3333-3333-3333-333333333333", to_conn="44444444-4444-4444-4444-444444444444", to_pin="55555555-5555-5555-5555-555555555555", path_nodes=[(0,0),(100,0)])
     item = WireItem(wire)
     if hasattr(item, 'subscribe'):
         item.subscribe('geometry_changed', lambda x: None)
@@ -50,7 +50,7 @@ def test_wireitem_uses_api_manager(app, api_manager):
 # PinItem MVC enforcement
 
 def test_pinitem_uses_api_manager(app, api_manager):
-    pin = Pin(id="P1", x=5, y=5, label="P1", side=Side.TOP)
+    pin = Pin(id="33333333-3333-3333-3333-333333333333", x=5, y=5, label="33333333-3333-3333-3333-333333333333", side=Side.TOP)
     item = PinItem(pin)
     if hasattr(item, 'subscribe'):
         item.subscribe('selection_changed', lambda x: None)
@@ -60,7 +60,7 @@ def test_pinitem_uses_api_manager(app, api_manager):
 # SegmentGripItem MVC enforcement
 
 def test_segmentgripitem_uses_api_manager(app, api_manager):
-    wire = Wire(id="W2", from_conn="D1", from_pin="P1", to_conn="D2", to_pin="P2", path_nodes=[(0,0),(100,0)])
+    wire = Wire(id="66666666-6666-6666-6666-666666666666", from_conn="11111111-1111-1111-1111-111111111111", from_pin="33333333-3333-3333-3333-333333333333", to_conn="44444444-4444-4444-4444-444444444444", to_pin="55555555-5555-5555-5555-555555555555", path_nodes=[(0,0),(100,0)])
     wire_item = WireItem(wire)
     grip = SegmentGripItem(wire_item, 0, 1, (0,0), (100,0))
     if hasattr(grip, 'subscribe'):
@@ -71,7 +71,7 @@ def test_segmentgripitem_uses_api_manager(app, api_manager):
 # ElbowGripItem MVC enforcement
 
 def test_elbowgripitem_uses_api_manager(app, api_manager):
-    wire = Wire(id="W3", from_conn="D1", from_pin="P1", to_conn="D2", to_pin="P2", path_nodes=[(0,0),(100,0)])
+    wire = Wire(id="77777777-7777-7777-7777-777777777777", from_conn="11111111-1111-1111-1111-111111111111", from_pin="33333333-3333-3333-3333-333333333333", to_conn="44444444-4444-4444-4444-444444444444", to_pin="55555555-5555-5555-5555-555555555555", path_nodes=[(0,0),(100,0)])
     wire_item = WireItem(wire)
     grip = ElbowGripItem(wire_item, 0, (0,0))
     if hasattr(grip, 'subscribe'):

@@ -1,9 +1,17 @@
+"""
+Base classes and mixins for custom QGraphicsItems in Talus Trace UI.
+
+Provides shared logic for selection, event handling, and model association.
+"""
+
 from PySide6.QtWidgets import QGraphicsItem, QGraphicsDropShadowEffect
 from PySide6.QtGui import QColor
 from PySide6.QtCore import Qt, QPointF
 
 class SelectableItemMixin:
+    """Mixin for QGraphicsItems to support selection, movement, and ghost logic."""
     def init_mixin(self, model, is_ghost=False):
+        """Initialize the mixin with model and ghost status, setting flags and state."""
         self.model = model
         self.is_ghost = is_ghost
         self.setAcceptHoverEvents(True)
@@ -18,6 +26,7 @@ class SelectableItemMixin:
 
 
     def itemChange(self, change, value):
+        """Custom itemChange handler for selection, movement, and grid snapping."""
         # Prevent non-ghost items from being moved by QGraphicsView drag unless MoveTool is handling the drag
         if not getattr(self, 'is_ghost', False):
             if change == QGraphicsItem.ItemPositionChange:
@@ -85,6 +94,7 @@ class SelectableItemMixin:
         return super().itemChange(change, value)
 
     def update_visual_state(self):
+        """Update the item's visual state based on selection and ghost status."""
         if self.isSelected() and not self.is_ghost:
             effect = QGraphicsDropShadowEffect()
             effect.setBlurRadius(15)
@@ -95,4 +105,6 @@ class SelectableItemMixin:
             self.setGraphicsEffect(None)
         self._apply_style()
 
-    def _apply_style(self): pass
+    def _apply_style(self):
+        """Apply custom style to the item (to be implemented by subclasses)."""
+        pass

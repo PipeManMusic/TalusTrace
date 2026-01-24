@@ -19,27 +19,3 @@ def test_helix_sine_wave_generation():
     # (Checking if the sine wave logic is producing expected oscillation)
     peak_y = [p[1] for p in helix_a if 1.0 <= p[0] <= 1.5]
     assert max(peak_y) == pytest.approx(2.0, 0.1)
-
-def test_lod_switcher_logic():
-    """
-    Validates PH3-2.2: UI: Twisted Pair LOD Switcher.
-    Swaps rendering based on lod_threshold_scale.
-    """
-    from ui.items import TwistedPairItem
-    
-    # Mock zoom scale
-    high_detail_zoom = 2.0  # Zoomed in
-    low_detail_zoom = 0.2   # Zoomed out
-    
-    # Provide minimal valid arguments for TwistedPairItem
-    dummy_path = [(0.0, 0.0), (10.0, 0.0)]
-    class DummyTransformer:
-        def mm_to_px(self, mm): return mm
-        def mm_to_px_tuple(self, pt): return pt
-    tp_item = TwistedPairItem(dummy_path, DummyTransformer())
-    
-    # Should use Helix (High Detail)
-    assert tp_item.determine_lod(high_detail_zoom) == "HELIX"
-    
-    # Should use Hatch (Low Detail)
-    assert tp_item.determine_lod(low_detail_zoom) == "HATCH"

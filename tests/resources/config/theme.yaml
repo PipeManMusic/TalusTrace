@@ -1,0 +1,10 @@
+name: Custom Theme
+background: "#222222"
+foreground: "#ffffff"
+primary: "#1976d2"
+secondary: "#424242"
+accent: "#ff4081"
+error: "#d32f2f"
+warning: "#ffa000"
+info: "#1976d2"
+success: "#388e3c"

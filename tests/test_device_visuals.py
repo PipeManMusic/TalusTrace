@@ -8,8 +8,9 @@ def test_device_rect_scaling(qtbot):
     Validates PH1-4.4: UI: Implement Generic DeviceItem Visuals.
     Ensures the bounding rect matches core mm dimensions.
     """
+    import uuid
     dev_model = Device(
-        id="dev_001",
+        id=str(uuid.uuid4()),
         meta={"width_mm": 25.4, "height_mm": 25.4}
     )
 
@@ -26,7 +27,8 @@ def test_ghost_device_visual_state():
     """
     Validates PH1-4.4: Logic for red dashed outline if is_ghost is True.
     """
-    dev_model = Device(id="ghost_001")
+    import uuid
+    dev_model = Device(id=str(uuid.uuid4()))
     
     # FIX: No transformer argument
     item = DeviceItem(dev_model, is_ghost=True)
@@ -36,7 +38,8 @@ def test_ghost_device_visual_state():
 
 def test_standard_device_visual_state():
     """Ensures non-ghost devices use the standard industrial theme."""
-    dev_model = Device(id="std_001")
+    import uuid
+    dev_model = Device(id=str(uuid.uuid4()))
     
     # FIX: No transformer argument
     item = DeviceItem(dev_model, is_ghost=False)

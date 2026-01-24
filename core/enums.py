@@ -1,3 +1,6 @@
+"""
+Defines enums for core concepts in Talus Trace, such as Pin orientation.
+"""
 from enum import Enum
 
 class Side(str, Enum):

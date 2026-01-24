@@ -1,72 +1,115 @@
 {
-  "project": "Talus Trace",
-  "version": "1.0.0",
-  "mandate": "Industrial-grade harness design system built on the 'Holy Millimeter' truth.",
-  "specification_index": {
-    "core_logic": "doc/specs/talus_trace_arch_core_spec.md",
-    "ui_behavior": "doc/specs/talus_trace_arch_ui_spec.md",
-    "infrastructure": "doc/specs/talus_trace_arch_infra_spec.md",
-    "api_singleton": "doc/specs/talus_trace_arch_api_spec.md",
-    "canvas_math": "doc/specs/talus_trace_canvas_spec.md",
-    "wire_standards": "doc/specs/talus_trace_wire_labels_spec.md",
-    "wire_spec": "doc/specs/talus_trace_wire_spec.md",
-    "data_schema": "doc/specs/talus_trace_data_schema.md",
-    "implementation": "doc/specs/talus_trace_implementation_guide.md",
-    "functional_logic": "doc/specs/talus_trace_functional_logic.md"
+  "project_metadata": {
+    "name": "Talus Trace",
+    "description": "Professional Wire Harness CAD Software",
+    "stack": {
+      "language": "Python 3.10+",
+      "gui_framework": "PySide6 (Qt)",
+      "testing_framework": "PyTest (pytest-qt for UI)",
+      "linter": "Flake8",
+      "architecture": "Strict MVC with Command Pattern & Event-Driven UI",
+      "logging": {
+        "config_module": "logging_config.py",
+        "infra_usage": "infra/logging.py provides infra_log(). All infra modules should use infra_log for actions, warnings, and errors.",
+        "env_vars": [
+          "TALUSTRACE_INFRA_LOG=1 (enable infra logging)",
+          "TALUSTRACE_LOG_LEVEL=DEBUG|INFO|WARNING|ERROR (set log level)",
+          "TALUSTRACE_LOG_FORMAT (customize log format)",
+          "TALUSTRACE_LOG_FILE (write logs to file instead of console)"
+        ],
+        "test_pattern": "See tests/infra/test_logging.py for how to capture and assert logs."
+      }
+    },
+    "philosophy": {
+      "ui": "Dumb View / Smart Controller",
+      "documentation": "Code-as-Source-of-Truth (Self-Generating Manual)"
+    }
   },
-  "architectural_layers": {
-    "core": {
-      "path": "core/",
-      "spec": "doc/specs/talus_trace_arch_core_spec.md",
-      "rules": [
-        "Strictly Pydantic models.",
-        "Absolutely no Qt or UI imports.",
-        "All spatial data stored in Millimeters (mm).",
-        "Supports 'Draft-First' UNDEFINED states."
-      ]
+  "documentation_map": {
+    "__instruction__": "Consult these specific specs before generating code for their respective domains.",
+    "architecture_overview": "docs/specs/talus_trace_codebase_architecture.md",
+    "core_logic_rules": "docs/specs/talus_trace_functional_logic.md",
+    "data_schema": "docs/specs/talus_trace_data_schema.md",
+    "ui_interaction_flow": "docs/specs/talus_trace_ui_flow.md",
+    "canvas_rendering": "docs/specs/talus_trace_canvas_spec.md",
+    "command_pattern": "docs/specs/talus_trace_command_pattern.md",
+    "infrastructure": "docs/specs/talus_trace_arch_infra_spec.md",
+    "implementation_guide": "docs/specs/talus_trace_implementation_guide.md",
+    "user_manual_intent": "docs/specs/talus_trace_intent.md"
+  },
+  "architectural_enforcements": {
+    "global_constraints": [
+      "CRITICAL: NO circular imports. Use 'typing.TYPE_CHECKING' for type hints or lazy imports inside methods only when absolutely necessary.",
+      "The 'View' (UI) must NEVER modify the 'Model' (Core) directly. It must dispatch Actions/Commands via the API.",
+      "The 'Model' (Core) must NEVER import 'PySide6', 'ui', or depend on the event loop."
+    ],
+    "layer_rules": {
+      "core": {
+        "description": "Pure logical representation (Data Models, Geometry, Electrical Rules).",
+        "allowed_imports": ["builtins", "math", "uuid", "dataclasses", "enum", "typing"],
+        "forbidden_imports": ["PySide6", "ui", "api"],
+        "mandate": "Must remain 100% headless. Logic must be verifiably correct via unit tests without a QApplication instance."
+      },
+      "api": {
+        "description": "The Controller layer. Orchestrates Commands, manages State, and handles Undo/Redo.",
+        "allowed_imports": ["core", "infra"],
+        "role": "Single Source of Truth. The UI queries the API for state; the API does not push data to UI widgets directly (use Observer pattern)."
+      },
+      "ui": {
+        "description": "The View layer. Dumb rendering and event capture only.",
+        "allowed_imports": ["PySide6", "api", "core (read-only models)"],
+        "forbidden_patterns": [
+          "Business logic in widget slots (e.g., calculating wire geometry in a mouse event).",
+          "Direct modification of device attributes (e.g., 'device.x = 10'). Must use 'api.commands.run(...)'.",
+          "Hardcoded keybinds (Must use 'ui.input_system')."
+        ],
+        "mandate": "UI components are disposable views of the underlying data."
+      }
+    }
+  },
+  "documentation_automation": {
+    "intent": "The User Manual is not written manually; it is generated from metadata embedded in the Codebase. The Code is the Source of Truth.",
+    "implementation_plan": {
+      "registry_source": "The 'api/actions.yaml' and 'api/commands/*.py' definitions define the manual structure.",
+      "required_metadata": [
+        "display_name: Human-readable title for the feature.",
+        "description: 1-2 sentence summary of what the feature does.",
+        "help_text: Detailed usage instructions (markdown allowed).",
+        "category: The section of the manual where this feature belongs."
+      ],
+      "generator_hook": "A CI/CD script will scan the Action Registry and Tool Manager to compile 'docs/generated_user_manual.md' automatically."
+    }
+  },
+  "workflow_protocols": {
+    "test_driven_design": {
+      "status": "MANDATORY",
+      "process": [
+        "1. WRITE TEST: Create a failing test case in 'tests/' using Pytest.",
+        "2. DEFINE INTERFACE: Stub the method or class in 'core/' or 'api/'.",
+        "3. IMPLEMENT LOGIC: Write the minimum code to pass the test.",
+        "4. LINT: Run 'flake8' on the new file. Fix all E/F/W errors immediately.",
+        "5. WIRE UI: Only after logic passes headless tests, create/update the UI widget."
+      ],
+      "ui_testing_rule": "Use 'pytest-qt' (qtbot) for UI tests. Mock the API backend to ensure UI tests focus only on signals/slots interaction, not business logic."
     },
-    "infra": {
-      "path": "infra/",
-      "spec": "doc/specs/talus_trace_arch_infra_spec.md",
-      "rules": [
-        "Handles Command execution and Undo/Redo.",
-        "Manages YAML serialization with mm precision.",
-        "Enforces Optimistic Locking via entity revision IDs."
-      ]
+    "feature_definition_protocol": {
+      "rule": "Every new Command or Tool must include 'help_text' and 'display_name' attributes at the time of creation to support the Self-Documenting Manual."
     },
-    "api": {
-      "path": "api/",
-      "spec": "doc/specs/talus_trace_arch_api_spec.md",
-      "rules": [
-        "Singleton gateway; sole entry point for UI-to-Core.",
-        "Converts Core mm to UI pixels for view requests.",
-        "Emits 'StateChanged' signals after successful commands."
-      ]
-    },
-    "ui": {
-      "path": "ui/",
-      "spec": "doc/specs/talus_trace_arch_ui_spec.md",
-      "rules": [
-        "PySide6/Qt-based 'Dumb Visualizer'.",
-        "Translates user clicks to mm-based Commands.",
-        "Grid snap: 20px (Standard).",
-        "Coordinate Scale: 1.0 Zoom = 20 Pixels per Inch."
+    "code_quality": {
+      "linter": "Flake8",
+      "enforcement": "Zero tolerance for linting errors in new code.",
+      "guidelines": [
+        "Line length: Follow project .flake8 config (standard 88 or 120 chars).",
+        "Docstrings: Google Style required for all public methods.",
+        "Type Hinting: Mandatory for all function signatures."
       ]
     }
   },
-  "development_protocol": {
-    "workflow": [
-      "Check current task in fix_items.json.",
-      "Write failing TDD test in tests/ before implementation.",
-      "Implement minimum code to pass test.",
-      "Update task status via manage_issues.py."
-    ],
-    "file_standard": "All coordinates are float (mm). Revisions are integer (0+).",
-    "issue_tracker": "fix_items.json"
-  },
-  "design_system": {
-    "theme": "resources/theme_tokens.json",
-    "grid_major": "100px",
-    "grid_minor": "20px"
+  "critical_paths": {
+    "entry_point": "ui/app.py",
+    "api_singleton": "api/manager.py",
+    "command_registry": "api/actions.py",
+    "input_routing": "ui/input_system.py",
+    "canvas_dispatch": "ui/canvas.py"
   }
 }

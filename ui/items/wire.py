@@ -1,9 +1,15 @@
+"""
+Wire item classes for Talus Trace UI.
+
+Provides scene items for rendering, interacting with, and visualizing wires.
+"""
 def generate_helix_points(path_nodes, pitch=10.0, amplitude=1.5, num_points=200):
-    # Dummy implementation for test compatibility
+    """Generate helix points for a wire path (dummy implementation for test compatibility)."""
     return [path_nodes for _ in range(2)]
 
 from PySide6.QtWidgets import QGraphicsPathItem, QGraphicsItem
-from PySide6.QtGui import QPen, QColor, QPainterPath, QPainterPathStroker, QBrush
+from PySide6.QtGui import QPen, QColor, QPainterPath, QPainterPathStroker, QBrush, QPainter
+from PySide6.QtCore import QRectF
 from PySide6.QtCore import Qt, QPointF
 from ui.theme import ThemeManager
 from ui.items.base import SelectableItemMixin
@@ -11,35 +17,38 @@ from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 from core.logic import calculate_bundle_diameter
 
 class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathItem):
+    """Scene item for rendering and interacting with a wire in the UI."""
     __test_scenario__ = {
         'model_data': {'path_nodes': [(0, 0), (1, 1)]},
         'expected_child_count': 0
     }
     def __init__(self, wire_model, parent=None, pin_lookup=None, **kwargs):
+        """Initialize a WireItem with the given wire model and optional pin lookup."""
         QGraphicsPathItem.__init__(self, parent)
         ObservableGraphicsItemMixin.__init__(self)
         self.theme = ThemeManager()
         self.setZValue(0)
         self._model = wire_model
         self.pin_lookup = pin_lookup
-        
         # New flag for compliance
         self.is_violation = False
-        
         self.update_from_model(wire_model)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemIsMovable, False)
 
     @property
     def model(self):
+        """Return the wire model associated with this item."""
         return self._model
 
     @model.setter
     def model(self, value):
+        """Set the wire model and update the item from the new model."""
         self._model = value
         self.update_from_model(value)
 
     def update_from_model(self, wire_model):
+        """Update the item's path and style from the given wire model."""
         self._model = wire_model
         nodes = getattr(wire_model, 'path_nodes', [])
         qpath = QPainterPath()
@@ -56,29 +65,30 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         self._apply_style()
 
     def _apply_style(self):
+        """Apply the appropriate style (color, width) to the wire based on its state."""
         # 1. Determine Color
         if self.is_violation:
             color = self.theme.get_color("bundle_violation")
         else:
             color_hex = getattr(self.model, 'color', None)
             color = QColor(color_hex) if color_hex else self.theme.get_color("bundle_standard")
-            
         # 2. Determine Width
         gauge_mm = getattr(self.model, 'gauge', 1.0)
         stroke_width = calculate_bundle_diameter([gauge_mm]) if gauge_mm else 1.0
         if stroke_width < 0.5:
             stroke_width = 0.5
-            
         pen = QPen(color, stroke_width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
         pen.setCosmetic(False)
         self.setPen(pen)
 
     def shape(self):
+        """Return the shape of the wire for hit testing and selection."""
         stroker = QPainterPathStroker()
         stroker.setWidth(self.pen().widthF() if self.pen() else 1.0)
         return stroker.createStroke(self.path())
 
     def paint(self, painter, option, widget):
+        """Custom paint method to draw the wire and selection handles."""
         super().paint(painter, option, widget)
         if self.isSelected() and self.path_nodes:
             # Draw blue dot at each elbow (bend) point (not endpoints), but only if not covered by a grip
@@ -92,78 +102,29 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
                     pt = self.path_nodes[i]
                     painter.drawEllipse(QPointF(pt[0], pt[1]), radius, radius)
 
-class TwistedPairItem(ObservableGraphicsItemMixin, QGraphicsItem):
-    __test_scenario__ = {
-        'model_data': {'path_nodes': [(0, 0), (1, 1)], 'gauge_mm': 0.65},
-        'expected_child_count': 0
-    }
-    def __init__(self, path_nodes, gauge_mm=0.65, parent=None):
-        super().__init__(parent)
-        self.path_nodes = path_nodes
-        self.gauge_mm = gauge_mm
-        self.theme = ThemeManager()
-        self.helix_a, self.helix_b = self._calculate_geometry()
-
-    def _calculate_geometry(self):
-        result = generate_helix_points(self.path_nodes, pitch=10.0, amplitude=1.5, num_points=200)
-        return result
-
-    def determine_lod(self, view_scale: float) -> str:
-        return "HELIX" if view_scale >= 0.5 else "HATCH"
-
-    def boundingRect(self):
-        if not self.path_nodes: return QRectF()
-        xs = [p[0] for p in self.path_nodes]
-        ys = [p[1] for p in self.path_nodes]
-        margin = 5.0
-        return QRectF(min(xs)-margin, min(ys)-margin, (max(xs)-min(xs))+margin*2, (max(ys)-min(ys))+margin*2)
-
-    def paint(self, painter, option, widget):
-        painter.setRenderHint(QPainter.Antialiasing)
-        pen_a = QPen(self.theme.get_color("wire_a"), self.gauge_mm, Qt.SolidLine, Qt.RoundCap)
-        pen_b = QPen(self.theme.get_color("wire_b"), self.gauge_mm, Qt.SolidLine, Qt.RoundCap)
-        pen_a.setCosmetic(False)
-        pen_b.setCosmetic(False)
-        
-        scale = painter.transform().m11()
-        if self.determine_lod(scale) == "HELIX":
-            for helix, pen in [(self.helix_a, pen_a), (self.helix_b, pen_b)]:
-                painter.setPen(pen)
-                path = QPainterPath()
-                if helix:
-                    path.moveTo(helix[0][0], helix[0][1])
-                    for pt in helix[1:]: path.lineTo(pt[0], pt[1])
-                painter.drawPath(path)
-        else:
-            # Low LOD
-            pen_a.setColor(Qt.gray)
-            painter.setPen(pen_a)
-            path = QPainterPath()
-            if self.path_nodes:
-                path.moveTo(self.path_nodes[0][0], self.path_nodes[0][1])
-                for pt in self.path_nodes[1:]: path.lineTo(pt[0], pt[1])
-            painter.drawPath(path)
-
 class GhostWireItem(ObservableGraphicsItemMixin, QGraphicsPathItem):
+    """Scene item for rendering a temporary (ghost) wire during interactive operations."""
     __test_scenario__ = {
         'model_data': {'start_pos': (0, 0), 'current_pos': (1, 1)},
         'expected_child_count': 0
     }
     def __init__(self, start_pos, current_pos, parent=None):
+        """Initialize a GhostWireItem with start and current positions."""
         super().__init__(parent)
         self.start_pos = start_pos
         self.current_pos = current_pos
-        
         pen = QPen(Qt.cyan, 0, Qt.DashLine, Qt.RoundCap)
         pen.setCosmetic(True) # Always visible
         self.setPen(pen)
         self.update_path()
 
     def update_target(self, new_pos):
+        """Update the target (current) position of the ghost wire and redraw the path."""
         self.current_pos = new_pos
         self.update_path()
 
     def update_path(self):
+        """Update the QPainterPath for the ghost wire based on start and current positions."""
         path = QPainterPath()
         path.moveTo(self.start_pos)
         path.lineTo(self.current_pos)

@@ -5,6 +5,7 @@ from ui.items import DeviceItem
 from core.device import Device
 from api.manager import APIManager
 
+@pytest.mark.gui
 def test_smart_cursor_affordance(qtbot):
     """PH5-CLN.3: Verify cursor changes to OpenHand over devices using API coordinates."""
     window = MainWindow()
@@ -15,7 +16,7 @@ def test_smart_cursor_affordance(qtbot):
     
     api = APIManager.get_instance()
     harness = api.context.harness
-    dev = Device(id="TEST_DEV", x=100.0, y=100.0)
+    dev = Device(id="11111111-1111-1111-1111-111111111111", x=100.0, y=100.0)
     harness.devices.append(dev)
     
     canvas.load_harness(harness)

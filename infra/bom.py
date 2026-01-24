@@ -1,19 +1,44 @@
+"""
+infra/bom.py
+
+Bill of Materials (BOM) generation and wire list utilities for Talus Trace.
+Provides cut length calculation and export methods.
+"""
+
 import csv
 import math
 from pathlib import Path
 
 class BOMGenerator:
+    """
+    Generates Bill of Materials (BOM) and wire lists for the harness.
+    Provides methods for cut length calculation and file export.
+    """
     def __init__(self, context=None, harness=None):
+        """
+        Initialize the BOMGenerator with context and harness.
+        Args:
+            context: The application context.
+            harness: The harness model.
+        """
         self.context = context
         self._harness = harness 
 
     @property
     def harness(self):
+        """Return the current harness model."""
         if self._harness: return self._harness
         if self.context: return self.context.harness
         return None
 
     def calculate_cut_length(self, wire):
+        """
+        Calculate the cut length for a given wire.
+        Args:
+            wire: The wire object.
+        Returns:
+            float: The calculated cut length.
+        """
         """
         Calculates manufacturing cut length.
         Logic: (Euclidean Length * Twist Factor) + Slack
@@ -41,6 +66,11 @@ class BOMGenerator:
         return (total_dist * factor) + slack
 
     def generate_bom(self, file_path):
+        """
+        Generate the Bill of Materials and save to a file.
+        Args:
+            file_path: The file path to save the BOM.
+        """
         counts = {}
         harness = self.harness
         if not harness: return False
@@ -62,6 +92,11 @@ class BOMGenerator:
             return False
 
     def generate_wire_list(self, file_path):
+        """
+        Generate the wire list and save to a file.
+        Args:
+            file_path: The file path to save the wire list.
+        """
         harness = self.harness
         if not harness: return False
         

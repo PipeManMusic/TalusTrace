@@ -1,13 +1,28 @@
+"""
+Select tool for item selection, marquee, and wire hit testing in Talus Trace.
+Implements selection logic, bend point addition, and event handling.
+"""
 import math
 from PySide6.QtCore import Qt
 from tools.base_tool import BaseTool
 from ui.items.wire import WireItem
 
 class SelectTool(BaseTool):
+    """
+    Tool for item selection, marquee, and wire hit testing.
+    """
     def start(self, *args, **kwargs):
+        """
+        Start the select tool.
+        """
         pass
     def add_bend_point(self, wire_id, location):
-        # Minimal stub for test compatibility
+        """
+        Add a bend point to a wire for test compatibility.
+        Args:
+            wire_id: ID of the wire.
+            location: Location to add the bend point.
+        """
         harness = getattr(self, '_get_harness', lambda: None)()
         if harness:
             for wire in getattr(harness, 'wires', []):
@@ -17,7 +32,14 @@ class SelectTool(BaseTool):
                     wire.points.append(location)
 
     def hit_test_wire(self, pos, tolerance=5.0):
-        # Match test: horizontal wire from (0,10) to (100,10)
+        """
+        Hit test for horizontal wire at y=10.
+        Args:
+            pos: Position to test.
+            tolerance: Tolerance for hit testing.
+        Returns:
+            True if wire is hit, False otherwise.
+        """
         harness = getattr(self, '_get_harness', lambda: None)()
         px, py = pos.x(), pos.y()
         for wire in getattr(harness, 'wires', []):
@@ -32,7 +54,14 @@ class SelectTool(BaseTool):
         return False
 
     def _calculate_marquee_hits(self, rect, crossing=False):
-        # Match DeviceItem geometry: device at (x, y), rect at (0, 0, w, h)
+        """
+        Calculate marquee selection hits for devices.
+        Args:
+            rect: QRectF selection rectangle.
+            crossing: Whether to use crossing selection.
+        Returns:
+            Set of hit devices.
+        """
         from PySide6.QtCore import QRectF
         hits = set()
         harness = getattr(self, '_get_harness', lambda: None)()
@@ -53,11 +82,19 @@ class SelectTool(BaseTool):
                         hits.add(device)
         return hits
     def __init__(self):
+        """
+        Initialize the SelectTool.
+        """
         super().__init__()
         self.name = "Select"
         self.cursor = Qt.ArrowCursor
 
     def on_mouse_press(self, event):
+        """
+        Handle mouse press event for selection.
+        Args:
+            event: Mouse event.
+        """
         # Use event.scene_item if present, else fallback to hit test
         item = getattr(event, 'scene_item', None)
         if item is None:
@@ -79,6 +116,12 @@ class SelectTool(BaseTool):
             self.api.open_context_menu(event)
 
     def _handle_wire_click(self, wire_item, event):
+        """
+        Handle wire click events for elbows and segments.
+        Args:
+            wire_item: The wire item being clicked.
+            event: Mouse event.
+        """
         pos = [event.scene_pos.x(), event.scene_pos.y()]
         nodes = wire_item.model.path_nodes
         # A. Check Elbow Hit (Right Click -> Delete)
@@ -101,6 +144,15 @@ class SelectTool(BaseTool):
             self.api.select([wire_item.model])
 
     def _find_elbow_index(self, nodes, pos, threshold):
+        """
+        Find the index of an elbow (bend point) near the given position.
+        Args:
+            nodes: List of wire path nodes.
+            pos: Position to check.
+            threshold: Distance threshold for hit detection.
+        Returns:
+            Index of the elbow if found, else -1.
+        """
         px, py = pos
         for i in range(1, len(nodes) - 1):
             nx, ny = nodes[i]
@@ -110,6 +162,15 @@ class SelectTool(BaseTool):
         return -1
 
     def _find_segment_index(self, nodes, pos, threshold):
+        """
+        Find the index of a wire segment near the given position.
+        Args:
+            nodes: List of wire path nodes.
+            pos: Position to check.
+            threshold: Distance threshold for hit detection.
+        Returns:
+            Index of the segment if found, else -1.
+        """
         px, py = pos
         for i in range(len(nodes) - 1):
             p1 = nodes[i]
@@ -120,6 +181,14 @@ class SelectTool(BaseTool):
         return -1
 
     def _point_to_segment_dist(self, px, py, x1, y1, x2, y2):
+        """
+        Calculate the distance from a point to a line segment.
+        Args:
+            px, py: Point coordinates.
+            x1, y1, x2, y2: Segment endpoints.
+        Returns:
+            Distance from the point to the segment.
+        """
         dx = x2 - x1
         dy = y2 - y1
         if dx == 0 and dy == 0:
@@ -131,4 +200,7 @@ class SelectTool(BaseTool):
         return math.hypot(px - nearest_x, py - nearest_y)
 
     def deactivate(self):
+        """
+        Deactivate the select tool and perform cleanup if necessary.
+        """
         pass

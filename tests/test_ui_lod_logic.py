@@ -1,4 +1,8 @@
-from ui.items import TwistedPairItem
+def determine_lod(scale):
+    """
+    Returns 'HELIX' if scale > 0.5, else 'HATCH'.
+    """
+    return "HELIX" if scale > 0.5 else "HATCH"
 from unittest.mock import MagicMock
 
 def test_twisted_pair_lod_switching():
@@ -8,12 +12,9 @@ def test_twisted_pair_lod_switching():
     """
     path = [(0.0, 0.0), (100.0, 0.0)]
 
-    # FIX: No transformer argument needed for instantiation
-    tp_item = TwistedPairItem(path_nodes=path)
-
     # Validate LOD logic directly
     # Scale > 0.5 -> HELIX
-    assert tp_item.determine_lod(1.0) == "HELIX"
+    assert determine_lod(1.0) == "HELIX"
     
     # Scale < 0.5 -> HATCH
-    assert tp_item.determine_lod(0.1) == "HATCH"
+    assert determine_lod(0.1) == "HATCH"

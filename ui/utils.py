@@ -1,9 +1,15 @@
+"""
+UI utility functions for Talus Trace.
+
+Includes helpers for event/scene position extraction and other common UI operations.
+"""
 from PySide6.QtCore import QPoint, QPointF
 
 # Utility to get scene position from any mouse event
 # Handles both view events and item events
 
 def get_scene_pos(event, canvas=None):
+    """Return the scene position for a Qt mouse event, handling both item and view events."""
     """
     Returns the scene position for a Qt mouse event.
     If event has scenePos(), use it directly (item event).

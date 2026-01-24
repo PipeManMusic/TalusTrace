@@ -50,7 +50,7 @@ def test_panel_uses_api_manager(PanelClass, app, api_manager):
     assert api_manager.subscribe.call_count >= 0
 
 def test_pin_mapping_dialog_uses_api_manager(app, api_manager):
-    dlg = PinMappingDialog(wire_id="W1", connector_id="C1")
+    dlg = PinMappingDialog(wire_id="22222222-2222-2222-2222-222222222222", connector_id="88888888-8888-8888-8888-888888888888")
     dlg.show()
     dlg.close()
     assert api_manager.dispatch.call_count >= 0

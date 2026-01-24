@@ -1,9 +1,20 @@
-from infra.context import Context
+"""
+API Manager for Talus Trace.
+
+This module defines the APIManager class, which acts as the main interface between the UI, core models, and infrastructure layers. It provides methods for manipulating devices, wires, selection, and scene items, and coordinates undo/redo, event dispatch, and tool management.
+"""
+
+Context = None
 from infra.settings import SystemSettings
 from core.library_manager import LibraryManager
 from ui.input_system import InputSystem
 
 class APIManager:
+    """
+    Main API manager for Talus Trace.
+
+    This singleton class provides high-level methods for manipulating the project state, devices, wires, and UI integration. It manages the tool system, event dispatch, undo/redo, and scene item registry.
+    """
     def handle_drop(self, event):
         """Handle drop events for the canvas, supporting library:// device insertion."""
         # Only handle QDropEvent with text starting with library://
@@ -20,7 +31,6 @@ class APIManager:
             parts = self.library.get_parts()
             part_def = parts.get(part_id)
         if not part_def:
-            print(f"[APIManager.handle_drop] Part {part_id} not found in library.")
             return
         # Create device model and add to harness
         Device = self._get_device_model_class()
@@ -40,38 +50,76 @@ class APIManager:
             pins=[{'id': p['id'], 'device_id': part_id, 'x': x, 'y': y} for p in part_def.get('pins', [])],
             meta=part_def
         )
-        self.context.harness.devices.append(device)
+        # Route device addition via infra command, not direct mutation
+        from api.commands.device import AddDeviceCommand
+        cmd = AddDeviceCommand(device)
+        if hasattr(self.context, 'undo_stack'):
+            self.context.undo_stack.push(cmd)
+        else:
+            cmd.execute()
         # Optionally, trigger scene update if needed
         if hasattr(self, 'main_window') and self.main_window and hasattr(self.main_window, 'canvas'):
             self.main_window.canvas.load_harness(self.context.harness)
 
     def _get_device_model_class(self):
-        # Helper to get the Device model class
+        """
+        Helper to get the Device model class.
+        Returns the Device class from core.device, or a minimal fallback if import fails.
+        """
         try:
             from core.device import Device
             return Device
         except ImportError:
             # Fallback: create a minimal Device class
             return lambda **kwargs: type('Device', (), kwargs)()
-    def move_device(self, device_id, new_x, new_y):
-        """Move a device by id, push MoveDeviceCommand, and dispatch model_changed."""
+        
+    def move_device(self, target_or_id, new_x, new_y, commit=False):
+        """
+        Move a device or scene item. If commit=True, push MoveCommand to undo stack; else, update model and dispatch only.
+        If commit is False, update model and dispatch for real-time feedback (drag).
+        If commit is True, push MoveCommand for undo/redo (on drag finish).
+        """
+        from api.commands.move import MoveCommand
         device = None
-        for dev in getattr(self.context.harness, 'devices', []):
-            if hasattr(dev, 'id') and dev.id == device_id:
-                device = dev
-                break
-        if device is None:
-            print(f"[APIManager.move_device] Device {device_id} not found.")
-            return
-        from api.commands.move import MoveDeviceCommand
-        old_x, old_y = device.x, device.y
-        cmd = MoveDeviceCommand(device, old_x, old_y, new_x, new_y)
-        if hasattr(self.context, 'undo_stack'):
-            self.context.undo_stack.push(cmd)
+        # Always resolve device and scene item from id if possible
+        if hasattr(target_or_id, 'model'):
+            scene_item = target_or_id
+            device = getattr(scene_item, 'model', None)
         else:
-            cmd.execute()
+            device_id = target_or_id
+            for dev in getattr(self.context.harness, 'devices', []):
+                if hasattr(dev, 'id') and dev.id == device_id:
+                    device = dev
+                    break
+            # Try to get scene item from registry
+            scene_item = self.get_scene_item(device_id)
+        if device is None:
+            return
+        if commit:
+            # Use the original drag start position for undo, if available
+            old_x, old_y = None, None
+            if hasattr(scene_item, '_drag_initial_pos'):
+                old_x, old_y = scene_item._drag_initial_pos
+            else:
+                old_x, old_y = getattr(device, 'x', 0.0), getattr(device, 'y', 0.0)
+            target = scene_item if scene_item is not None else device
+            if scene_item is None and hasattr(device, 'mock_item'):
+                target = getattr(device, 'mock_item')
+            cmd = MoveCommand(target, (old_x, old_y), (new_x, new_y))
+            if hasattr(self.context, 'undo_stack'):
+                self.context.undo_stack.push(cmd)
+            else:
+                cmd.execute()
+        else:
+            # Directly update model for real-time feedback
+            device.x = new_x
+            device.y = new_y
+            self.dispatch("model_changed", {"action": "move", "item": device})
     def open_context_menu(self, event):
-        print('[DEBUG] APIManager.open_context_menu called')
+        """
+        Open a context menu at the event location, dispatching a 'context_menu' event.
+        Handles both device and canvas context menus, and supports headless/test mode.
+        """
         from PySide6.QtWidgets import QMenu
         from PySide6.QtGui import QAction
         from PySide6.QtCore import QPoint
@@ -90,70 +138,51 @@ class APIManager:
             viewport_pos = canvas.mapFromGlobal(event.globalPos())
             mapped_scene_pos = canvas.mapToScene(viewport_pos)
             item = canvas.scene.itemAt(mapped_scene_pos, canvas.transform())
-            print(f'[DEBUG] Hit test at viewport_pos={viewport_pos}, mapped_scene_pos={mapped_scene_pos}')
-            for scene_item in canvas.scene.items():
-                try:
-                    print(f'  [DEBUG] Item: {scene_item}, type={type(scene_item)}, pos={scene_item.scenePos()}, boundingRect={scene_item.boundingRect()}')
-                except Exception as e:
-                    print(f'  [DEBUG] Item: {scene_item}, type={type(scene_item)}, error={e}')
         else:
             scene_pos = event.pos() if hasattr(event, 'pos') else None
             if scene_pos is not None:
                 mapped_scene_pos = canvas.mapToScene(scene_pos)
                 item = canvas.scene.itemAt(mapped_scene_pos, canvas.transform())
-        print(f'[DEBUG] open_context_menu: mapped_scene_pos={mapped_scene_pos}, item={item}')
         menu = QMenu(view)
         # Default actions
         if item and hasattr(item, 'model'):
-            print('[DEBUG] Device context menu will be shown')
             action = QAction('Device Action', menu)
             menu.addAction(action)
         else:
-            print('[DEBUG] Canvas context menu will be shown')
             action = QAction('Canvas Action', menu)
             menu.addAction(action)
         # Always provide scene_pos for event dispatch
         dispatch_scene_pos = mapped_scene_pos if mapped_scene_pos is not None else None
         self.dispatch('context_menu', {'menu': menu, 'item': item, 'scene_pos': dispatch_scene_pos, 'event': event})
-        print(f'[DEBUG] Menu actions after dispatch: {[a.text() for a in menu.actions()]}')
         global_pos = event.globalPos() if hasattr(event, 'globalPos') else None
         import os
         is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
         if global_pos and not is_headless:
             menu.exec(global_pos)
         elif hasattr(self, '_test_context_menu_hook'):
-            print('[DEBUG] Calling _test_context_menu_hook')
             self._test_context_menu_hook(menu, global_pos)
         event.accept()
 
     def deselect_all(self):
         """Clears all selection for SelectTool compatibility."""
         self.clear_selection()
-    def add_wire(self, pin1, pin2):
-        """Create a Wire and push a real AddWireCommand to the undo stack."""
-        from core.wire import Wire
+    def add_wire(self, wire):
+        """
+        Accept a fully-formed Wire object (with valid UUID id) and push a real AddWireCommand to the undo stack.
+        The API must not generate or mutate IDs; this is handled by the infra/model layer.
+        """
         from api.commands.device import AddWireCommand
-        # Create a minimal wire model
-        wire = Wire(
-            id=f"W_{pin1.id}_{pin2.id}",
-            from_conn=getattr(pin1, 'device_id', None) or getattr(pin1, 'parent_id', None) or "D1",
-            from_pin=pin1.id,
-            to_conn=getattr(pin2, 'device_id', None) or getattr(pin2, 'parent_id', None) or "D2",
-            to_pin=pin2.id,
-            path_nodes=[[pin1.x, pin1.y], [pin2.x, pin2.y]]
-        )
-        # Push a real AddWireCommand to the undo stack
         self.context.undo_stack.push(AddWireCommand(wire))
     @classmethod
     def reset(cls):
         """Reset the singleton instance (for test compatibility)."""
         cls._instance = None
 
-    def move_segment(self, wire, start_idx, end_idx, new_start, new_end):
-        """Move a wire segment (two points) to new positions via the undo stack."""
+    def move_segment(self, wire, start_idx, end_idx, dx, dy):
+        """Move a wire segment by delta values (dx, dy) via the undo stack."""
         from tools.segment_move_tool import MoveSegmentCommand
-        # Find old positions for undo (not needed here, command already has them)
-        cmd = MoveSegmentCommand(wire, start_idx, end_idx, wire.path_nodes[start_idx][:], wire.path_nodes[end_idx][:], new_start, new_end)
+        # Pass delta values to the command
+        cmd = MoveSegmentCommand(wire, start_idx, end_idx, dx, dy, self)
         self.context.undo_stack.push(cmd)
 
     def add_elbow(self, wire, insert_idx, pos):
@@ -196,6 +225,9 @@ class APIManager:
         self.dispatch("selection_changed", {"selection": models, "tool": tool_name})
 
     def deselect(self, ids, tool_name=None):
+        """
+        Deselects items by ID, updates SelectionManager, and broadcasts selection_changed.
+        """
         import datetime
         ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
         # ...removed debug print...
@@ -207,6 +239,9 @@ class APIManager:
         self.dispatch("selection_changed", {"selection": models, "tool": tool_name})
 
     def clear_selection(self, tool_name=None):
+        """
+        Clears selection, updates SelectionManager, and broadcasts selection_changed.
+        """
         import datetime
         ts = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f')
         # ...removed debug print...
@@ -223,12 +258,25 @@ class APIManager:
         return round(x / grid) * grid, round(y / grid) * grid
 
     @classmethod
-    def get_instance(cls):
+    def get_instance(cls, context=None):
+        """
+        Get the singleton instance of APIManager, optionally injecting a new context.
+        """
         if cls._instance is None:
-            cls._instance = cls()
+            cls._instance = cls(context=context)
+        elif context is not None:
+            # If a context is provided and instance exists, update its context (for test injection)
+            cls._instance.context = context
         return cls._instance
 
     def __init__(self, context=None):
+        """
+        Initialize the APIManager singleton, setting up settings, context, library, tools, and service layer.
+        Raises an exception if an instance already exists (unless reset() was called).
+        """
+        global Context
+        if Context is None:
+            from infra.context import Context
         # Allow re-instantiation if reset() was called
         if APIManager._instance is not None:
             raise Exception("This class is a singleton! Call APIManager.reset() before creating a new instance in tests.")
@@ -271,20 +319,34 @@ class APIManager:
 
     # --- Scene Object Registry ---
     def register_scene_item(self, model_id, item):
+        """
+        Register a scene item (UI object) with a model ID for lookup and selection.
+        """
         if not hasattr(self, '_scene_registry'):
             self._scene_registry = {}
         self._scene_registry[model_id] = item
 
     def unregister_scene_item(self, model_id):
+        """
+        Unregister a scene item by its model ID.
+        """
         if hasattr(self, '_scene_registry') and model_id in self._scene_registry:
             del self._scene_registry[model_id]
 
     def get_scene_item(self, model_id):
+        """
+        Retrieve a registered scene item by its model ID.
+        Returns None if not found.
+        """
         if hasattr(self, '_scene_registry'):
             return self._scene_registry.get(model_id)
         return None
 
     def find_pin_item(self, device_id, pin_id):
+        """
+        Look up a PinItem by device_id and pin_id in the scene registry.
+        Returns the item if found, else None.
+        """
         # Look up PinItem by device_id and pin_id
         if not hasattr(self, '_scene_registry'):
             return None
@@ -320,9 +382,11 @@ class APIManager:
             self.context.observer.subscribe(event_type, callback)
 
     def dispatch(self, event_type, data=None):
+        """
+        Dispatch an event to all observers, and always dispatch 'state_changed' for compatibility.
+        """
         if data is None:
             data = {}
-        print(f"[APIManager.dispatch] Event: {event_type}, Data: {data}")
         self.context.observer.dispatch(event_type, data)
         # Always also dispatch 'state_changed' for observer notification compatibility
         if event_type != "state_changed":

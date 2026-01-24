@@ -1,7 +1,10 @@
-# core/models.py
+"""
+Models module for Talus Trace.
+Defines core data models and structures.
+"""
+
 # Facade for backward compatibility
 from .enums import Side
 from .wire import Wire, WireLabel
 from .device import Device, Pin
-from .twisted_pair import TwistedPair
 from .harness import Harness

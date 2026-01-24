@@ -1,14 +1,24 @@
+
+"""
+Segment grip item for Talus Trace UI.
+
+Provides a movable grip for wire segments, allowing interactive editing of wire geometry.
+"""
+
 from PySide6.QtWidgets import QGraphicsRectItem
 from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QBrush, QPen, QColor
 
+
 class SegmentGripItem(ObservableGraphicsItemMixin, QGraphicsRectItem):
+    """Movable grip for a wire segment, allowing interactive geometry editing."""
     __test_scenario__ = {
         'model_data': {'start_idx': 0, 'end_idx': 1, 'start_pos': (0, 0), 'end_pos': (1, 1)},
         'expected_child_count': 0
     }
     def __init__(self, wire_item, start_idx, end_idx, start_pos, end_pos, width=6.0, height=3.0, parent=None):
+        """Initialize a SegmentGripItem between two elbows of a wire segment."""
         # Center grip between elbows
         mid_x = (start_pos[0] + end_pos[0]) / 2
         mid_y = (start_pos[1] + end_pos[1]) / 2
@@ -28,6 +38,7 @@ class SegmentGripItem(ObservableGraphicsItemMixin, QGraphicsRectItem):
             self.wire_item.subscribe('geometry_changed', self._on_wire_geometry_changed)
 
     def _on_wire_geometry_changed(self, *args, **kwargs):
+        """Update the grip position when the wire geometry changes."""
         # Use the wire model's path_nodes if available for real-time updates
         path_nodes = None
         if hasattr(self.wire_item, 'model') and hasattr(self.wire_item.model, 'path_nodes'):
@@ -42,6 +53,7 @@ class SegmentGripItem(ObservableGraphicsItemMixin, QGraphicsRectItem):
             self.setPos(QPointF(mid_x, mid_y))
 
     def mouseMoveEvent(self, event):
+        """Handle mouse movement to move both elbows and update the wire segment in real time."""
         # Move both elbows by the delta of the mouse movement
         delta = event.scenePos() - event.lastScenePos()
         self.wire_item.path_nodes[self.start_idx][0] += delta.x()

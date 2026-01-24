@@ -13,8 +13,9 @@ def test_ph5_2_1_optimistic_locking():
     assert harness.revision == 6
 
     # Simulate a conflict (incoming data has revision 7, we are at 6)
-    # Assume sync_from_remote is now validate_revision
-    # If validate_revision does not raise, check that revision remains unchanged
+    # Should raise RuntimeError due to revision mismatch
     prev_revision = harness.revision
-    harness.validate_revision(7)
+    with pytest.raises(RuntimeError) as exc:
+        harness.validate_revision(7)
+    assert "Conflict" in str(exc.value)
     assert harness.revision == prev_revision

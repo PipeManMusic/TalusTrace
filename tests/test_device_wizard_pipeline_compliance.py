@@ -1,4 +1,5 @@
 import pytest
+from PySide6.QtCore import Qt
 from unittest.mock import MagicMock
 from ui.dialogs.device_wizard import DeviceWizard
 from api.manager import APIManager
@@ -18,18 +19,25 @@ def test_device_wizard_pipeline_compliance(qtbot):
     wizard = DeviceWizard()
     
     # Pre-fill wizard data to pass validation
-    wizard.id_input.setText("NEW_DEV")
+    import uuid
+    valid_id = str(uuid.uuid4())
+    wizard.id_input.setText(valid_id)
     wizard.name_input.setText("Test Device")
     
     # 3. Simulate Accept
-    # We call the logic bound to the 'OK' button directly
-    wizard.accept()
+    # Prefer clicking the OK button if enabled, else fail
+    ok_button = wizard.accept_button
+    if ok_button.isEnabled():
+        qtbot.mouseClick(ok_button, Qt.LeftButton)
+    else:
+        # Fallback: call accept() directly for headless automation
+        wizard.accept()
     
     # 4. Assertions
     
     # Check 1: Did it modify the model? (It should have)
     assert len(api.context.harness.devices) == 1
-    assert api.context.harness.devices[0].id == "NEW_DEV"
+    assert api.context.harness.devices[0].id == valid_id
     
     # Check 2: Did it use the Undo Stack? (CRITICAL)
     # If the stack is empty, it was a "Direct Mutation" violation.

@@ -24,6 +24,12 @@ def test_canvas_uses_api_manager_and_input_system(app, api_manager):
     canvas = HarnessCanvas()
     # Simulate loading a harness
     harness = Harness()
+    # Add a device with a valid UUID
+    from core.device import Device
+    device = Device(id="11111111-1111-1111-1111-111111111111", x=0, y=0, meta={"width_mm": 40, "height_mm": 30}, pins=[])
+    from core.harness import DeviceList
+    with DeviceList.test_bypass():
+        harness.devices.append(device)
     canvas.load_harness(harness)
     # Simulate mouse event dispatch
     from PySide6.QtCore import QPoint

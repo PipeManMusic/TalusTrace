@@ -1,5 +1,15 @@
+"""
+WorkbenchController for managing the main application workbench, device spawning, and bundle testing.
+"""
+
 class WorkbenchController:
+    """
+    Controller for the main application workbench, handling device spawning and bundle testing.
+    """
     def __init__(self, api, scene):
+        """
+        Initialize the WorkbenchController with API and scene references.
+        """
         self.api = api
         self.scene = scene
 

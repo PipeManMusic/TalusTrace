@@ -48,17 +48,20 @@ def get_lang_yaml(lang=DEFAULT_LANG):
     with open(lang_path, "r") as f:
         return yaml.safe_load(f) or {}
 
+@pytest.mark.gui
 def test_menu_items_have_translatable_label():
     items = get_menu_items_with_labels()
     missing = [item["command"] for item in items if "label" not in item]
     assert not missing, f"Menu items missing 'label' for i18n: {missing}"
 
+@pytest.mark.gui
 def test_menu_labels_exist_in_language_yaml():
     items = get_menu_items_with_labels()
     lang_yaml = get_lang_yaml(DEFAULT_LANG)
     missing = [item["label"] for item in items if item["label"] not in lang_yaml]
     assert not missing, f"Missing translations in {DEFAULT_LANG}.yaml: {missing}"
 
+@pytest.mark.gui
 def test_menu_labels_render_translated(main_window):
     lang_yaml = get_lang_yaml(DEFAULT_LANG)
     menubar = main_window.menuBar()

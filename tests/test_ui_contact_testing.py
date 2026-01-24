@@ -15,7 +15,7 @@ def canvas(qtbot):
     return canvas
 
 def test_deviceitem_contact(canvas):
-    device = Device(id="D1", x=10, y=20, meta={"width_mm": 40, "height_mm": 30})
+    device = Device(id="11111111-1111-1111-1111-111111111111", x=10, y=20, meta={"width_mm": 40, "height_mm": 30})
     item = DeviceItem(device)
     canvas.scene.addItem(item)
     # Test hit inside
@@ -26,7 +26,14 @@ def test_deviceitem_contact(canvas):
     assert not item.contains(outside)
 
 def test_wireitem_contact(canvas):
-    wire = Wire(id="W1", from_conn="D1", from_pin="P1", to_conn="D2", to_pin="P2", path_nodes=[(0,0),(100,0)])
+    wire = Wire(
+        id="22222222-2222-2222-2222-222222222222",
+        from_conn="11111111-1111-1111-1111-111111111111",
+        from_pin="44444444-4444-4444-4444-444444444444",
+        to_conn="33333333-3333-3333-3333-333333333333",
+        to_pin="55555555-5555-5555-5555-555555555555",
+        path_nodes=[(0,0),(100,0)]
+    )
     item = WireItem(wire)
     canvas.scene.addItem(item)
     # Test hit near wire

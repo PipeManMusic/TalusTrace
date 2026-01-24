@@ -10,6 +10,7 @@ def selection_manager():
     mgr.clear_selection()
     return mgr
 
+@pytest.mark.gui
 def test_visual_selection_syncs_to_core(qtbot, selection_manager):
     """
     Ensures that clicking/selecting a QGraphicsItem updates the Core SelectionManager.
@@ -26,6 +27,7 @@ def test_visual_selection_syncs_to_core(qtbot, selection_manager):
     assert len(selection_manager.selected_models) == 1
     assert selection_manager.selected_models[0].id == "D1"
 
+@pytest.mark.gui
 def test_core_selection_syncs_to_visual(qtbot, selection_manager):
     """
     Ensures that updating Core SelectionManager updates the Visual Item.

@@ -1,3 +1,7 @@
+"""
+Routing engine for automated netlist-to-routing in Talus Trace.
+Generates orthogonal paths and updates wire routing on the engineering grid.
+"""
 from core.harness import Harness
 from typing import Tuple, List
 
@@ -7,6 +11,11 @@ class RoutingEngine:
     Generates orthogonal paths on the 2.0mm 'Holy Millimeter' grid.
     """
     def __init__(self, harness: Harness):
+        """
+        Initialize the RoutingEngine with a harness and grid size.
+        Args:
+            harness: Harness object containing devices and wires.
+        """
         self.harness = harness
         self.grid_size = 2.0
 

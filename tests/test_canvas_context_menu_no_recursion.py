@@ -13,21 +13,17 @@ def test_canvas_context_menu_no_recursion(qtbot):
     """
     app = QApplication.instance() or QApplication([])
     api = APIManager.get_instance()
-    # Patch APIManager.open_context_menu to monitor calls and prevent recursion
-    orig_open_context_menu = api.open_context_menu
-    api.open_context_menu = MagicMock(wraps=orig_open_context_menu)
+    from unittest.mock import patch
     window = MainWindow()
     qtbot.addWidget(window)
     window.show()
     canvas = window.canvas
-    # Simulate context menu event on the canvas
     event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10), QPoint(10, 10), Qt.NoModifier)
-    try:
-        canvas.contextMenuEvent(event)
-    except RecursionError:
-        pytest.fail("RecursionError: contextMenuEvent and open_context_menu are calling each other recursively.")
-    # API should have handled the event exactly once
-    api.open_context_menu.assert_called_once_with(event)
-    # Event should be accepted
-    assert event.isAccepted()
+    with patch.object(api, "open_context_menu", wraps=api.open_context_menu) as mock_open:
+        try:
+            canvas.contextMenuEvent(event)
+        except RecursionError:
+            pytest.fail("RecursionError: contextMenuEvent and open_context_menu are calling each other recursively.")
+        mock_open.assert_called_once_with(event)
+        assert event.isAccepted()
     window.close()

@@ -1,3 +1,8 @@
+"""
+Compliance logic for Talus Trace.
+Implements rules and checks for PH4 compliance.
+"""
+
 import math
 from typing import List, Optional, Dict, Any
 from .bundling import calculate_bundle_diameter

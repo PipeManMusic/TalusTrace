@@ -1,3 +1,9 @@
+"""
+Command pattern implementation for undoable actions in Talus Trace.
+Defines base and concrete command classes for transactional operations.
+"""
+from abc import ABC, abstractmethod
+from typing import Any, Tuple
 from abc import ABC, abstractmethod
 from typing import Any, Tuple
 
@@ -22,6 +28,13 @@ class MoveDeviceCommand(BaseCommand):
     Specific implementation for moving a Device in mm space.
     """
     def __init__(self, device_id: str, new_pos: Tuple[float, float], base_revision: int):
+        """
+        Initialize the command with required parameters.
+        Args:
+            device_id (str): The device identifier.
+            new_pos (Tuple[float, float]): New position in mm.
+            base_revision (int): Revision for optimistic locking.
+        """
         self.device_id = device_id
         self.new_pos = new_pos
         self.base_revision = base_revision

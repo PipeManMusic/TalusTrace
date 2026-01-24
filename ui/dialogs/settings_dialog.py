@@ -1,10 +1,18 @@
+"""
+Settings dialog for Talus Trace UI.
+
+Allows users to edit and save workspace/grid settings via a dialog interface.
+"""
+
 import yaml
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QFormLayout, 
                                QDoubleSpinBox, QDialogButtonBox, QMessageBox)
 from api.manager import APIManager
 
 class SettingsDialog(QDialog):
+    """Dialog for editing and saving workspace/grid settings."""
     def __init__(self, parent=None):
+        """Initialize the settings dialog, loading current values and building the UI."""
         super().__init__(parent)
         from ui.i18n import I18N
         self.setWindowTitle(I18N.get('settings_dialog_title'))
@@ -39,6 +47,7 @@ class SettingsDialog(QDialog):
         self.layout.addWidget(self.buttons)
 
     def save(self):
+        """Save the edited settings to the YAML file and notify the system."""
         new_grid = self.spin_grid.value()
         new_dpi = self.spin_dpi.value()
         

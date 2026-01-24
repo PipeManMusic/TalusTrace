@@ -21,11 +21,13 @@ def test_library_drag_to_canvas_insertion(qtbot, clean_api_singleton):
     # 2. Setup Mock Library
     # We inject the part definition so the API can find it
     api.library = MagicMock(spec=LibraryManager)
-    test_part_id = "TEST-SPLICE-001"
+    import uuid
+    test_part_id = str(uuid.uuid4())
+    test_pin_id = str(uuid.uuid4())
     test_part_def = {
         "manufacturer": "TestCorp", 
         "category": "Splices",
-        "pins": [{"id": "1"}]
+        "pins": [{"id": test_pin_id}]
     }
     api.library.get_parts.return_value = {test_part_id: test_part_def}
     

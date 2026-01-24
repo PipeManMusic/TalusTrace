@@ -20,7 +20,7 @@ def canvas(qtbot):
     return canvas
 
 def test_deviceitem_contact(canvas):
-    device = Device(id="D1", x=10, y=20, meta={"width_mm": 40, "height_mm": 30}, pins=[])
+    device = Device(id="11111111-1111-1111-1111-111111111111", x=10, y=20, meta={"width_mm": 40, "height_mm": 30}, pins=[])
     item = DeviceItem(device)
     canvas.scene.addItem(item)
     assert item.contains(item.boundingRect().center())
@@ -29,7 +29,14 @@ def test_deviceitem_contact(canvas):
     assert not item.contains(outside)
 
 def test_wireitem_contact(canvas):
-    wire = Wire(id="W1", from_conn="D1", from_pin="P1", to_conn="D2", to_pin="P2", path_nodes=[(0,0),(100,0)])
+    wire = Wire(
+        id="22222222-2222-2222-2222-222222222222",
+        from_conn="11111111-1111-1111-1111-111111111111",
+        from_pin="44444444-4444-4444-4444-444444444444",
+        to_conn="33333333-3333-3333-3333-333333333333",
+        to_pin="55555555-5555-5555-5555-555555555555",
+        path_nodes=[(0,0),(100,0)]
+    )
     item = WireItem(wire)
     canvas.scene.addItem(item)
     mid = item.path().pointAtPercent(0.5)
@@ -39,8 +46,8 @@ def test_wireitem_contact(canvas):
     assert not item.contains(far)
 
 def test_pinitem_contact(canvas):
-    pin = Pin(id="P1", x=5, y=5, label="P1", side=Side.TOP)
-    device = Device(id="D2", x=0, y=0, meta={"width_mm": 40, "height_mm": 30}, pins=[pin])
+    pin = Pin(id="44444444-4444-4444-4444-444444444444", x=5, y=5, label="44444444-4444-4444-4444-444444444444", side=Side.TOP)
+    device = Device(id="33333333-3333-3333-3333-333333333333", x=0, y=0, meta={"width_mm": 40, "height_mm": 30}, pins=[pin])
     item = DeviceItem(device)
     canvas.scene.addItem(item)
     pin_item = None
@@ -55,7 +62,14 @@ def test_pinitem_contact(canvas):
     assert not pin_item.contains(outside)
 
 def test_segmentgripitem_contact(canvas):
-    wire = Wire(id="W2", from_conn="D1", from_pin="P1", to_conn="D2", to_pin="P2", path_nodes=[(0,0),(100,0)])
+    wire = Wire(
+        id="66666666-6666-6666-6666-666666666666",
+        from_conn="11111111-1111-1111-1111-111111111111",
+        from_pin="44444444-4444-4444-4444-444444444444",
+        to_conn="33333333-3333-3333-3333-333333333333",
+        to_pin="55555555-5555-5555-5555-555555555555",
+        path_nodes=[(0,0),(100,0)]
+    )
     wire_item = WireItem(wire)
     canvas.scene.addItem(wire_item)
     grip = SegmentGripItem(wire_item, 0, 1, (0,0), (100,0))
@@ -66,7 +80,14 @@ def test_segmentgripitem_contact(canvas):
     assert not grip.contains(outside)
 
 def test_elbowgripitem_contact(canvas):
-    wire = Wire(id="W3", from_conn="D1", from_pin="P1", to_conn="D2", to_pin="P2", path_nodes=[(0,0),(100,0)])
+    wire = Wire(
+        id="77777777-7777-7777-7777-777777777777",
+        from_conn="11111111-1111-1111-1111-111111111111",
+        from_pin="44444444-4444-4444-4444-444444444444",
+        to_conn="33333333-3333-3333-3333-333333333333",
+        to_pin="55555555-5555-5555-5555-555555555555",
+        path_nodes=[(0,0),(100,0)]
+    )
     wire_item = WireItem(wire)
     canvas.scene.addItem(wire_item)
     grip = ElbowGripItem(wire_item, 0, (0,0))

@@ -10,10 +10,11 @@ def test_ph5_1_1_bom_cut_length_accuracy():
     # 1. Create a 1000mm (1m) straight path
     path = [(0.0, 0.0), (1000.0, 0.0)]
     
+    import uuid
     # Standard Wire: 1000mm + 50mm slack = 1050mm
-    standard_wire = Wire(id="W1", type="STANDARD", path_nodes=path, from_conn="P1", to_conn="P2")
+    standard_wire = Wire(id=str(uuid.uuid4()), type="STANDARD", path_nodes=path, from_conn="P1", to_conn="P2")
     # Twisted Pair: (1000mm * 1.05) + 50mm slack = 1100mm
-    twisted_pair = Wire(id="W2", type="TWISTED_PAIR", path_nodes=path, from_conn="P1", to_conn="P2")
+    twisted_pair = Wire(id=str(uuid.uuid4()), type="TWISTED_PAIR", path_nodes=path, from_conn="P1", to_conn="P2")
     
     bom = BOMGenerator(harness=None) # Standalone logic test
     

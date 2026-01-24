@@ -1,3 +1,7 @@
+"""
+DeviceItem: QGraphicsRectItem subclass for representing devices in the scene.
+Handles device geometry, style, and pin placement.
+"""
 from PySide6.QtWidgets import QGraphicsRectItem
 from PySide6.QtGui import QPen, QBrush, QColor
 from PySide6.QtCore import Qt
@@ -7,11 +11,22 @@ from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 from ui.items.pin import PinItem
 
 class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRectItem):
+    """
+    QGraphicsRectItem subclass for device visualization and interaction.
+    Handles device geometry, style, and pin placement in the scene.
+    """
     __test_scenario__ = {
         'model_data': {'meta': {'width_mm': 40.0, 'height_mm': 30.0}, 'x': 0, 'y': 0, 'rotation': 0.0, 'pins': []},
         'expected_child_count': 0
     }
     def __init__(self, device, is_ghost=False, parent=None):
+        """
+        Initialize the DeviceItem.
+        Args:
+            device: The device model object.
+            is_ghost (bool): Whether this is a ghost (preview) item.
+            parent: Optional parent QGraphicsItem.
+        """
         QGraphicsRectItem.__init__(self, parent)
         ObservableGraphicsItemMixin.__init__(self)
         self.setZValue(10)  # Devices above wires
@@ -38,35 +53,48 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
                 pin_item.setPos(pin.x, pin.y)
 
         # Subscribe to model_changed events for this device
-        from api.manager import APIManager
-        self._api = APIManager.get_instance()
-        self._api.subscribe(self._on_model_changed)
 
-        # Debug output for hit test diagnosis
-        print(f'[DeviceItem] Created: id={getattr(device, "id", None)}, scenePos={self.scenePos()}, pos={self.pos()}, rect={self.rect()}, boundingRect={self.boundingRect()}')
 
-    def _on_model_changed(self, data):
-        # Only update if this device moved
-        if not data or 'item' not in data:
-            return
-        item = data['item']
-        if hasattr(item, 'id') and hasattr(self.model, 'id') and item.id == self.model.id:
-            # Update position to match model
-            self.setPos(self.model.x, self.model.y)
+
+
+    def update_from_model(self):
+        """
+        Update the item's position and visuals to match the model.
+        """
+        # Always update position and visuals to match model
+        self.setPos(self.model.x, self.model.y)
+        self.update()  # Force redraw in case of visual artifacts
 
     @property
     def device(self):
+        """
+        Get the device model associated with this item.
+        Returns:
+            The device model object.
+        """
         return self.model
 
     @device.setter
     def device(self, value):
+        """
+        Set the device model for this item.
+        Args:
+            value: The new device model object.
+        """
         self.model = value
 
     def boundingRect(self):
-        # Adjust slightly for selection halo
+        """
+        Return the bounding rectangle, adjusted for selection halo.
+        Returns:
+            QRectF: The adjusted bounding rectangle.
+        """
         return super().boundingRect().adjusted(-2, -2, 2, 2)
 
     def _apply_style(self):
+        """
+        Apply the visual style (pen and brush) to the device item.
+        """
         body_color = QColor(THEME_FALLBACK["device_body"])
         outline_color = QColor(THEME_FALLBACK["device_outline"])
         
@@ -82,6 +110,13 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
         self.setBrush(QBrush(body_color))
 
     def paint(self, painter, option, widget):
+        """
+        Paint the device item, including selection highlight if selected.
+        Args:
+            painter: QPainter object.
+            option: QStyleOptionGraphicsItem.
+            widget: Optional widget being painted on.
+        """
         super().paint(painter, option, widget)
         if self.isSelected() and not self.is_ghost:
             rect = self.rect().adjusted(-1, -1, 1, 1)

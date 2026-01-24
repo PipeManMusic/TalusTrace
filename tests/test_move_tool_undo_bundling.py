@@ -18,42 +18,42 @@ def test_move_tool_undo_bundling(qtbot):
     api = APIManager.get_instance()
     
     # Create Device
-    dev = Device(id="D1", x=0, y=0)
-    api.context.harness.devices.append(dev)
+    import uuid
+    dev = Device(id=str(uuid.uuid4()), x=0, y=0)
+    from core.harness import DeviceList
+    with DeviceList.test_bypass():
+        api.context.harness.devices.append(dev)
     
     # Setup Tool
     tool = MoveTool()
     tool.start(dev)
 
-    # 2. Simulate Drag (0,0 -> 100,100)
-    # Start
-    press_evt = MagicMock()
-    press_evt.scene_pos = QPointF(0, 0)
-    press_evt.button.return_value = Qt.LeftButton
-    tool.on_mouse_press(CanvasEvent(press_evt, QPointF(0, 0), scene_item=None, item_at=dev))
+    # Create and register a mock QGraphicsItem wrapper for the device
+    mock_item = MagicMock()
+    mock_item.model = dev
+    mock_item.parentItem.return_value = None
+    mock_item.setPos = MagicMock()
+    mock_item.pos.return_value = QPointF(dev.x, dev.y)
+    mock_item._drag_initial_pos = (dev.x, dev.y)
+    # Subscribe to model_changed and call setPos when device moves
+    def on_model_changed(data):
+        item = data.get('item', None)
+        if item and hasattr(item, 'id') and item.id == dev.id:
+            mock_item.setPos(QPointF(dev.x, dev.y))
+    api.subscribe(on_model_changed)
+    api.register_scene_item(dev.id, mock_item)
 
-    # Move (Real-time update)
-    move_evt = MagicMock()
-    move_evt.scene_pos = QPointF(50, 50) # Halfway
-    move_evt.button.return_value = Qt.LeftButton
-    tool.on_mouse_move(CanvasEvent(move_evt, QPointF(50, 50), scene_item=None, item_at=dev))
-
-    # Verify Real-time spec (Spec 4.1)
+    # Simulate Drag (0,0 -> 100,100)
+    tool.start_drag(mock_item, QPointF(0, 0))
+    tool.update_drag(QPointF(50, 50))
     assert dev.x == 50.0, "MoveTool failed real-time update requirement"
-
-    # Finish
-    release_evt = MagicMock()
-    release_evt.scene_pos = QPointF(100, 100)
-    release_evt.button.return_value = Qt.LeftButton
-    tool.on_mouse_release(CanvasEvent(release_evt, QPointF(100, 100), scene_item=None, item_at=dev))
-
+    tool.finish_drag(QPointF(100, 100))
     assert dev.x == 100.0
-    
-    # 3. Critical Assertion: Undo Stack
-    # Stack should have EXACTLY 1 command (not 0, not 50)
-    assert len(api.context.undo_stack) == 1, \
-        "VIOLATION: Undo Stack empty! MoveTool modified state but pushed no command."
-        
-    # 4. Verify Undo Integrity
+    # Assert scene item position updated
+    mock_item.setPos.assert_called_with(QPointF(100.0, 100.0))
+    # Undo stack should have exactly 1 command
+    assert len(api.context.undo_stack) == 1, "VIOLATION: Undo Stack empty! MoveTool modified state but pushed no command."
+    # Undo Integrity
     api.context.undo_stack.undo()
     assert dev.x == 0.0, "Undo failed to revert position to start."
+    mock_item.setPos.assert_any_call(QPointF(0.0, 0.0))

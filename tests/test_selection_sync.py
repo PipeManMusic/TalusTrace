@@ -15,11 +15,11 @@ def test_selection_manager_singleton(qapp):
     assert s1 is s2
 
 def test_device_click_updates_manager(qapp):
-    dev = Device(id="D1")
+    dev = Device(id="11111111-1111-1111-1111-111111111111")
     item = DeviceItem(dev)
     
     # Simulate Selection
     item.setSelected(True)
     # The itemChange event in DeviceItem should notify the Manager
     
-    assert "D1" in SelectionManager().current_selection_ids
+    assert "11111111-1111-1111-1111-111111111111" in SelectionManager().current_selection_ids

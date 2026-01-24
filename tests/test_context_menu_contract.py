@@ -25,6 +25,7 @@ def canvas_and_api(qtbot):
     api.tool_manager.active_tool = DummyTool()
     return canvas, api
 
+@pytest.mark.gui
 def test_context_menu_api_contract(canvas_and_api, qtbot):
     canvas, api = canvas_and_api
     # Simulate right mouse press event

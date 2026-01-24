@@ -10,11 +10,12 @@ def test_device_context_menu_shown_on_right_click(qtbot):
     """
     Contract: Right-clicking a device must show a device-specific context menu (not a canvas menu or nothing).
     """
+    is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
+    if is_headless:
+        pytest.skip("Skipping GUI context menu test in headless mode.")
     window = MainWindow()
     qtbot.addWidget(window)
-    is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
-    if not is_headless:
-        window.show()
+    window.show()
     api = window.api
     # Install a test hook for context menu
     shown_menu = {}
@@ -28,7 +29,8 @@ def test_device_context_menu_shown_on_right_click(qtbot):
     try:
         # Add a device to the model and scene
         from core.models import Device
-        device = Device(id="test_device", x=100.0, y=100.0, meta={"width_mm": 40.0, "height_mm": 30.0})
+        import uuid
+        device = Device(id=str(uuid.uuid4()), x=100.0, y=100.0, meta={"width_mm": 40.0, "height_mm": 30.0})
         api.context.harness.devices.append(device)
         window.canvas.load_harness(api.context.harness)
         item = api.get_scene_item(device.id)

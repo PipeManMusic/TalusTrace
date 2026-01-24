@@ -1,3 +1,8 @@
+"""
+Base logic for Talus Trace.
+Provides base classes and utilities for logic modules.
+"""
+
 from dataclasses import dataclass, field
 from typing import List, Tuple, Optional, Iterator, Any
 
@@ -13,7 +18,12 @@ class ComplianceViolation:
     value: Optional[float] = None
     indices: Optional[List[int]] = None
     
-    def to_dict(self) -> dict:
+    def to_dict(self):
+        """
+        Serialize the base logic object to a dictionary.
+        Returns:
+            dict: Dictionary representation of the object.
+        """
         return {k: v for k, v in self.__dict__.items() if v is not None}
 
 def iter_segments(nodes: List[Tuple[float, float]]) -> Iterator[Tuple[Tuple[float, float], Tuple[float, float]]]:

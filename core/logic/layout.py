@@ -1,3 +1,8 @@
+"""
+Layout logic for Talus Trace.
+Handles device and wire layout algorithms.
+"""
+
 import math
 from typing import List, Tuple
 from .base import iter_segments

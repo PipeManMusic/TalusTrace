@@ -1,11 +1,29 @@
+
+"""
+ToolManager for registering, activating, and managing tools in Talus Trace.
+Handles tool lifecycle, transitions, and integration with the global ActionRegistry.
+"""
 from api.actions import registry
 
 class ToolManager:
+    """
+    Manages registration, activation, and lifecycle of tools in the application.
+    Provides methods to register, retrieve, and switch tools, and integrates with the ActionRegistry for action execution.
+    """
     def __init__(self):
+        """
+        Initialize the ToolManager with an empty tool registry and no active tool.
+        """
         self._tools = {}
         self.active_tool = None
 
     def register_tool(self, name, tool):
+        """
+        Register a tool with the given name.
+        Args:
+            name (str): The name of the tool.
+            tool: The tool instance to register.
+        """
         self._tools[name] = tool
 
     def get_tool(self, name):
@@ -27,10 +45,12 @@ class ToolManager:
             return
 
         # Deactivate existing tool before switching
-        if self.active_tool:
-            # ...removed debug print...
-            self.active_tool.deactivate()
+        """
+        ToolManager for registering, activating, and managing tools in Talus Trace.
+        Handles tool lifecycle, transitions, and integration with the global ActionRegistry.
+        """
 
+        from api.actions import registry
         self.active_tool = self._tools[name]
         # ...removed debug print...
         # Pass args/kwargs to start() for event context (MAP-compliant)

@@ -1,3 +1,9 @@
+"""
+Theme dialog for Talus Trace UI.
+
+Allows users to view and edit theme color tokens via a dialog interface.
+"""
+
 import yaml
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QGridLayout, QLabel, 
                                QPushButton, QDialogButtonBox, QColorDialog, QScrollArea, QWidget)
@@ -5,14 +11,16 @@ from PySide6.QtGui import QColor
 from api.manager import APIManager
 
 class ColorButton(QPushButton):
-    """A button that displays a color and opens a picker when clicked."""
+    """A button that displays a color and opens a color picker dialog when clicked."""
     def __init__(self, color_hex, parent=None):
+        """Initialize ColorButton with a color hex string and optional parent."""
         super().__init__(parent)
         self.color_hex = color_hex
         self.update_style()
         self.clicked.connect(self.pick_color)
 
     def update_style(self):
+        """Update the button's style to reflect the current color."""
         # Show color as background, text as hex code
         # Determine text color (black/white) for contrast
         c = QColor(self.color_hex)
@@ -22,13 +30,16 @@ class ColorButton(QPushButton):
         self.setText(self.color_hex)
 
     def pick_color(self):
+        """Open a QColorDialog to pick a new color and update the button."""
         color = QColorDialog.getColor(QColor(self.color_hex), self, "Pick Color")
         if color.isValid():
             self.color_hex = color.name()
             self.update_style()
 
 class ThemeDialog(QDialog):
+    """Dialog for editing and saving theme color tokens."""
     def __init__(self, parent=None):
+        """Initialize the theme dialog, loading current colors and building the UI."""
         super().__init__(parent)
         from ui.i18n import I18N
         self.setWindowTitle(I18N.get('theme_dialog_title'))
@@ -77,6 +88,7 @@ class ThemeDialog(QDialog):
         layout.addWidget(buttons)
 
     def _load_from_file(self):
+        """Load theme color data from the YAML file."""
         try:
             with open("resources/config/theme.yaml", 'r') as f:
                 self.current_data = yaml.safe_load(f) or {}
@@ -84,6 +96,7 @@ class ThemeDialog(QDialog):
             self.current_data = {"colors": {}}
 
     def save(self):
+        """Save the edited colors to the YAML file and notify the system."""
         new_colors = {}
         for key, btn in self.editors.items():
             new_colors[key] = btn.color_hex

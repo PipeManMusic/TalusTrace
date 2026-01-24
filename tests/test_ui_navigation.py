@@ -17,8 +17,11 @@ def test_zoom_extents(qtbot):
     
     # Add items far apart
     harness = Harness()
-    harness.devices.append(Device(id="D1", x=0, y=0))
-    harness.devices.append(Device(id="D2", x=1000, y=1000))
+    from core.harness import DeviceList
+    import uuid
+    with DeviceList.test_bypass():
+        harness.devices.append(Device(id="11111111-1111-1111-1111-111111111111", x=0, y=0))
+        harness.devices.append(Device(id="22222222-2222-2222-2222-222222222222", x=1000, y=1000))
     
     # Load into Canvas
     canvas.load_harness(harness)

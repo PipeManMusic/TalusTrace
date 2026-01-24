@@ -1,46 +1,73 @@
+"""
+Segment move tool for wire segment manipulation in Talus Trace.
+Implements logic for dragging wire segments, undo/redo, and view updates.
+"""
 from PySide6.QtCore import Qt, QPointF
 from tools.base_tool import BaseTool
 
 class MoveSegmentCommand:
-    """Command to finalize segment movement for Undo/Redo."""
-    def __init__(self, wire, start_idx, end_idx, old_pos_start, old_pos_end, new_pos_start, new_pos_end, api):
+    """
+    Command to finalize segment movement for Undo/Redo operations.
+    """
+    def __init__(self, wire, start_idx, end_idx, dx, dy, api):
+        """
+        Initialize the MoveSegmentCommand.
+        Args:
+            wire: The wire to move.
+            start_idx: Start index of the segment.
+            end_idx: End index of the segment.
+            dx: Delta x for movement.
+            dy: Delta y for movement.
+            api: API instance for context.
+        """
         self.wire = wire
         self.start_idx = start_idx
         self.end_idx = end_idx
-        self.old_pos_start = old_pos_start
-        self.old_pos_end = old_pos_end
-        self.new_pos_start = new_pos_start
-        self.new_pos_end = new_pos_end
+        self.dx = dx
+        self.dy = dy
         self.api = api
         self.executed = False
 
     def execute(self):
-        # In headless/realtime mode, the model is already updated by the tool.
-        # We just ensure consistency or handle re-do.
-        self.api.move_segment(
-            self.wire, 
-            self.start_idx, 
-            self.end_idx, 
-            self.new_pos_start[0] - self.old_pos_start[0], # Delta X
-            self.new_pos_start[1] - self.old_pos_start[1]  # Delta Y
-        )
+        """
+        Execute the segment movement by applying dx, dy.
+        """
+        # Actually move the segment by dx, dy
+        nodes = self.wire.path_nodes
+        nodes[self.start_idx][0] += self.dx
+        nodes[self.start_idx][1] += self.dy
+        nodes[self.end_idx][0] += self.dx
+        nodes[self.end_idx][1] += self.dy
         self.executed = True
 
     def undo(self):
+        """
+        Undo the segment movement by reversing dx, dy.
+        """
         # Inverse move
-        delta_x = self.old_pos_start[0] - self.new_pos_start[0]
-        delta_y = self.old_pos_start[1] - self.new_pos_start[1]
-        self.api.move_segment(self.wire, self.start_idx, self.end_idx, delta_x, delta_y)
+        nodes = self.wire.path_nodes
+        nodes[self.start_idx][0] -= self.dx
+        nodes[self.start_idx][1] -= self.dy
+        nodes[self.end_idx][0] -= self.dx
+        nodes[self.end_idx][1] -= self.dy
 
     def redo(self):
-        delta_x = self.new_pos_start[0] - self.old_pos_start[0]
-        delta_y = self.new_pos_start[1] - self.old_pos_start[1]
-        self.api.move_segment(self.wire, self.start_idx, self.end_idx, delta_x, delta_y)
+        """
+        Redo the segment movement by reapplying dx, dy.
+        """
+        # Redo move
+        self.execute()
     
     def mark_executed(self):
+        """
+        Mark the command as executed.
+        """
         self.executed = True
 
 class SegmentMoveTool(BaseTool):
+    """
+    Tool for dragging and moving wire segments, handling user interaction and model updates.
+    """
     __guide__ = {
         "name": "Segment Move Tool",
         "description": "Drag wire segments to reshape the path.",
@@ -48,6 +75,9 @@ class SegmentMoveTool(BaseTool):
     }
 
     def __init__(self):
+        """
+        Initialize the SegmentMoveTool with default state.
+        """
         super().__init__()
         self.wire = None
         self.start_idx = None
@@ -87,10 +117,19 @@ class SegmentMoveTool(BaseTool):
                 self.api.main_window.canvas.setCursor(Qt.SizeAllCursor)
 
     def on_mouse_press(self, event):
-        # Handled by start() typically
+        """
+        Handle mouse press event for segment move (typically handled by start).
+        Args:
+            event: Mouse event.
+        """
         pass
 
     def on_mouse_move(self, event):
+        """
+        Handle mouse move event to update wire segment position during drag.
+        Args:
+            event: Mouse event.
+        """
         if not self.is_dragging or not self.wire:
             return
 
@@ -123,6 +162,11 @@ class SegmentMoveTool(BaseTool):
             self.wire.ui_item.update_from_model(self.wire)
 
     def on_mouse_release(self, event):
+        """
+        Handle mouse release event to finalize segment move and push command.
+        Args:
+            event: Mouse event.
+        """
         if self.is_dragging and self.wire:
             # 1. Create Command
             # Get final positions from model
@@ -130,14 +174,15 @@ class SegmentMoveTool(BaseTool):
             final_end = self.wire.path_nodes[self.end_idx]
             
             if hasattr(self.api.context, 'undo_stack'):
+                # Calculate dx, dy from initial to final positions
+                dx = final_start[0] - self.initial_nodes[self.start_idx][0]
+                dy = final_start[1] - self.initial_nodes[self.start_idx][1]
                 cmd = MoveSegmentCommand(
                     self.wire,
                     self.start_idx,
                     self.end_idx,
-                    self.initial_nodes[self.start_idx],
-                    self.initial_nodes[self.end_idx],
-                    final_start,
-                    final_end,
+                    dx,
+                    dy,
                     self.api
                 )
                 cmd.mark_executed()

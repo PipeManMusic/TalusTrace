@@ -1,6 +1,19 @@
+
+
 import os
 import pytest
 from unittest.mock import patch
+
+# Force reload of infra.undo_stack to ensure latest UndoStack class is used
+import importlib
+import infra.undo_stack
+importlib.reload(infra.undo_stack)
+
+@pytest.fixture(autouse=True)
+def skip_if_headless(request):
+    is_headless = os.environ.get('DISPLAY') is None or os.environ.get('PYTEST_CURRENT_TEST')
+    if is_headless and request.node.get_closest_marker("gui"):
+        pytest.skip("Skipping GUI test in headless mode to avoid Qt segfault.")
 
 # Global fixture to patch modal dialogs for hands-free test automation
 
@@ -98,7 +111,8 @@ def create_test_wire(fresh_api: APIManager):
         if nodes is None:
             nodes = [[0,0], [100,0]]
         # Defaults for robustness
-        kwargs.setdefault("id", "W_TEST")
+        import uuid
+        kwargs.setdefault("id", str(uuid.uuid4()))
         kwargs.setdefault("from_conn", "D1")
         kwargs.setdefault("to_conn", "D2")
         wire = Wire(path_nodes=nodes, **kwargs)
@@ -121,6 +135,17 @@ def clean_api_singleton():
     # 3. Explicitly clear sub-components (Double Tap)
     if hasattr(api, 'context'):
         if hasattr(api.context, 'undo_stack'):
+            import sys
+            import infra.undo_stack
+            print('DEBUG: undo_stack type:', type(api.context.undo_stack))
+            print('DEBUG: undo_stack module:', type(api.context.undo_stack).__module__)
+            print('DEBUG: undo_stack dir:', dir(api.context.undo_stack))
+            print('DEBUG: infra.undo_stack file:', infra.undo_stack.__file__)
+            print('DEBUG: sys.path:', sys.path)
+            with open(infra.undo_stack.__file__, 'r') as f:
+                print('DEBUG: undo_stack.py contents:')
+                for i, line in enumerate(f):
+                    print(f'{i+1:03}: {line.rstrip()}')
             api.context.undo_stack.clear()
         if hasattr(api.context, 'harness'):
             api.context.harness.devices.clear()

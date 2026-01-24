@@ -4,4 +4,4 @@ meta:
   trunk_length_mm: 1000
 devices: []
 wires: []
-twisted_pairs: []
+bundles: []

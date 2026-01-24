@@ -27,9 +27,11 @@ def test_device_id_edit_bypasses_undo_stack(qtbot):
     panel.show()
     
     # 2. Create a Device
-    original_id = "DEV_001"
+    original_id = "55555555-5555-5555-5555-555555555555"
     device = Device(id=original_id, x=0, y=0)
-    api.context.harness.devices.append(device)
+    from core.harness import DeviceList
+    with DeviceList.test_bypass():
+        api.context.harness.devices.append(device)
     
     # 3. Load into Panel
     panel.load_item(device)

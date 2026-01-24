@@ -1,3 +1,8 @@
+
+"""
+AuditController for handling audit interactions in Talus Trace.
+Provides logic for click-to-zoom and violation selection without UI dependencies.
+"""
 from api.manager import APIManager
 
 class AuditController:
@@ -6,6 +11,11 @@ class AuditController:
     Validates PH3-3.2: Click-to-Zoom logic without requiring a QWidget.
     """
     def __init__(self, api: APIManager = None):
+        """
+        Initialize the AuditController with an APIManager instance.
+        Args:
+            api (APIManager, optional): The API manager to use. Defaults to singleton instance.
+        """
         self.api = api or APIManager.get_instance() #
 
     def select_violation(self, violation: dict):

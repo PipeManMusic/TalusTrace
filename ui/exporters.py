@@ -1,12 +1,19 @@
+"""
+Exporters for Talus Trace UI.
 
+Provides functions and classes for exporting project data to various formats.
+"""
 # --- SVG Exporter for FILE.2 ---
 from core.models import Harness
 
 class SVGExporter:
+    """Exports a Harness to SVG format for visualization or printing."""
     def __init__(self, harness: Harness):
+        """Initialize SVGExporter with a Harness instance."""
         self.harness = harness
 
     def export(self, filename: str) -> bool:
+        """Export the harness wires to an SVG file at the given filename."""
         try:
             wires = getattr(self.harness, 'wires', [])
             svg_lines = []
@@ -40,16 +47,21 @@ class SVGExporter:
 from typing import List, Tuple
 
 class DXFExporter:
+    """Exports lines and wires to DXF format for CAD interoperability."""
     def __init__(self):
+        """Initialize DXFExporter with an empty entity list."""
         self.entities = []
 
     def add_line(self, nodes, layer="0"):
+        """Add a line entity to the DXF with given nodes and layer."""
         self.entities.append({"nodes": nodes, "layer": layer})
 
     def add_wire(self, nodes, layer="0"):
+        """Add a wire entity to the DXF (alias for add_line)."""
         self.add_line(nodes, layer)
 
     def save(self, filename: str):
+        """Save the DXF entities to a file at the specified path."""
         """PH5-1.2: Saves the 1:1 scale DXF to the specified path."""
         with open(filename, "w") as f:
             f.write("0\nSECTION\n2\nENTITIES\n")

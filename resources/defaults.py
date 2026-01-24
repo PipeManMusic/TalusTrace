@@ -1,5 +1,16 @@
+"""
+Default resources for Talus Trace.
+Provides default library loader and configuration.
+"""
+
 class LibraryLoader:
+    """
+    Loads default libraries and resources for Talus Trace.
+    """
     def __init__(self, library_path=None):
+        """
+        Initialize the library loader with configuration options.
+        """
         self.library_path = library_path
         # Dummy for test compatibility
 # Default fallback values for UI layout and theme

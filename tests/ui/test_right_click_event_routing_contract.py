@@ -41,8 +41,11 @@ def test_right_click_event_routing_and_mvc(qtbot, enforce_device_mvc_fixture):
     device = api.context.harness.devices[0] if api.context.harness.devices else None
     if device is None:
         from core.models import Device
-        device = Device(id="test_device", x=100.0, y=100.0, meta={"width_mm": 40.0, "height_mm": 30.0})
-        api.context.harness.devices.append(device)
+        import uuid
+        device = Device(id=str(uuid.uuid4()), x=100.0, y=100.0, meta={"width_mm": 40.0, "height_mm": 30.0})
+        from core.harness import DeviceList
+        with DeviceList.test_bypass():
+            api.context.harness.devices.append(device)
         window.canvas.load_harness(api.context.harness)
     item = api.get_scene_item(device.id)
     assert item is not None, "DeviceItem not found in scene registry."

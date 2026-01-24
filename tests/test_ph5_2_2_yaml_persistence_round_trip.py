@@ -1,4 +1,4 @@
-from infra.persistence import HarnessSerializer
+from infra.harness_serializer import HarnessSerializer
 
 def test_ph5_2_2_yaml_persistence_round_trip():
     """

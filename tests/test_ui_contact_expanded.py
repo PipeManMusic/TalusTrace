@@ -15,8 +15,9 @@ def canvas(qtbot):
     qtbot.add_widget(canvas)
     return canvas
 
+@pytest.mark.gui
 def test_deviceitem_contact(canvas):
-    device = Device(id="D1", x=10, y=20, meta={"width_mm": 40, "height_mm": 30}, pins=[])
+    device = Device(id="11111111-1111-1111-1111-111111111111", x=10, y=20, meta={"width_mm": 40, "height_mm": 30}, pins=[])
     item = DeviceItem(device)
     canvas.scene.addItem(item)
     assert item.contains(item.boundingRect().center())
@@ -24,6 +25,7 @@ def test_deviceitem_contact(canvas):
     outside = rect.bottomRight() + QPointF(rect.width(), rect.height())
     assert not item.contains(outside)
 
+@pytest.mark.gui
 def test_wireitem_contact(canvas):
     wire = Wire(id="W1", from_conn="D1", from_pin="P1", to_conn="D2", to_pin="P2", path_nodes=[(0,0),(100,0)])
     item = WireItem(wire)
@@ -34,6 +36,7 @@ def test_wireitem_contact(canvas):
     far = mid + QPointF(rect.width()*2, rect.height()*2)
     assert not item.contains(far)
 
+@pytest.mark.gui
 def test_pinitem_contact(canvas):
     from core.pin import Pin
     from core.enums import Side

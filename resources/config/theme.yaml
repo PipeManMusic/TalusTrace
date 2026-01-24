@@ -1,10 +1,20 @@
+
 colors:
-  bundle_standard: '#8ecae6'
-  bundle_violation: '#ffb703'
-  canvas_bg: '#23272e'
-  device_body: '#4e5d6c'
-  device_outline: '#bfc9d1'
-  grid_color: '#3a3f4b'
-  pin_fill: '#e0e0e0'
-  wire_a: '#0000FF'
-  wire_b: '#FFA500'
+	device_body: "#222222"
+	device_outline: "#ffffff"
+	pin_fill: "#1976d2"
+	pin_label: "#424242"
+	bundle_standard: "#ff4081"
+	bundle_violation: "#d32f2f"
+	grid_minor: "#ffa000"
+	grid_major: "#1976d2"
+name: Custom Theme
+background: "#222222"
+foreground: "#ffffff"
+primary: "#1976d2"
+secondary: "#424242"
+accent: "#ff4081"
+error: "#d32f2f"
+warning: "#ffa000"
+info: "#1976d2"
+success: "#388e3c"

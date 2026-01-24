@@ -15,6 +15,7 @@ def app():
     yield app
 
 @pytest.mark.parametrize("DialogClass", [DeviceWizard, SettingsDialog, ThemeDialog])
+@pytest.mark.gui
 def test_dialog_contact(DialogClass, app):
     dlg = DialogClass()
     dlg.show()
@@ -24,6 +25,7 @@ def test_dialog_contact(DialogClass, app):
     assert not dlg.isVisible()
 
 @pytest.mark.parametrize("PanelClass", [PropertiesPanel, ProjectBrowser, LibraryPanel, AuditPanel])
+@pytest.mark.gui
 def test_panel_contact(PanelClass, app):
     panel = PanelClass()
     panel.show()
@@ -31,6 +33,7 @@ def test_panel_contact(PanelClass, app):
     panel.close()
     assert not panel.isVisible()
 
+@pytest.mark.gui
 def test_pin_mapping_dialog_contact(app):
     dlg = PinMappingDialog(wire_id="W1", connector_id="C1")
     dlg.show()

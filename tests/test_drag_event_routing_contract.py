@@ -33,8 +33,12 @@ def test_drag_event_routes_to_move_tool(qtbot):
     device = api.context.harness.devices[0] if api.context.harness.devices else None
     if device is None:
         from core.models import Device
-        device = Device(id="test_device", x=100.0, y=100.0, meta={"width_mm": 40.0, "height_mm": 30.0})
-        api.context.harness.devices.append(device)
+        import uuid
+        valid_uuid = str(uuid.uuid4())
+        device = Device(id=valid_uuid, x=100.0, y=100.0, meta={"width_mm": 40.0, "height_mm": 30.0})
+        from core.harness import DeviceList
+        with DeviceList.test_bypass():
+            api.context.harness.devices.append(device)
         window.canvas.load_harness(api.context.harness)
     # Find the DeviceItem in the scene
     item = api.get_scene_item(device.id)

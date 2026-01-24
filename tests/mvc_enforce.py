@@ -37,15 +37,17 @@ def enforce_device_mvc(device, item, api):
         return orig_setPos(self, *args, **kwargs)
     type(item).setPos = guarded_setPos
 
-    # Patch DeviceItem._on_model_changed to allow setPos
-    orig_on_model_changed = item._on_model_changed
-    def guarded_on_model_changed(self, data):
-        setpos_flag['allowed'] = True
-        try:
-            return orig_on_model_changed(data)
-        finally:
-            setpos_flag['allowed'] = False
-    item._on_model_changed = guarded_on_model_changed.__get__(item)
+
+    # Patch DeviceItem.update_from_model to allow setPos
+    if hasattr(item, 'update_from_model'):
+        orig_update_from_model = item.update_from_model
+        def guarded_update_from_model(self):
+            setpos_flag['allowed'] = True
+            try:
+                return orig_update_from_model()
+            finally:
+                setpos_flag['allowed'] = False
+        item.update_from_model = guarded_update_from_model.__get__(item)
 
     try:
         yield
@@ -54,4 +56,5 @@ def enforce_device_mvc(device, item, api):
         api.move_device = orig_move_device
         device_cls.__setattr__ = orig_setattr
         type(item).setPos = orig_setPos
-        item._on_model_changed = orig_on_model_changed
+        if hasattr(item, 'update_from_model'):
+            item.update_from_model = orig_update_from_model

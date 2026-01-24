@@ -1,3 +1,7 @@
+"""
+Geometry utilities for Talus Trace: helix generation, bundle diameter calculation, grid snapping, and spatial hashing.
+Implements procedural wire logic and grid-based segment hashing.
+"""
 # PH3-2.1: Procedural Helix Sine Wave Logic
 import math
 from typing import List
@@ -67,12 +71,24 @@ def snap_to_grid_mm(value_mm: float, grid_step_mm: float) -> float:
 
 # PH2-2.1: SpatialHasher for wire segment hashing
 class SpatialHasher:
+    """
+    Provides grid-based hashing for wire segments to enable fast spatial queries.
+    """
     def __init__(self, grid_size: float = 2.0):
+        """
+        Initialize the SpatialHasher with a grid size.
+        Args:
+            grid_size (float): Grid size in mm for hashing.
+        """
         self.grid_size = grid_size
 
     def get_key(self, segment):
         """
         Returns a hashable key for a wire segment, snapped to grid.
+        Args:
+            segment (tuple): ((x1, y1), (x2, y2)) coordinates of the segment.
+        Returns:
+            tuple: Grid-snapped coordinates as a hashable key.
         """
         (x1, y1), (x2, y2) = segment
         gx1 = round(x1 / self.grid_size)

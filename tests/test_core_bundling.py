@@ -5,8 +5,9 @@ from api.actions import registry
 def test_create_bundle_command():
     """PH5-WIRE.2: Selected wires should be grouped into a Bundle entity."""
     harness = Harness()
-    w1 = Wire(id="W1", from_conn="A", to_conn="B")
-    w2 = Wire(id="W2", from_conn="A", to_conn="B")
+    import uuid
+    w1 = Wire(id=str(uuid.uuid4()), from_conn="A", to_conn="B")
+    w2 = Wire(id=str(uuid.uuid4()), from_conn="A", to_conn="B")
     harness.wires.extend([w1, w2])
     
     # Context: Selection contains W1, W2

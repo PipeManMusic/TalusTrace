@@ -11,8 +11,9 @@ def test_ph5_serialization_tuple_to_list_conversion():
     Verify PH5-2.2: Ensure coordinates are serialized as Lists.
     """
     path_nodes = [[0.0, 0.0], [10.5, 20.0]]
+    import uuid
     wire = Wire(
-        id="W-TEST",
+        id=str(uuid.uuid4()),
         from_conn="J1.1",
         to_conn="J2.1",
         path_nodes=path_nodes 
@@ -20,7 +21,7 @@ def test_ph5_serialization_tuple_to_list_conversion():
     harness = Harness(wires=[wire])
     context = ProjectContext(harness=harness)
     stream = io.StringIO()
-    data = context.harness.model_dump(mode='json')
+    data = context.harness.to_dict()
     yaml.safe_dump(data, stream)
     yaml_content = stream.getvalue()
     assert "!!python/tuple" not in yaml_content
@@ -30,15 +31,16 @@ def test_ph5_manufacturing_metadata():
     """
     Verify PH5-1.1: Ensure Wire and Device models contain BOM fields.
     """
+    import uuid
     wire = Wire(
-        id="W-TP",
+        id=str(uuid.uuid4()),
         from_conn="J1.1",
         to_conn="J2.1",
         type="TWISTED_PAIR", 
         diameter_mm=2.5      
     )
     device = Device(
-        id="J1",
+        id=str(uuid.uuid4()),
         service_slack_mm=75.0 
     )
     assert wire.type == "TWISTED_PAIR"
