@@ -27,93 +27,228 @@ class CanvasEvent:
             self.button = original_event.button()
 
 class HarnessCanvas(QGraphicsView):
-    """QGraphicsView subclass for the main harness canvas, handling model sync and UI events."""
+    """
+    QGraphicsView subclass for the main harness canvas in Talus Trace.
+    Handles event dispatch, model synchronization, and tool event routing for the UI.
+    Provides the main interface between the scene, user input, and the model layer.
+    """
+    def mousePressEvent(self, event):
+        """Dispatch mouse press events to the active tool and InputSystem for context menu support. Also handle deselection on blank canvas click."""
+        api = APIManager.get_instance()
+        scene_pos = self.mapToScene(event.position().toPoint() if hasattr(event, 'position') else event.pos())
+        item = self.scene.itemAt(scene_pos, self.transform())
+        canvas_event = CanvasEvent(event, scene_pos, scene_item=item)
+        # Route right-clicks through InputSystem for context menu contract
+        if hasattr(api, 'input_system') and api.input_system:
+            handled = api.input_system.handle_canvas_event(canvas_event)
+            if handled:
+                super().mousePressEvent(event)
+                return
+        # Deselect if clicking on blank space (no item under cursor, left click)
+        if item is None and event.button() == Qt.LeftButton:
+            api.dispatch("selection_changed", {"selection": []})
+        # Otherwise, dispatch to tool if present
+        tool = getattr(api.tool_manager, 'active_tool', None)
+        if tool and hasattr(tool, 'on_mouse_press'):
+            tool.on_mouse_press(canvas_event)
+        super().mousePressEvent(event)
     def keyPressEvent(self, event):
-        """Handle key press events, including delete for selected items."""
-        from api.manager import APIManager
+        """Handle key press events, including delete for selected items, via API contract methods only."""
         api = APIManager.get_instance()
         if event.key() == Qt.Key_Delete:
             selected_items = self.scene.selectedItems()
             for item in selected_items:
                 model = getattr(item, 'model', None)
-                if model is not None and hasattr(api.context.harness, 'devices') and model in api.context.harness.devices:
-                    api.context.harness.devices.remove(model)
-                    api.dispatch("model_changed", {"action": "remove", "item": model})
+                if model is not None:
+                    # Route all deletions through the dispatcher contract only
+                    if hasattr(model, 'pins') and hasattr(model, 'meta'):
+                        # Device deletion
+                        api.dispatch('edit.delete', {'device': model})
+                    elif hasattr(model, 'device_id') and hasattr(model, 'id'):
+                        # Pin deletion
+                        api.dispatch('edit.delete', {'pin': model})
             event.accept()
         else:
             super().keyPressEvent(event)
 
     def on_model_changed(self, data):
         """Respond to model changes by updating or removing scene items as needed."""
-        print(f"[DEBUG] HarnessCanvas.on_model_changed called with: {data}")
+        from infra.logging import infra_log
+        import traceback
+        print("\n[DIAG] === on_model_changed CALLED ===")
+        print(f"[DIAG] data: {data}")
+        traceback.print_stack(limit=6)
+        infra_log(f"[CANVAS] on_model_changed called with: {data}", level="debug")
         # Robustly handle all device actions: add, update, move, remove, delete
         if not data or 'action' not in data or 'item' not in data:
-            print("[DEBUG] model_changed: missing action or item")
+            infra_log("[CANVAS] model_changed: missing action or item", level="debug")
+            print("[DIAG] model_changed: missing action or item")
             return
         action = data['action']
-        device = data['item']
+        model = data['item']
         api = APIManager.get_instance()
-        # Always use device_id for registry lookup, not object identity
-        device_id = getattr(device, 'id', None)
-        item = api.get_scene_item(device_id)
+        model_id = getattr(model, 'id', None)
+        print(f"[DIAG] action={action}, model={model}, type={type(model)}, model_id={model_id}")
+        infra_log(f"[CANVAS] on_model_changed: action={action}, model={model}, type={type(model)}, model_id={model_id}", level="debug")
+        item = api.get_scene_item(model_id)
+        print(f"[DIAG] get_scene_item({model_id}) -> {item}")
+        infra_log(f"[CANVAS] on_model_changed: action={action}, model_id={model_id}, item={item}", level="debug")
+        # Print all scene items and their model ids
+        print("[DIAG] Scene items:")
+        for scene_item in list(self.scene.items()):
+            mid = getattr(getattr(scene_item, 'model', None), 'id', None)
+            print(f"    scene_item={scene_item}, model_id={mid}")
+        # Print scene registry state
+        if hasattr(api, '_scene_registry'):
+            print(f"[DIAG] Scene registry: {list(api._scene_registry.keys())}")
 
         if action in ('remove', 'delete'):
-            print(f"[DEBUG] Attempting to remove item for device_id={device_id}, item={item}")
+            from infra.logging import infra_log
+            print(f"[DIAG] [REMOVE/DELETE] on_model_changed triggered for action={action}, model_id={model_id}, item={item}")
+            infra_log(f"[CANVAS] [REMOVE/DELETE] on_model_changed triggered for action={action}, model_id={model_id}, item={item}", level="debug")
+            print(f"[DIAG] [REMOVE/DELETE] Attempting to remove item(s) for model_id={model_id}, item={item}")
+            infra_log(f"[CANVAS] [REMOVE/DELETE] Attempting to remove item(s) for model_id={model_id}, item={item}", level="debug")
+
+            def fully_cleanup_item(target_item, target_id):
+                print(f"[DIAG] [REMOVE/DELETE] fully_cleanup_item: target_id={target_id}, target_item={target_item}")
+                infra_log(f"[CANVAS] [REMOVE/DELETE] fully_cleanup_item: target_id={target_id}, target_item={target_item}", level="debug")
+                # Deselect
+                if hasattr(target_item, 'setSelected'):
+                    target_item.setSelected(False)
+                # Disconnect signals if any
+                if hasattr(target_item, 'disconnect'):
+                    try:
+                        target_item.disconnect()
+                    except Exception:
+                        pass
+                # Remove from scene
+                self.scene.removeItem(target_item)
+                print(f"[DIAG] [REMOVE/DELETE] Removed from scene: {target_item}")
+                infra_log(f"[CANVAS] [REMOVE/DELETE] Removed from scene: {target_item}", level="debug")
+                # Remove from selection if present
+                if hasattr(self.scene, 'selectedItems'):
+                    try:
+                        selected = self.scene.selectedItems()
+                        if target_item in selected:
+                            self.scene.clearSelection()
+                            print(f"[DIAG] [REMOVE/DELETE] Cleared selection for: {target_item}")
+                            infra_log(f"[CANVAS] [REMOVE/DELETE] Cleared selection for: {target_item}", level="debug")
+                    except Exception:
+                        pass
+                # Remove from API registry
+                api.unregister_scene_item(target_id)
+                print(f"[DIAG] [REMOVE/DELETE] Unregistered from scene registry: {target_id}")
+                infra_log(f"[CANVAS] [REMOVE/DELETE] Unregistered from scene registry: {target_id}", level="debug")
+                # Print registry state after removal
+                if hasattr(api, '_scene_registry'):
+                    print(f"[DIAG] [REMOVE/DELETE] Scene registry after removal: {list(api._scene_registry.keys())}")
+                    infra_log(f"[CANVAS] [REMOVE/DELETE] Scene registry after removal: {list(api._scene_registry.keys())}", level="debug")
+
             removed = False
+            # Remove the item found by registry lookup (if any)
             if item is not None:
-                if hasattr(item, 'setSelected'):
-                    item.setSelected(False)
-                self.scene.removeItem(item)
-                api.unregister_scene_item(device_id)
+                fully_cleanup_item(item, model_id)
                 removed = True
-                print(f"[DEBUG] Removed item for device_id={device_id}")
-            else:
-                # Defensive: try to find and remove any DeviceItem with matching id
+                print(f"[DEBUG] Removed item for model_id={model_id}")
+                infra_log(f"[CANVAS] [REMOVE/DELETE] Removed item for model_id={model_id}", level="debug")
+            # Defensive: try to find and remove any scene item with matching id (in case registry is stale)
+            for scene_item in list(self.scene.items()):
+                if hasattr(scene_item, 'model') and getattr(scene_item.model, 'id', None) == model_id:
+                    fully_cleanup_item(scene_item, model_id)
+                    removed = True
+            # --- Robust PinItem removal: if a pin is being removed, always remove all PinItems with matching model id ---
+            if hasattr(model, 'device_id') and hasattr(model, 'id'):
+                # This is likely a Pin model; remove all PinItems with matching pin id
                 for scene_item in list(self.scene.items()):
-                    if hasattr(scene_item, 'model') and getattr(scene_item.model, 'id', None) == device_id:
-                        if hasattr(scene_item, 'setSelected'):
-                            scene_item.setSelected(False)
-                        self.scene.removeItem(scene_item)
-                        api.unregister_scene_item(device_id)
-                        removed = True
-                        print(f"[DEBUG] Fallback removed item for device_id={device_id}")
-                        break
-                else:
-                    print(f"[DEBUG] No item found for device_id={device_id}")
+                    if type(scene_item).__name__ == 'PinItem' and hasattr(scene_item, 'model'):
+                        pin_model = getattr(scene_item, 'model', None)
+                        if getattr(pin_model, 'id', None) == model_id:
+                            fully_cleanup_item(scene_item, model_id)
+                            removed = True
+                # --- Do NOT mutate parent_device.pins in UI layer. All model mutations must be performed via commands/dispatcher. ---
+                # Static enforcement: direct model mutation is forbidden in UI. This block intentionally left blank.
             # If the removed item was selected, clear selection in the scene
             if removed and hasattr(self.scene, 'clearSelection'):
                 self.scene.clearSelection()
+                print(f"[DIAG] [REMOVE/DELETE] Cleared selection after removal.")
+                infra_log(f"[CANVAS] [REMOVE/DELETE] Cleared selection after removal.", level="debug")
         elif action in ('add',):
             from core.device import Device, Pin
-            if isinstance(device, Pin):
+            infra_log(f"[CANVAS] on_model_changed: entering 'add' branch, model={model}", level="debug")
+            print(f"[DIAG] [ADD] on_model_changed: action=add, model={model}, type={type(model)}, model_id={model_id}")
+            if isinstance(model, Pin):
                 # Find parent device and its DeviceItem
-                parent_id = getattr(device, 'device_id', None)
+                parent_id = getattr(model, 'device_id', None)
                 parent_item = api.get_scene_item(parent_id)
+                print(f"[DIAG] [ADD] Pin add: parent_id={parent_id}, parent_item={parent_item}")
                 if parent_item is not None:
                     from ui.items.pin import PinItem
-                    pin_item = PinItem(device, parent_item)
-                    pin_item.setPos(device.x, device.y)
-                    print(f"[DEBUG] Added PinItem for pin_id={device_id} to DeviceItem {parent_id}")
+                    pin_item = PinItem(model, parent_item)
+                    pin_item.setPos(model.x, model.y)
+                    print(f"[DIAG] [ADD] Adding PinItem to scene: pin_id={model_id}, pin_item={pin_item}")
+                    self.scene.addItem(pin_item)
+                    api.register_scene_item(model_id, pin_item)
+                    print(f"[DIAG] [ADD] Registered PinItem in scene registry: pin_id={model_id}")
+                    infra_log(f"[CANVAS] Added PinItem for pin_id={model_id} to DeviceItem {parent_id} and registered in scene registry", level="debug")
                 else:
-                    print(f"[DEBUG] Could not find DeviceItem for parent device_id={parent_id}")
+                    print(f"[DIAG] [ADD] Could not find DeviceItem for parent device_id={parent_id}")
+                    infra_log(f"[CANVAS] Could not find DeviceItem for parent device_id={parent_id}", level="debug")
             else:
+                infra_log(f"[CANVAS] on_model_changed: model is not a Pin, type={type(model)}", level="debug")
                 if item is None:
                     from ui.items.device import DeviceItem
-                    item = DeviceItem(device)
+                    infra_log(f"[CANVAS] Creating DeviceItem for device_id={model_id}", level="debug")
+                    print(f"[DIAG] [ADD] Creating DeviceItem for device_id={model_id}")
+                    item = DeviceItem(model)
                     self.scene.addItem(item)
-                    api.register_scene_item(device_id, item)
-                    print(f"[DEBUG] Added DeviceItem for device_id={device_id}")
+                    api.register_scene_item(model_id, item)
+                    print(f"[DIAG] [ADD] Added DeviceItem to scene and registered: device_id={model_id}, item={item}")
+                    infra_log(f"[CANVAS] Added DeviceItem for device_id={model_id}", level="debug")
+                else:
+                    print(f"[DIAG] [ADD] DeviceItem already exists for device_id={model_id}: {item}")
+                    infra_log(f"[CANVAS] DeviceItem already exists for device_id={model_id}: {item}", level="debug")
         elif action in ('update', 'move'):
-            if item is not None:
-                item.model = device
-                if hasattr(item, 'update_from_model'):
-                    item.update_from_model()
+            from core.device import Pin
+            if isinstance(device, Pin):
+                # Update the PinItem for this pin (no direct model mutation)
+                pin_item = api.get_scene_item(getattr(device, 'id', None))
+                if pin_item is not None and hasattr(pin_item, 'update_from_model'):
+                    pin_item.update_from_model()
+            else:
+                if item is not None:
+                    item.model = device
+                    if hasattr(item, 'update_from_model'):
+                        item.update_from_model()
 
     def contextMenuEvent(self, event):
-        """Show the context menu for the canvas if available."""
+        """Show the context menu for the device, pin, wire, or canvas as appropriate."""
         api = APIManager.get_instance()
+        scene_pos = self.mapToScene(event.pos())
+        item = self.scene.itemAt(scene_pos, self.transform())
+        try:
+            from ui.items.device import DeviceItem
+        except Exception:
+            DeviceItem = None
+        try:
+            from ui.items.wire import WireItem
+        except Exception:
+            WireItem = None
+        try:
+            from ui.items.pin import PinItem
+        except Exception:
+            PinItem = None
         if hasattr(api, 'open_context_menu'):
-            api.open_context_menu(event)
+            if item is not None:
+                if DeviceItem and isinstance(item, DeviceItem):
+                    api.open_context_menu(event, item=item)
+                elif WireItem and isinstance(item, WireItem):
+                    api.open_context_menu(event, item=item)
+                elif PinItem and isinstance(item, PinItem):
+                    api.open_context_menu(event, item=item)
+                else:
+                    api.open_context_menu(event)
+            else:
+                api.open_context_menu(event)
         event.accept()
 
     def mouseDoubleClickEvent(self, event: QMouseEvent):
@@ -138,7 +273,11 @@ class HarnessCanvas(QGraphicsView):
         event.accept()
 
     def wheelEvent(self, event):
-        """Zoom in/out on wheel events, or pass to base handler."""
+        """Zoom in/out on wheel events, or pass to base handler. Ignores non-QWheelEvent events for robustness."""
+        from PySide6.QtGui import QWheelEvent
+        if not isinstance(event, QWheelEvent):
+            # Ignore synthetic or malformed events (prevents segfaults)
+            return
         zoom_in_factor = 1.15
         zoom_out_factor = 1 / zoom_in_factor
         angle_delta = event.angleDelta().y()
@@ -148,6 +287,7 @@ class HarnessCanvas(QGraphicsView):
             self.scale(zoom_out_factor, zoom_out_factor)
         else:
             super().wheelEvent(event)
+
 
     def __init__(self, parent=None):
         """Initialize the canvas, scene, theme, and event subscriptions."""
@@ -174,8 +314,37 @@ class HarnessCanvas(QGraphicsView):
 
         # Subscribe to model_changed for device deletion
         api = APIManager.get_instance()
-        if hasattr(api, 'subscribe'):
-            api.subscribe('model_changed', self.on_model_changed)
+        # Subscribe to all API events for robust model sync
+        if hasattr(api, 'subscribe_to_all'):
+            api.subscribe_to_all(self._on_any_event)
+
+    def _on_any_event(self, event_type, data):
+        """Handle any API event that could affect the canvas rendering. Prevent recursion and redundant reloads."""
+        # Prevent recursive reloads
+        if not hasattr(self, '_is_reloading'):
+            self._is_reloading = False
+        if self._is_reloading:
+            return
+        # Only reload for undo/redo, not for every event
+        if event_type in ("undo", "redo"):
+            try:
+                self._is_reloading = True
+                api = APIManager.get_instance()
+                harness = getattr(api.context, 'harness', None)
+                if harness is not None:
+                    self.load_harness(harness)
+            finally:
+                self._is_reloading = False
+        elif event_type == "model_changed":
+            self.on_model_changed(data)
+
+    def _on_undo_redo_event(self, event_type):
+        """Callback for undo/redo events to refresh the canvas scene."""
+        if event_type in ("undo", "redo"):
+            api = APIManager.get_instance()
+            harness = getattr(api.context, 'harness', None)
+            if harness is not None:
+                self.load_harness(harness)
 
     def drawBackground(self, painter, rect):
         """Draw the background grid and call the base background renderer."""
@@ -224,15 +393,7 @@ class HarnessCanvas(QGraphicsView):
         rect.adjust(-pad, -pad, pad, pad)
         self.fitInView(rect, Qt.KeepAspectRatio)
 
-    # --- Tool Event Dispatching ---
-    def mousePressEvent(self, event: QMouseEvent):
-        """Handle mouse press events, including tool dispatch and drag mode switching."""
-        if event.button() == Qt.MiddleButton:
-            self.setDragMode(QGraphicsView.ScrollHandDrag)
-            super().mousePressEvent(event)
-            return
-        self._dispatch(event)
-        super().mousePressEvent(event)
+
 
     def mouseMoveEvent(self, event: QMouseEvent):
         """Handle mouse move events and dispatch to the tool system."""

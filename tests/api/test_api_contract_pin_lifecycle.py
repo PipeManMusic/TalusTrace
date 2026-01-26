@@ -27,9 +27,10 @@ def test_api_pin_lifecycle_contracts():
     from api.commands.device import AddDeviceCommand, AddPinCommand
     ctx.undo_stack.push(AddDeviceCommand(device))
     # Add pin
-    ctx.undo_stack.push(AddPinCommand(device))
+    import uuid
+    pin = Pin(id=str(uuid.uuid4()), x=0, y=0, device_id=device.id)
+    ctx.undo_stack.push(AddPinCommand(device, pin, context=ctx))
     assert len(device.pins) == 1
-    pin = device.pins[0]
     # Move pin using MovePinCommand (relative to device origin)
     try:
         from api.commands.device import MovePinCommand
@@ -107,10 +108,12 @@ def test_api_delete_pin_removes_internal_routes():
     from api.commands.device import AddDeviceCommand, AddPinCommand, DeletePinCommand
     ctx.undo_stack.push(AddDeviceCommand(device))
     # Add two pins
-    ctx.undo_stack.push(AddPinCommand(device))
-    ctx.undo_stack.push(AddPinCommand(device))
+    import uuid
+    pin1 = Pin(id=str(uuid.uuid4()), x=0, y=0, device_id=device.id)
+    pin2 = Pin(id=str(uuid.uuid4()), x=10, y=0, device_id=device.id)
+    ctx.undo_stack.push(AddPinCommand(device, pin1, context=ctx))
+    ctx.undo_stack.push(AddPinCommand(device, pin2, context=ctx))
     assert len(device.pins) == 2
-    pin1, pin2 = device.pins
     # Add internal routing between pins
     device.internal_routing[pin1.id] = pin2.id
     device.internal_routing[pin2.id] = pin1.id

@@ -43,23 +43,16 @@ class DeviceWizard(QDialog):
         return bool(self.id_input.text().strip()) and bool(self.name_input.text().strip())
 
     def accept(self):
-        """Create the device, add it to the context, and refresh the canvas."""
+        """Request device creation via the API, which generates the UUID and returns the device, then refresh the canvas."""
         from api.manager import APIManager
-        from core.device import Device
-        from api.commands.device import AddDeviceCommand
-        id_val = self.id_input.text().strip()
         name = self.name_input.text().strip()
-        if id_val and name:
+        if name:
             api = APIManager.get_instance()
-            new_device = Device(id=id_val, label=name)
-            # Use Command Pattern for undo/redo compliance
-            if hasattr(api.context, 'undo_stack'):
-                api.context.undo_stack.push(AddDeviceCommand(new_device))
-            else:
-                AddDeviceCommand(new_device).execute()
-            # PH6-FIX.5: Trigger canvas refresh
-            from PySide6.QtWidgets import QApplication
-            window = QApplication.activeWindow()
-            if window and hasattr(window, 'canvas'):
-                window.canvas.load_harness(api.context.harness)
+            device = api.create_device(name)
+            if device:
+                # PH6-FIX.5: Trigger canvas refresh
+                from PySide6.QtWidgets import QApplication
+                window = QApplication.activeWindow()
+                if window and hasattr(window, 'canvas'):
+                    window.canvas.load_harness(api.context.harness)
         super().accept()

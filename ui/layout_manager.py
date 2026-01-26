@@ -26,7 +26,7 @@ class LayoutManager:
             self.config = {}
 
     def create_menubar(self, window):
-        """Create a QMenuBar for the given window using the loaded config."""
+        """Create a QMenuBar for the given window using the loaded config (UUID-driven)."""
         from ui.i18n import I18N
         menubar = QMenuBar(window)
         menu_configs = self.config.get('menubar', [])
@@ -42,24 +42,33 @@ class LayoutManager:
                     if item_conf.get('type') == 'separator':
                         menu.addSeparator()
                         continue
-                    cmd_id = item_conf.get('command')
-                    label = item_conf.get('label', cmd_id)
-                    action = QAction(I18N.get(cmd_id, label), window)
-                    # Always set data for testability
-                    action.setData(cmd_id)
-                    def handler(checked=False, *args, cmd_id=cmd_id, **kwargs):
-                        """Handle layout manager events with provided arguments."""
-                        from api.actions import registry
-                        context = getattr(window, 'api', None)
-                        # For dialog actions, pass the window as context if needed
-                        # Always pass the main window as context for all actions
-                        registry.execute(cmd_id, window)
-                    action.triggered.connect(handler)
-                    menu.addAction(action)
+                    uuid = item_conf.get('uuid')
+                    if uuid:
+                        label = I18N.get(uuid, uuid)
+                        action = QAction(label, window)
+                        action.setData(uuid)
+                        def handler(checked=False, *args, uuid=uuid, **kwargs):
+                            from api.actions import registry
+                            context = getattr(window, 'api', None)
+                            registry.execute(uuid, window)
+                        action.triggered.connect(handler)
+                        menu.addAction(action)
+                    elif 'command' in item_conf:
+                        # fallback for legacy
+                        cmd_id = item_conf.get('command')
+                        label = item_conf.get('label', cmd_id)
+                        action = QAction(I18N.get(cmd_id, label), window)
+                        action.setData(cmd_id)
+                        def handler(checked=False, *args, cmd_id=cmd_id, **kwargs):
+                            from api.actions import registry
+                            context = getattr(window, 'api', None)
+                            registry.execute(cmd_id, window)
+                        action.triggered.connect(handler)
+                        menu.addAction(action)
         return menubar
 
     def create_toolbar(self, window):
-        """Create a QToolBar for the given window using the loaded config."""
+        """Create a QToolBar for the given window using the loaded config (UUID-driven)."""
         from ui.i18n import I18N
         toolbar = QToolBar(window)
         toolbar.setObjectName("MainToolBar")
@@ -70,25 +79,26 @@ class LayoutManager:
                 if item_conf == 'separator':
                     toolbar.addSeparator()
                     continue
-                cmd_id = item_conf
-                label = cmd_id
+                uuid = item_conf
+                label = uuid
             elif isinstance(item_conf, dict):
                 if item_conf.get('type') == 'separator':
                     toolbar.addSeparator()
                     continue
-                cmd_id = item_conf.get('command')
-                label = item_conf.get('label', cmd_id)
+                uuid = item_conf.get('uuid')
+                if uuid:
+                    label = I18N.get(uuid, uuid)
+                else:
+                    uuid = item_conf.get('command')
+                    label = item_conf.get('label', uuid)
             else:
                 continue
-            action = QAction(I18N.get(cmd_id, label), window)
-            # Always set data for testability
-            action.setData(cmd_id)
-            def handler(checked=False, *args, cmd_id=cmd_id, **kwargs):
-                """Handle toolbar action trigger event and dispatch the command action."""
+            action = QAction(I18N.get(uuid, label), window)
+            action.setData(uuid)
+            def handler(checked=False, *args, uuid=uuid, **kwargs):
                 from api.actions import dispatch_action, registry
-                dispatch_action(cmd_id)
-                # Explicitly emit action_triggered for test coverage
-                registry.action_triggered.emit(cmd_id, None)
+                dispatch_action(uuid)
+                registry.action_triggered.emit(uuid, None)
             action.triggered.connect(handler)
             toolbar.addAction(action)
         return toolbar

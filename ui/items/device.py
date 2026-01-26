@@ -20,6 +20,7 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
         'expected_child_count': 0
     }
     def __init__(self, device, is_ghost=False, parent=None):
+        from infra.logging import infra_log
         """
         Initialize the DeviceItem.
         Args:
@@ -29,6 +30,7 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
         """
         QGraphicsRectItem.__init__(self, parent)
         ObservableGraphicsItemMixin.__init__(self)
+        infra_log(f"[DeviceItem] Created DeviceItem for model id={getattr(device, 'id', None)}, obj={device}, DeviceItem id={id(self)}", level="debug")
         self.setZValue(10)  # Devices above wires
 
         # ARCHITECTURE UPDATE: Use MM dimensions directly
@@ -47,10 +49,17 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
         self.init_mixin(device, is_ghost)
 
         if not self.is_ghost and hasattr(device, 'pins'):
+            from api.manager import APIManager
+            api = APIManager.get_instance()
             for pin in device.pins:
                 pin_item = PinItem(pin, self)
                 # Pin positions in model are relative MM. Use directly.
                 pin_item.setPos(pin.x, pin.y)
+                # Ensure PinItem is added to the scene as a child of DeviceItem
+                if self.scene() is not None:
+                    self.scene().addItem(pin_item)
+                # Always register PinItem in scene registry by pin id
+                api.register_scene_item(pin.id, pin_item)
 
         # Subscribe to model_changed events for this device
 
@@ -59,10 +68,15 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
 
     def update_from_model(self):
         """
-        Update the item's position and visuals to match the model.
+        Update the item's position, size, and visuals to match the model, including meta fields.
         """
-        # Always update position and visuals to match model
+        # Update position
         self.setPos(self.model.x, self.model.y)
+        # Update size and origin from meta fields
+        width_mm = self.model.meta.get("width_mm", 40.0)
+        height_mm = self.model.meta.get("height_mm", 30.0)
+        self.setRect(0, 0, width_mm, height_mm)
+        self.setTransformOriginPoint(width_mm / 2, height_mm / 2)
         self.update()  # Force redraw in case of visual artifacts
 
     @property

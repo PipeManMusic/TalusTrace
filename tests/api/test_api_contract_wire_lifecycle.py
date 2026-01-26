@@ -20,9 +20,11 @@ def test_api_wire_lifecycle():
     device = Device(id=str(uuid.uuid4()), x=0, y=0, meta={})
     from api.commands.device import AddDeviceCommand, AddPinCommand, AddWireCommand
     ctx.undo_stack.push(AddDeviceCommand(device, context=ctx))
-    ctx.undo_stack.push(AddPinCommand(device, context=ctx))
-    ctx.undo_stack.push(AddPinCommand(device, context=ctx))
-    pin1, pin2 = device.pins
+    import uuid
+    pin1 = Pin(id=str(uuid.uuid4()), x=0, y=0, device_id=device.id)
+    pin2 = Pin(id=str(uuid.uuid4()), x=10, y=0, device_id=device.id)
+    ctx.undo_stack.push(AddPinCommand(device, pin1, context=ctx))
+    ctx.undo_stack.push(AddPinCommand(device, pin2, context=ctx))
 
     # 2. Create a wire
     wire = Wire(id=str(uuid.uuid4()), from_conn=device.id, from_pin=pin1.id, to_conn=device.id, to_pin=pin2.id, path_nodes=[[pin1.x, pin1.y], [pin2.x, pin2.y]])
@@ -160,8 +162,11 @@ def test_api_undo_redo_complex_scenarios():
     import uuid
     device = Device(id=str(uuid.uuid4()), x=10, y=10, meta={})
     ctx.undo_stack.push(AddDeviceCommand(device, context=ctx))
-    ctx.undo_stack.push(AddPinCommand(device, context=ctx))
-    ctx.undo_stack.push(AddPinCommand(device, context=ctx))
+    import uuid
+    pin1 = Pin(id=str(uuid.uuid4()), x=0, y=0, device_id=device.id)
+    pin2 = Pin(id=str(uuid.uuid4()), x=10, y=0, device_id=device.id)
+    ctx.undo_stack.push(AddPinCommand(device, pin1, context=ctx))
+    ctx.undo_stack.push(AddPinCommand(device, pin2, context=ctx))
     ctx.undo_stack.end_transaction()
     pin1, pin2 = device.pins
     # Add a wire

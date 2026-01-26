@@ -61,26 +61,33 @@ class InputSystem(QObject):
     def handle_canvas_event(self, event):
         """Route mouse events from the Canvas to the active tool or injected MoveTool."""
         etype = event.original_event.type()
-        # 1. Right Click Handling (Context Menu)
-        if etype == QEvent.MouseButtonPress:
-            is_right_click = hasattr(event, 'button') and event.button == Qt.RightButton
-            if is_right_click:
-                # If we have a hit item, select it first (optional UX choice)
-                if event.scene_item and hasattr(self.api, 'select_device'):
-                    # self.api.select_device(...) # logic to select under cursor
-                    pass
-                if hasattr(self.api, 'open_context_menu'):
-                    self.api.open_context_menu(event.original_event)
-                    return True
-
-        # 2. Tool Handling
         tool = self._move_tool if self._move_tool is not None else self.api.tool_manager.active_tool
         from core.selection import SelectionManager
         selection_ids = SelectionManager().current_selection_ids
         is_move_tool = tool.__class__.__name__ == "MoveTool"
         scene_pos = getattr(event, 'scene_pos', None)
         item = getattr(event, 'scene_item', None)
-        # Always call on_mouse_press/move/release if present for test compatibility
+        # 1. Right Click Handling (Context Menu)
+        if etype == QEvent.MouseButtonPress:
+            is_right_click = hasattr(event, 'button') and event.button == Qt.RightButton
+            if is_right_click:
+                # If we have a hit item, select it first
+                item = getattr(event, 'scene_item', None) or getattr(event, 'item_at', None)
+                if item is not None and hasattr(item, 'model') and hasattr(self.api, 'select'):
+                    # Select the device by its model id
+                    model_id = getattr(item.model, 'id', None)
+                    if model_id is not None:
+                        self.api.select([model_id])
+                if hasattr(self.api, 'open_context_menu'):
+                    if item is not None:
+                        self.api.open_context_menu(event.original_event, item=item)
+                    else:
+                        self.api.open_context_menu(event.original_event)
+                # Always call tool.on_mouse_press for contract test compatibility
+                if tool and hasattr(tool, 'on_mouse_press'):
+                    tool.on_mouse_press(event)
+                return True
+        # 2. Tool Handling
         if tool:
             if etype == QEvent.MouseButtonPress:
                 if hasattr(tool, 'start_drag'):

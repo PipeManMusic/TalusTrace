@@ -102,7 +102,7 @@ class MainWindow(QMainWindow):
         # Map actions to labels/IDs
         actions_map = {
             "device.add_pin": {"label": "Add Pin", "action": "device.add_pin"},
-            "edit.delete": {"label": "Delete Item", "action": "edit.delete"},
+            "edit.delete": {"action": "edit.delete"},
             "edit.rotate_cw": {"label": "Rotate 90°", "action": "edit.rotate_cw"}
         }
         self.context_menu_manager = ContextMenuManager(self.layout_manager.config, actions_map)

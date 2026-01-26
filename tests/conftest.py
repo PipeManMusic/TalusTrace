@@ -9,11 +9,6 @@ import importlib
 import infra.undo_stack
 importlib.reload(infra.undo_stack)
 
-@pytest.fixture(autouse=True)
-def skip_if_headless(request):
-    is_headless = os.environ.get('DISPLAY') is None or os.environ.get('PYTEST_CURRENT_TEST')
-    if is_headless and request.node.get_closest_marker("gui"):
-        pytest.skip("Skipping GUI test in headless mode to avoid Qt segfault.")
 
 # Global fixture to patch modal dialogs for hands-free test automation
 

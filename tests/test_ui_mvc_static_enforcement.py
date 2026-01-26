@@ -30,7 +30,8 @@ for mod_dir in [CORE_DIR, INFRA_DIR]:
 
 
 def find_model_mutations_in_ui():
-    """Yield (filename, line, offending_code) for any UI file that directly mutates a model class or its attributes."""
+    """Return a list of (filename, line, offending_code) for any UI file that directly mutates a model class or its attributes."""
+    violations = []
     for root, _, files in os.walk(UI_DIR):
         for fname in files:
             if fname.endswith('.py'):
@@ -51,14 +52,21 @@ def find_model_mutations_in_ui():
                                 varname = var.id
                                 # Heuristic: if variable name is 'model', 'device', 'pin', etc., flag it
                                 if any(model.lower() in varname.lower() for model in MODEL_CLASSES):
-                                    yield (path, node.lineno, method)
+                                    violations.append((path, node.lineno, method))
                     # Look for direct assignment to model attributes
                     if isinstance(node, ast.Assign):
                         for target in node.targets:
                             if isinstance(target, ast.Attribute):
                                 if hasattr(target.value, 'id') and any(model.lower() in target.value.id.lower() for model in MODEL_CLASSES):
-                                    yield (path, node.lineno, 'assign')
+                                    violations.append((path, node.lineno, 'assign'))
+    return violations
+
+
 
 @pytest.mark.parametrize('filename,line,code', list(find_model_mutations_in_ui()))
 def test_ui_does_not_mutate_model(filename, line, code):
-    pytest.fail(f"UI file {filename} directly mutates model at line {line} via {code} (MVC violation)")
+    """Fail if any UI code directly mutates model objects or their attributes."""
+    violations = find_model_mutations_in_ui()
+    if violations:
+        msg = '\n'.join(f"{file}:{lineno} {code}" for file, lineno, code in violations)
+        pytest.fail(f"Direct model mutation found in UI code:\n{msg}")

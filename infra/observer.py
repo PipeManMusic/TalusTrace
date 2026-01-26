@@ -2,11 +2,20 @@
 Observer pattern implementation for event subscription and dispatch in Talus Trace.
 Allows components to subscribe to and receive events.
 """
+
 class Observer:
     """
     Implements the Observer pattern for event subscription and dispatch.
     Allows components to subscribe to and receive events.
     """
+
+    def subscribe_to_all(self, callback):
+        """
+        Subscribe a callback to all event types. The callback will receive every event dispatched.
+        """
+        import weakref
+        self._all_callback = (True, weakref.WeakMethod(callback)) if hasattr(callback, '__self__') and hasattr(callback, '__func__') else (False, callback)
+
     def __init__(self):
         """Initialize the Observer with an empty subscriber list."""
         self._subscribers = {}
@@ -75,3 +84,12 @@ class Observer:
                         pass
                 # else: dead weakref, do not keep
             self._subscribers[event_type] = new_list
+        # Dispatch to all-event subscriber if present
+        if hasattr(self, '_all_callback') and self._all_callback:
+            is_weak, ref = self._all_callback
+            cb = ref() if is_weak else ref
+            if cb is not None:
+                try:
+                    cb(event_type, data)
+                except Exception:
+                    pass

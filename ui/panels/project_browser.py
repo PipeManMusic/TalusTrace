@@ -29,6 +29,15 @@ class ProjectBrowser(QWidget):
                     if dev_id:
                         ids.append(dev_id)
         return ids
+
+    @property
+    def devices(self):
+        """
+        Return the list of device models currently in the harness (mirrors what is shown in the browser).
+        """
+        if hasattr(self.api, 'context') and self.api.context and hasattr(self.api.context, 'harness'):
+            return list(getattr(self.api.context.harness, 'devices', []))
+        return []
     def __init__(self, parent=None):
         """
         Initialize the ProjectBrowser panel and set up the device/wire tree.
@@ -47,6 +56,11 @@ class ProjectBrowser(QWidget):
         if hasattr(self.api, 'subscribe'):
             self.api.subscribe("selection_changed", self.on_selection_changed)
             self.api.subscribe("model_changed", self.refresh)
+            # Subscribe to all *_removed events for live updates
+            self.api.subscribe("device_removed", self.refresh)
+            self.api.subscribe("wire_removed", self.refresh)
+            self.api.subscribe("bundle_removed", self.refresh)
+            self.api.subscribe("pin_removed", self.refresh)
         self.refresh()
 
     def refresh(self, data=None):
@@ -55,16 +69,37 @@ class ProjectBrowser(QWidget):
         Args:
             data (optional): Data passed from the model_changed event.
         """
+        from infra.logging import infra_log
+        infra_log(f"[ProjectBrowser] refresh called with data={data}", level="debug")
+        # If called from a model_changed event, only refresh for device add/remove/delete
+        if data and isinstance(data, dict):
+            action = data.get('action')
+            # Always refresh for device add/remove/delete actions, regardless of item type
+            if action in ('remove', 'delete', 'add'):
+                pass  # continue to refresh
+            else:
+                infra_log(f"[ProjectBrowser] refresh: skipping for action={action}", level="debug")
+                return
+        infra_log(f"[ProjectBrowser] refresh: proceeding to update tree", level="debug")
         self.tree.clear()
         if not hasattr(self.api, 'context') or not self.api.context:
+            infra_log(f"[ProjectBrowser] refresh: no api context", level="debug")
             return
         harness = self.api.context.harness
         if not harness:
+            infra_log(f"[ProjectBrowser] refresh: no harness", level="debug")
             return
         # Devices
         dev_group = QTreeWidgetItem(self.tree, ["Devices"])
         dev_group.setExpanded(True)
+        ids_seen = set()
         for dev in harness.devices:
+            infra_log(f"[ProjectBrowser] refresh: device in harness.devices: {getattr(dev, 'id', None)}", level="debug")
+            if dev.id in ids_seen:
+                import sys
+                print(f"[ERROR] Duplicate device ID in project browser: {dev.id}", file=sys.stderr)
+                assert False, f"Duplicate device ID in project browser: {dev.id}"
+            ids_seen.add(dev.id)
             display_text = f"{dev.id} ({dev.label})" if hasattr(dev, 'label') and dev.label else dev.id
             item = QTreeWidgetItem(dev_group, [display_text])
             item.setData(0, 100, dev.id)

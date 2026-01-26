@@ -1,0 +1,112 @@
+New File: New
+New: New
+Open File: Open File
+Save File: Save File
+Export BOM: Export BOM
+Export Wirelist: Export Wirelist
+Exit: Exit
+Undo: Undo
+Redo: Redo
+Settings: Settings
+Theme: Theme
+Add Generic Device: Add Generic Device
+Device Wizard: Device Wizard
+Measure: Measure
+Zoom Extents: Zoom Extents
+Zoom Selected: Zoom Selected
+Toggle Project Browser: Toggle Project Browser
+Toggle Property Panel: Toggle Property Panel
+Toggle Library: Toggle Library
+Toggle Audit Panel: Toggle Audit Panel
+Reset Layout: Reset Layout
+Move: Move
+file_new: New
+file_open: Open File
+file_save: Save File
+file_export_bom: Export BOM
+file_export_wirelist: Export Wirelist
+file_exit: Exit
+edit_undo: Undo
+edit_redo: Redo
+edit_settings: Settings
+edit_theme: Theme
+tool_add_generic_device: Add Generic Device
+device_create_wizard: Device Wizard
+tool_measure: Measure
+view_zoom_extents: Zoom Extents
+view_zoom_selected: Zoom Selected
+view_toggle_project_browser: Toggle Project Browser
+view_toggle_property_panel: Toggle Property Panel
+view_toggle_library: Toggle Library
+view_toggle_audit_panel: Toggle Audit Panel
+view_reset_layout: Reset Layout
+file.new: New
+file.open: Open
+file.save: Save
+file.export_bom: Export BOM
+file.export_wirelist: Export Wirelist
+file.exit: Exit
+edit.undo: Undo
+edit.redo: Redo
+edit.settings: Settings
+edit.theme: Theme
+tool.move: Move
+tool.add_generic_device: Add Generic Device
+device.create_wizard: Device Wizard
+tool.measure: Measure
+view.zoom_extents: Zoom Extents
+view.zoom_selected: Zoom Selected
+view.toggle_project_browser: Toggle Project Browser
+view.toggle_property_panel: Toggle Property Panel
+view.toggle_library: Toggle Library
+view.toggle_audit_panel: Toggle Audit Panel
+view.reset_layout: Reset Layout
+window_title: Talus Trace
+device_wizard_title: Device Wizard
+settings_dialog_title: System Settings
+theme_dialog_title: Theme Editor
+pin_mapping_dialog_title: Map Wire {wire_id} to Connector {connector_id}
+properties_panel_header: Properties
+audit_panel_header: Audit
+library_panel_header: Component Library
+project_browser_panel_header: Harness Components
+device_name_label: 'Device Name:'
+grid_size_label: 'Grid Size:'
+screen_ppi_label: 'Screen PPI:'
+id_label: ID
+label_label: Label
+no_selection_label: No Selection
+unknown_item_label: Unknown Item
+create_button: Create
+save_button: Save
+cancel_button: Cancel
+ok_button: Ok
+device.add_pin: Add Pin
+edit.rotate_cw: "Rotate 90\xB0"
+edit.delete: Delete
+edit.delete.device: Delete Item
+edit.delete.pin: Delete
+f1831bfa-9f66-461c-8a1d-6c5440dc314b: Add Generic Device
+6295355a-fa7e-474e-b0d1-825b9a237280: Select Mode
+7ebb2f9c-eb05-43e4-9531-f58f1e4847e9: Move
+c4c49dee-9a8a-4df3-8bf4-09ed795d13ff: Draw Wire
+66d2bf4e-5235-4baf-b949-05fc95cca8fa: Measure
+e7d71871-de52-4863-afc1-1ec01be58af7: Device Wizard
+4a88e033-860e-4b9b-9140-338b49c40e61: "Rotate 90\xB0"
+aae036a2-4ebc-4f27-8247-2476996f7871: "Rotate -90\xB0"
+e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b: Delete
+eed2f62d-aa9f-4bc2-a54f-72899e52122d: Undo
+76d4f934-9a88-4fca-8d8b-81503224c354: Redo
+6a4d16c9-6733-4141-8cd8-1171c60088e4: Zoom Extents
+b0fe1764-78d7-4199-bfc1-079b243b49a1: Zoom Selected
+c6b94895-d9e5-4c4b-b202-14426f01b9bb: Toggle Grid
+8cb57c15-ca0f-4bf1-9e0a-b8c161985594: Properties
+fa7664bb-217f-4a18-b763-2b0c649957de: Project Browser
+de250c9d-f25a-481d-b8bb-29da11cde04e: Component Library
+4390ebb9-c044-488c-917e-658bdf35e428: Reset Layout
+d24f41dd-f88b-4c97-a5ac-1ed6c40497ea: New
+ca077cf8-9a77-4fed-a091-13009b7382b2: Open
+25d186c1-e3ab-4ca7-a1ed-8d8fa811976d: Save
+90522229-e8d5-4860-af69-c8e384a5a01a: Exit
+aaceb7da-39e0-4647-82e1-3af331cbdf40: Export BOM
+6430b1a7-e043-46d2-a321-99b7c9b34f3b: Export Wires

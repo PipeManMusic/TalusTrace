@@ -109,8 +109,10 @@ class SelectTool(BaseTool):
         # Standard selection
         if event.button == Qt.LeftButton:
             if item and hasattr(item, 'model'):
-                self.api.select([item.model])
+                # Additive selection: add to current selection set
+                self.api.select([item.model], additive=True)
             else:
+                # Blank canvas: clear selection
                 self.api.deselect_all()
         elif event.button == Qt.RightButton:
             self.api.open_context_menu(event)

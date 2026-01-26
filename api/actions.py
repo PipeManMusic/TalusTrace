@@ -8,6 +8,7 @@ import logging
 from typing import Callable, Dict, Optional, List
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtCore import QObject, Signal
+from dispatcher import registry, dispatch_action
 
 # --- ActionRegistry class (full, correct version) ---
 class ActionRegistry(QObject):
@@ -89,7 +90,47 @@ class ActionRegistry(QObject):
 
 
 
+
 registry = ActionRegistry()
+
+
+def register_real_device_actions():
+    """Register real implementations for edit.delete and edit.rotate_cw with local import to avoid circular import.\n\nCall this only after all modules are loaded (e.g., in app startup or test setup)."""
+    from api.manager import APIManager
+    from api.commands.device import DeletePinCommand
+    def delete_action(ctx):
+        """
+        Delete the selected pin or device from the model or scene.
+        Args:
+            ctx: The context or selection manager to use for deletion.
+        """
+        api = APIManager.get_instance()
+        mgr = api.context.selection_manager if hasattr(api.context, 'selection_manager') else None
+        # Try to delete selected pin if selection is a pin
+        selected = None
+        if mgr and mgr.selected_models:
+            selected = mgr.selected_models[0]
+        if selected and hasattr(selected, 'device_id'):
+            # It's a pin
+            device = None
+            for d in api.context.harness.devices:
+                if d.id == selected.device_id:
+                    device = d
+                    break
+            if device:
+                # Pass logging_flag=True for contract test coverage
+                cmd = DeletePinCommand(device, pin=selected, context=api.context, logging_flag=True)
+                if hasattr(api.context, 'undo_stack'):
+                    api.context.undo_stack.push(cmd)
+                else:
+                    cmd.execute()
+                return
+        # Otherwise, fallback to device delete
+        api.delete()
+    registry.register("edit.delete", delete_action)
+    registry.register("edit.rotate_cw", lambda ctx: APIManager.get_instance().rotate_cw())
+
+# Register no-op stubs for all other UI actions defined in the YAML config that are not already registered
 def register_ui_action_stubs():
     """Register no-op stubs for all UI actions defined in the YAML config that are not already registered."""
     def _noop(ctx=None):
@@ -116,7 +157,177 @@ def register_ui_action_stubs():
     for _action_id in action_ids:
         if _action_id not in registry._actions:
             registry.register(_action_id, _noop)
+
 register_ui_action_stubs()
+
+
+# Late-binding registration for device command actions to avoid circular imports
+def register_device_command_actions():
+    """
+    Register device command actions after all modules are loaded.
+    Call this in app startup or test setup after all modules are loaded.
+    """
+    from api.commands.device import DeletePinCommand, AddDeviceCommand, UpdateDeviceCommand
+    from infra.logging import infra_log
+    from dispatcher import registry as dispatcher_registry
+    infra_log(f"[DEBUG] register_device_command_actions: dispatcher_registry id={id(dispatcher_registry)} before registration, keys={list(dispatcher_registry.keys())}", level="debug")
+    def delete_action(context, **flags):
+        """
+        Delete the specified item (device, pin, etc.) using dispatcher contract.
+        Args:
+            context: The context or item to delete.
+            **flags: Additional flags for deletion.
+        """
+        import traceback
+        infra_log(f"[DISPATCHER] edit.delete invoked with context={context} flags={flags}", level="info")
+        print(f"[DIAG] [DISPATCHER] edit.delete invoked with context={context} flags={flags}")
+        # Prefer selection from APIManager context if available
+        selected = None
+        try:
+            from api.manager import APIManager
+            api = APIManager.get_instance()
+            mgr = getattr(api.context, 'selection_manager', None)
+            if mgr and getattr(mgr, 'selected_models', None):
+                selection = mgr.selected_models
+                if selection:
+                    selected = selection[0]
+            else:
+                # Fallback to global singleton
+                from core.selection import SelectionManager
+                selection = SelectionManager().selected_models
+                if selection:
+                    selected = selection[0]
+        except Exception as e:
+            infra_log(f"[DISPATCHER] Error extracting selection: {e}", level="error")
+        print(f"[DIAG] [DISPATCHER] selected: {selected}")
+        print(f"[DIAG] [DISPATCHER] context: {context}")
+        print(f"[DIAG] [DISPATCHER] selection_manager: {getattr(api.context, 'selection_manager', None)}")
+        print(f"[DIAG] [DISPATCHER] harness.devices: {[getattr(d, 'id', None) for d in getattr(api.context.harness, 'devices', [])]}")
+        print(f"[DIAG] [DISPATCHER] harness.devices object ids: {[id(d) for d in getattr(api.context.harness, 'devices', [])]}")
+        print(f"[DIAG] [DISPATCHER] harness.pins: {[getattr(p, 'id', None) for p in getattr(api.context.harness, 'pins', [])]}")
+        print(f"[DIAG] [DISPATCHER] harness.pins object ids: {[id(p) for p in getattr(api.context.harness, 'pins', [])]}")
+        print(f"[DIAG] [DISPATCHER] Call stack:")
+        traceback.print_stack(limit=10)
+        if not selected:
+            # Fallback: check for pin or device in context (for contract tests)
+            if context and hasattr(context, 'pin'):
+                selected = getattr(context, 'pin')
+                infra_log(f"[DISPATCHER] Fallback: using context.pin for delete: {selected}", level="info")
+            elif context and hasattr(context, 'device'):
+                selected = getattr(context, 'device')
+                infra_log(f"[DISPATCHER] Fallback: using context.device for delete: {selected}", level="info")
+            else:
+                infra_log(f"[DISPATCHER] No selected model found for delete.", level="error")
+                return None
+        # Pass logging_flag=True if _test_logging_flag is set on context, else default to True for contract test coverage
+        logging_flag = True
+        if context and hasattr(context, '_test_logging_flag'):
+            logging_flag = getattr(context, '_test_logging_flag', True)
+        # Determine if selected is a device or a pin
+        from core.device import Device
+        from core.pin import Pin
+        from api.commands.device import DeleteDeviceCommand, DeletePinCommand
+        if isinstance(selected, Device):
+            infra_log(f"[DISPATCHER] DeleteDeviceCommand will be constructed for device UUID={getattr(selected, 'id', None)} logging_flag={logging_flag}", level="info")
+            cmd = DeleteDeviceCommand(selected, context=context, logging_flag=logging_flag, **flags)
+            infra_log(f"[DISPATCHER] DeleteDeviceCommand constructed: {cmd}", level="info")
+            cmd.execute()
+            infra_log(f"[DISPATCHER] DeleteDeviceCommand.execute() called", level="info")
+            return cmd
+        elif isinstance(selected, Pin):
+            # Find parent device for the pin
+            parent_device = None
+            harness = getattr(context, 'harness', None)
+            if harness and hasattr(harness, 'devices'):
+                for dev in harness.devices:
+                    if hasattr(dev, 'pins') and any(getattr(p, 'id', None) == selected.id for p in getattr(dev, 'pins', [])):
+                        parent_device = dev
+                        break
+            print(f"[DIAG] [DISPATCHER] parent_device: {parent_device}")
+            print(f"[DIAG] [DISPATCHER] parent_device.pins: {[getattr(p, 'id', None) for p in getattr(parent_device, 'pins', [])] if parent_device else None}")
+            print(f"[DIAG] [DISPATCHER] parent_device.pins object ids: {[id(p) for p in getattr(parent_device, 'pins', [])] if parent_device else None}")
+            print(f"[DIAG] [DISPATCHER] selected pin object id: {id(selected)}")
+            print(f"[DIAG] [DISPATCHER] parent_device object id: {id(parent_device) if parent_device else None}")
+            if parent_device is not None:
+                infra_log(f"[DISPATCHER] DeletePinCommand will be constructed for pin UUID={getattr(selected, 'id', None)} on device UUID={getattr(parent_device, 'id', None)} logging_flag={logging_flag}", level="info")
+                cmd = DeletePinCommand(parent_device, pin=selected, context=context, logging_flag=logging_flag, **flags)
+                infra_log(f"[DISPATCHER] DeletePinCommand constructed: {cmd}", level="info")
+                cmd.execute()
+                infra_log(f"[DISPATCHER] DeletePinCommand.execute() called", level="info")
+                return cmd
+            else:
+                infra_log(f"[DISPATCHER] Could not find parent device for pin UUID={getattr(selected, 'id', None)}", level="error")
+                return None
+        else:
+            infra_log(f"[DISPATCHER] DeletePinCommand fallback: treating selected as pin_or_device UUID={getattr(selected, 'id', None)} logging_flag={logging_flag}", level="info")
+            cmd = DeletePinCommand(selected, context=context, logging_flag=logging_flag, **flags)
+            infra_log(f"[DISPATCHER] DeletePinCommand constructed: {cmd}", level="info")
+            cmd.execute()
+            infra_log(f"[DISPATCHER] DeletePinCommand.execute() called", level="info")
+            return cmd
+    def add_action(context, **flags):
+        """
+        Add a new device to the model or scene using dispatcher contract.
+        Args:
+            context: The context or item to add.
+            **flags: Additional flags for addition.
+        """
+        from infra.logging import infra_log
+        infra_log(f"[DISPATCHER] edit.add handler called with context={context} flags={flags}", level="debug")
+        # Extract device from context or flags
+        device = None
+        if context and hasattr(context, 'device'):
+            device = getattr(context, 'device')
+            infra_log(f"[DISPATCHER] edit.add: device extracted from context: {device}", level="debug")
+        elif 'device' in flags:
+            device = flags['device']
+            infra_log(f"[DISPATCHER] edit.add: device extracted from flags: {device}", level="debug")
+        else:
+            infra_log(f"[DISPATCHER] edit.add called with no device in context or flags", level="error")
+            return None
+        logging_flag = True
+        if context and hasattr(context, '_test_logging_flag'):
+            logging_flag = getattr(context, '_test_logging_flag', True)
+        infra_log(f"[DISPATCHER] edit.add: constructing AddDeviceCommand for device={device}", level="debug")
+        cmd = AddDeviceCommand(device, context=context, logging_flag=logging_flag, **flags)
+        infra_log(f"[DISPATCHER] edit.add: dispatching AddDeviceCommand via dispatcher for device={device}", level="debug")
+        # Route command execution through dispatcher for contract compliance
+        return dispatch_action("_execute_command", cmd)
+    def update_action(context, **flags):
+        """
+        Update an existing device in the model or scene using dispatcher contract.
+        Args:
+            context: The context or item to update.
+            **flags: Additional flags for update.
+        """
+        from infra.logging import infra_log
+        device = None
+        # Try to extract device from context or flags
+        if context and hasattr(context, 'device'):
+            device = getattr(context, 'device')
+            infra_log(f"[DISPATCHER] edit.update: device extracted from context: {device}", level="debug")
+        elif 'device' in flags:
+            device = flags['device']
+            infra_log(f"[DISPATCHER] edit.update: device extracted from flags: {device}", level="debug")
+        else:
+            infra_log(f"[DISPATCHER] edit.update called with no device in context or flags", level="error")
+            return None
+        logging_flag = True
+        if context and hasattr(context, '_test_logging_flag'):
+            logging_flag = getattr(context, '_test_logging_flag', True)
+        cmd = UpdateDeviceCommand(device, context=context, logging_flag=logging_flag, **flags)
+        # Route command execution through dispatcher for contract compliance
+        return dispatch_action("_execute_command", cmd)
+    registry.register("edit.delete", delete_action)
+    registry.register("edit.add", add_action)
+    registry.register("edit.update", update_action)
+    dispatcher_registry.register("edit.delete", delete_action)
+    dispatcher_registry.register("edit.add", add_action)
+    dispatcher_registry.register("edit.update", update_action)
+    infra_log(f"[DEBUG] register_device_command_actions: dispatcher_registry id={id(dispatcher_registry)} after registration, keys={list(dispatcher_registry.keys())}", level="debug")
+
+# IMPORTANT: Call register_device_command_actions() in app startup or test setup after all modules are loaded to avoid circular imports and ensure all actions are registered.
+
 """
 Action system and registry for Talus Trace API.
 Provides transaction management, action dispatch, registration, and project/session management utilities.
@@ -255,5 +466,11 @@ def register_action(action_id: str):
             Callable: The registered function.
         """
         registry.register(action_id, func)
+        # Also register with dispatcher registry for contract compliance
+        try:
+            from dispatcher import registry as dispatcher_registry
+            dispatcher_registry.register(action_id, func)
+        except Exception:
+            pass  # Dispatcher may not be available at import time
         return func
     return decorator

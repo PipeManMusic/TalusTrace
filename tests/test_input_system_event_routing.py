@@ -33,7 +33,18 @@ def test_all_ui_events_routed_to_input_system(qtbot):
     qtbot.mouseRelease(canvas.viewport(), Qt.LeftButton, pos=move_pos)
     qtbot.mouseDClick(canvas.viewport(), Qt.LeftButton, pos=mouse_pos)
     # Wheel event (simulate zoom)
-    wheel_event = QEvent(QEvent.Wheel)
+    from PySide6.QtGui import QWheelEvent
+    from PySide6.QtCore import QPoint, QPointF
+    wheel_event = QWheelEvent(
+        QPointF(center),  # pos
+        QPointF(center),  # globalPos
+        QPoint(0, 120),   # pixelDelta
+        QPoint(0, 120),   # angleDelta (simulate scroll up)
+        Qt.NoButton,
+        Qt.NoModifier,
+        Qt.ScrollUpdate,
+        False
+    )
     QApplication.sendEvent(canvas.viewport(), wheel_event)
     # Key events
     key_event = QKeyEvent(QEvent.KeyPress, Qt.Key_A, Qt.NoModifier)

@@ -2,61 +2,61 @@ menubar:
   - label: "File"
     items:
       - command: "file.new"
-        label: "New"
+        label: "file.new"
       - command: "file.open"
-        label: "Open File"
+        label: "file.open"
       - command: "file.save"
-        label: "Save File"
+        label: "file.save"
       - separator: true
       - command: "file.export_bom"
-        label: "Export BOM"
+        label: "file.export_bom"
       - command: "file.export_wirelist"
-        label: "Export Wirelist"
+        label: "file.export_wirelist"
       - separator: true
       - command: "file.exit"
-        label: "Exit"
+        label: "file.exit"
 
   - label: "Edit"
     items:
       - command: "edit.undo"
-        label: "Undo"
+        label: "edit.undo"
       - command: "edit.redo"
-        label: "Redo"
+        label: "edit.redo"
       - separator: true
       - command: "edit.settings"
-        label: "Settings"
+        label: "edit.settings"
       - command: "edit.theme"
-        label: "Theme"
+        label: "edit.theme"
 
   - label: "Tools"
     items:
       - command: "tool.move"
-        label: "Move"
+        label: "tool.move"
       - command: "tool.add_generic_device"
-        label: "Add Generic Device"
+        label: "tool.add_generic_device"
       - command: "device.create_wizard"
-        label: "Device Wizard"
+        label: "device.create_wizard"
       - command: "tool.measure"
-        label: "Measure"
+        label: "tool.measure"
 
   - label: "View"
     items:
       - command: "view.zoom_extents"
-        label: "Zoom Extents"
+        label: "view.zoom_extents"
       - command: "view.zoom_selected"
-        label: "Zoom Selected"
+        label: "view.zoom_selected"
       - separator: true
       - command: "view.toggle_project_browser"
-        label: "Toggle Project Browser"
+        label: "view.toggle_project_browser"
       - command: "view.toggle_property_panel"
-        label: "Toggle Property Panel"
+        label: "view.toggle_property_panel"
       - command: "view.toggle_library"
-        label: "Toggle Library"
+        label: "view.toggle_library"
       - command: "view.toggle_audit_panel"
-        label: "Toggle Audit Panel"
+        label: "view.toggle_audit_panel"
       - separator: true
       - command: "view.reset_layout"
-        label: "Reset Layout"
+        label: "view.reset_layout"
         
 keymap:
   cancel: Key_Escape
@@ -64,23 +64,23 @@ toolbar:
   visible: true
   items:
     - command: "tool.move"
-      label: "Move"
     - command: "tool.add_generic_device"
-      label: "Add Generic Device"
     - command: "device.create_wizard"
-      label: "Device Wizard"
     - separator: true
     - command: "edit.undo"
-      label: "Undo"
     - command: "edit.redo"
-      label: "Redo"
 
 context_menu:
+  canvas:
+    - command: "tool.add_generic_device"
   device:
     - command: "device.add_pin"
     - separator: true
     - command: "edit.rotate_cw"
     - separator: true
     - command: "edit.delete"
+      label: "Delete Item"
   wire:
+    - command: "edit.delete"
+  pin:
     - command: "edit.delete"

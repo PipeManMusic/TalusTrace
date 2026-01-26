@@ -45,10 +45,7 @@ class PlacementTool(BaseTool):
         meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
         dev_id = str(uuid.uuid4())
         new_device = Device(id=dev_id, x=x, y=y, meta=meta_defaults)
-        # Call API method to add device
-        if hasattr(self.api, 'add_device'):
-            self.api.add_device(new_device)
-        # Switch tool to select after placement
+        # Only set up for drag; do not add device here. Device will be added in on_mouse_press.
         if hasattr(self.api.tool_manager, 'set_tool'):
             self.api.tool_manager.set_tool("select")
 
@@ -159,29 +156,9 @@ class PlacementTool(BaseTool):
         dev_id = str(uuid.uuid4())
         meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
         new_device = Device(id=dev_id, x=self.current_pos.x(), y=self.current_pos.y(), meta=meta_defaults)
-        # Directly add device to harness
-        if hasattr(self.api.context, 'harness') and hasattr(self.api.context.harness, 'devices'):
-            from core.harness import DeviceList
-            with DeviceList.test_bypass():
-                self.api.context.harness.devices.append(new_device)
-            # Ensure undo command is pushed for test
-            if hasattr(self.api.context, 'undo_stack') and hasattr(self.api.context.undo_stack, 'push'):
-                class MockCommand:
-                    """Mock command for device placement undo/redo in tests."""
-                    def __init__(self, device):
-                        """Initialize MockCommand with device."""
-                        self.device = device
-                    def execute(self):
-                        """Execute the mock command (no-op)."""
-                        pass
-                    def undo(self):
-                        """Undo the mock command (no-op)."""
-                        pass
-                    def mark_executed(self):
-                        """Mark the mock command as executed (no-op)."""
-                        pass
-                cmd = MockCommand(new_device)
-                self.api.context.undo_stack.push(cmd)
+        # Use APIManager to add device via AddDeviceCommand and undo stack
+        if hasattr(self.api, 'add_device'):
+            self.api.add_device(new_device)
         # Update canvas scene to reflect new device
         if hasattr(self.api.main_window, 'canvas'):
             self.api.main_window.canvas.load_harness(self.api.context.harness)

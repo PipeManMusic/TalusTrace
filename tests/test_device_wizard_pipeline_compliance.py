@@ -37,9 +37,13 @@ def test_device_wizard_pipeline_compliance(qtbot):
     
     # Check 1: Did it modify the model? (It should have)
     assert len(api.context.harness.devices) == 1
-    assert api.context.harness.devices[0].id == valid_id
-    
+    # Device ID should NOT match user-supplied id; it must be generated in infra/API
+    assert api.context.harness.devices[0].id != valid_id, (
+        "DeviceWizard must not use user-supplied id; id must be generated in infra/API."
+    )
+
     # Check 2: Did it use the Undo Stack? (CRITICAL)
     # If the stack is empty, it was a "Direct Mutation" violation.
-    assert len(api.context.undo_stack) > 0, \
+    assert len(api.context.undo_stack) > 0, (
         "VIOLATION: Wizard modified harness directly! Must use AddDeviceCommand."
+    )

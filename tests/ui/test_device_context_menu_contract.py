@@ -10,9 +10,7 @@ def test_device_context_menu_shown_on_right_click(qtbot):
     """
     Contract: Right-clicking a device must show a device-specific context menu (not a canvas menu or nothing).
     """
-    is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
-    if is_headless:
-        pytest.skip("Skipping GUI context menu test in headless mode.")
+    # Removed headless skip logic; always run the test
     window = MainWindow()
     qtbot.addWidget(window)
     window.show()
@@ -20,6 +18,7 @@ def test_device_context_menu_shown_on_right_click(qtbot):
     # Install a test hook for context menu
     shown_menu = {}
     def test_hook(data):
+        print(f"[DEBUG] test_hook called with data: {data}")
         menu = data['menu']
         pos = data.get('event').globalPos() if data.get('event') else None
         print(f'[TEST HOOK] Context menu shown with actions: {[a.text() for a in menu.actions()]} at pos: {pos}')
@@ -31,7 +30,9 @@ def test_device_context_menu_shown_on_right_click(qtbot):
         from core.models import Device
         import uuid
         device = Device(id=str(uuid.uuid4()), x=100.0, y=100.0, meta={"width_mm": 40.0, "height_mm": 30.0})
-        api.context.harness.devices.append(device)
+        from core.harness import DeviceList
+        with DeviceList.test_bypass():
+            api.context.harness.devices.append(device)
         window.canvas.load_harness(api.context.harness)
         item = api.get_scene_item(device.id)
         assert item is not None, "DeviceItem not found in scene registry."
@@ -46,10 +47,21 @@ def test_device_context_menu_shown_on_right_click(qtbot):
         # Select the device first
         item.setSelected(True)
         # Simulate right-click mouse event at the device position
+        print(f"[DEBUG] Simulating right-click at viewport_pos: {viewport_pos}")
         qtbot.mouseClick(canvas.viewport(), Qt.RightButton, pos=viewport_pos)
-        # Assert a menu was shown with a device-specific action
-        assert 'actions' in shown_menu, "No context menu was shown."
-        assert any('Device' in a for a in shown_menu['actions']), f"Device context menu not shown, actions: {shown_menu['actions']}"
+        print(f"[DEBUG] shown_menu after click: {shown_menu}")
+        # Assert a menu was shown with expected device-specific actions (by UUID)
+        assert 'menu' in shown_menu, "No context menu was shown."
+        menu = shown_menu['menu']
+        # UUIDs from context_menu config: device.add_pin (command), rotate_cw (uuid), delete (uuid)
+        expected_uuids = set([
+            'device.add_pin',
+            '4a88e033-860e-4b9b-9140-338b49c40e61',  # Rotate 90°
+            'e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b'   # Delete
+        ])
+        actual_uuids = set(a.data() for a in menu.actions() if a.data())
+        missing = expected_uuids - actual_uuids
+        assert not missing, f"Device context menu missing actions: {missing}. Actual UUIDs: {actual_uuids}"
     finally:
         if hasattr(api, '_test_context_menu_hook'):
             del api._test_context_menu_hook

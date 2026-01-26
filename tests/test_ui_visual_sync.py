@@ -16,25 +16,26 @@ def test_visual_selection_syncs_to_core(qtbot, selection_manager):
     Ensures that clicking/selecting a QGraphicsItem updates the Core SelectionManager.
     Protected against recursion by _is_updating_selection in base.py.
     """
-    dev = Device(id="D1", x=0, y=0)
+    import uuid
+    dev_id = str(uuid.uuid4())
+    dev = Device(id=dev_id, x=0, y=0)
     item = DeviceItem(dev)
-    
     # Simulate UI selection
     item.setSelected(True)
-    
     # Assert Core updated
-    assert "D1" in selection_manager.current_selection_ids
+    assert dev_id in selection_manager.current_selection_ids
     assert len(selection_manager.selected_models) == 1
-    assert selection_manager.selected_models[0].id == "D1"
+    assert selection_manager.selected_models[0].id == dev_id
 
 @pytest.mark.gui
 def test_core_selection_syncs_to_visual(qtbot, selection_manager):
     """
     Ensures that updating Core SelectionManager updates the Visual Item.
     """
-    dev = Device(id="D2", x=10, y=10)
+    import uuid
+    dev_id = str(uuid.uuid4())
+    dev = Device(id=dev_id, x=10, y=10)
     item = DeviceItem(dev)
-    
     # Simulate Core selection
     selection_manager.select(dev)
     

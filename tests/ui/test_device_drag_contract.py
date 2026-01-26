@@ -5,8 +5,7 @@ def test_device_drag_moves_device(qtbot, enforce_device_mvc_fixture):
     """
     Contract: Dragging a device on the canvas should update its position in the model.
     """
-    if os.environ.get('HEADLESS') or os.environ.get('CI'):
-        pytest.skip('Skipping UI test in headless/CI environment to prevent segmentation fault.')
+    # Removed headless/CI skip logic; always run the test
     from PySide6.QtCore import QPointF, Qt
     from ui.main_window import MainWindow
     from api.manager import APIManager

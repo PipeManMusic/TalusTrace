@@ -61,10 +61,16 @@ class PropertiesPanel(QWidget):
         """
         Handle selection change events from the APIManager.
         Args:
-            data (dict): Event data containing the selection.
+            data (dict): Event data containing the selection and (optionally) device_dict.
         """
         sel = data.get('selection', [])
-        if sel:
+        device_dict = data.get('device_dict')
+        if device_dict:
+            # Use device_dict to reconstruct a Device with all pins and metadata
+            from core.device import Device
+            self.current_item = Device.from_dict(device_dict)
+            self.refresh()
+        elif sel:
             self.load_item(sel[0])
         else:
             self.current_item = None
@@ -136,30 +142,68 @@ class PropertiesPanel(QWidget):
         self.label_edit.editingFinished.connect(update_label)
         self.form.addRow(I18N.get('label_label'), self.label_edit)
 
-        # Dynamic Metadata Rendering
-        schema = {'fields': {}}
+        print("[DEBUG] _render_device: meta=", getattr(device, 'meta', {}))
+        # Always display all meta fields, even if not present in schema
+        meta = getattr(device, 'meta', {}) or {}
+        # Always fetch the latest schema from MetadataManager at render time
+        schema_fields = {}
         try:
             from core.metadata import MetadataManager
             meta_mgr = MetadataManager.get_instance()
-            meta = getattr(device, 'meta', {}) or {}
+            # Always re-fetch schemas at render time
             schema = meta_mgr.schemas.get(meta.get('_type', 'generic'), meta_mgr.schemas.get('generic', {'fields': {}}))
+            schema_fields = schema.get('fields', {})
+            print(f"[DEBUG] _render_device: meta _type={meta.get('_type')}, schema_fields={list(schema_fields.keys())}")
         except Exception:
             pass
-        for key, field_def in schema.get('fields', {}).items():
+        # Render schema-defined fields in schema order
+        rendered_keys = set()
+        for key in schema_fields:
+            field_def = schema_fields.get(key, {})
             label = field_def.get('label', key)
-            current_val = getattr(device, 'meta', {}).get(key, field_def.get('default'))
             field_type = field_def.get('type', 'string')
             read_only = field_def.get('read_only', False)
+            current_val = meta.get(key, field_def.get('default', ''))
+            meta_field = f"meta.{key}"
+            rendered_keys.add(key)
             if field_type == 'select':
                 combo = QComboBox()
                 options = field_def.get('options', [])
                 combo.addItems([str(opt) for opt in options])
                 combo.setCurrentText(str(current_val))
                 if not read_only:
-                    combo.currentTextChanged.connect(lambda v, k=key: self._update_model(device, k, v))
+                    def on_combo_change(v, k=meta_field):
+                        """Callback for combo box value change. Updates the device model via API."""
+                        self._update_model(device, k, v)
+                    combo.currentTextChanged.connect(on_combo_change)
                 self.form.addRow(label, combo)
             else:
-                self._add_field(label, current_val, (lambda v, k=key: self._update_model(device, k, v)) if not read_only else None, read_only)
+                # Add type-aware validator and conversion for float/int fields
+                if field_type == 'float':
+                    validator = self._is_float
+                    def make_callback(k):
+                        """Return a callback that updates the device meta field as float via API."""
+                        return lambda v: self._update_model(device, f"meta.{k}", float(v))
+                elif field_type == 'int':
+                    validator = lambda v: v.isdigit()
+                    def make_callback(k):
+                        """Return a callback that updates the device meta field as int via API."""
+                        return lambda v: self._update_model(device, f"meta.{k}", int(v))
+                else:
+                    validator = None
+                    def make_callback(k):
+                        """Return a callback that updates the device meta field as string via API."""
+                        return lambda v: self._update_model(device, f"meta.{k}", v)
+                self._add_field(label, current_val, make_callback(key) if not read_only else None, read_only, validator)
+        # Render extra meta fields not in schema, sorted alphabetically
+        extra_keys = sorted(set(meta.keys()) - rendered_keys)
+        for key in extra_keys:
+            current_val = meta.get(key, '')
+            meta_field = f"meta.{key}"
+            def make_callback(k):
+                """Return a callback that updates the device meta field via API."""
+                return lambda v: self._update_model(device, f"meta.{k}", v)
+            self._add_field(key, current_val, make_callback(key), False)
 
         # Render all pins for this device
         if hasattr(device, 'pins') and device.pins:
@@ -188,10 +232,32 @@ class PropertiesPanel(QWidget):
         self._add_field("Pin ID", getattr(pin, 'id', ''), read_only=True)
         self._add_field("Signal", getattr(pin, 'signal', ''), lambda v: self._update_model(pin, "signal", v))
         self.form.addRow(QLabel("--- Geometry ---"))
-        self._add_field("Rel X", str(getattr(pin, 'x', 0)), lambda v: self._update_model(pin, "x", float(v)))
-        self._add_field("Rel Y", str(getattr(pin, 'y', 0)), lambda v: self._update_model(pin, "y", float(v)))
+        self._add_field(
+            "Rel X", str(getattr(pin, 'x', 0)),
+            lambda v: self._update_model(pin, "x", float(v)),
+            validator=self._is_float
+        )
+        self._add_field(
+            "Rel Y", str(getattr(pin, 'y', 0)),
+            lambda v: self._update_model(pin, "y", float(v)),
+            validator=self._is_float
+        )
 
-    def _add_field(self, label, value, callback=None, read_only=False):
+    def _is_float(self, v):
+        """
+        Check if the given value can be converted to a float.
+        Args:
+            v: The value to check.
+        Returns:
+            bool: True if v can be converted to float, False otherwise.
+        """
+        try:
+            float(v)
+            return True
+        except Exception:
+            return False
+
+    def _add_field(self, label, value, callback=None, read_only=False, validator=None):
         """
         Add a labeled field to the form for editing or display.
         Args:
@@ -199,6 +265,7 @@ class PropertiesPanel(QWidget):
             value: The value to display.
             callback (callable, optional): Function to call when the value changes.
             read_only (bool): Whether the field is read-only.
+            validator (callable, optional): Function to validate the input value.
         """
         lbl = QLabel(label)
         edit = QLineEdit(str(value) if value is not None else "")
@@ -206,19 +273,30 @@ class PropertiesPanel(QWidget):
             edit.setReadOnly(True)
             edit.setStyleSheet("color: gray;")
         elif callback:
-            edit.editingFinished.connect(lambda: callback(edit.text()))
+            def validate_and_commit():
+                """
+                Validate the input and commit the value if valid, otherwise show error feedback.
+                """
+                text = edit.text()
+                valid = True
+                if validator:
+                    valid = validator(text)
+                if valid:
+                    edit.setStyleSheet("")
+                    callback(text)
+                else:
+                    edit.setStyleSheet("border: 2px solid red;")
+            edit.editingFinished.connect(validate_and_commit)
+            edit.textChanged.connect(lambda _: edit.setStyleSheet("") if (not validator or validator(edit.text())) else edit.setStyleSheet("border: 2px solid red;"))
         self.form.addRow(lbl, edit)
 
     def _update_model(self, item, field, value):
         """
-        Update the model with a new value for a field, using the command pattern if available.
+        Request a property update via the API, enforcing MVC (no direct mutation or undo stack access).
         Args:
             item: The item to update.
             field (str): The field name to update.
             value: The new value to set.
         """
-        cmd = UpdatePropertyCommand(item, field, value)
-        if hasattr(self.api.context, 'undo_stack'):
-            self.api.context.undo_stack.push(cmd)
-        else:
-            cmd.execute()
+        # Use the API's property update mechanism (dispatch action or call method)
+        self.api.update_property(item, field, value)

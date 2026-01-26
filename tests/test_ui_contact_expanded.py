@@ -17,7 +17,9 @@ def canvas(qtbot):
 
 @pytest.mark.gui
 def test_deviceitem_contact(canvas):
-    device = Device(id="11111111-1111-1111-1111-111111111111", x=10, y=20, meta={"width_mm": 40, "height_mm": 30}, pins=[])
+    import uuid
+    dev_id = str(uuid.uuid4())
+    device = Device(id=dev_id, x=10, y=20, meta={"width_mm": 40, "height_mm": 30}, pins=[])
     item = DeviceItem(device)
     canvas.scene.addItem(item)
     assert item.contains(item.boundingRect().center())
@@ -27,7 +29,13 @@ def test_deviceitem_contact(canvas):
 
 @pytest.mark.gui
 def test_wireitem_contact(canvas):
-    wire = Wire(id="W1", from_conn="D1", from_pin="P1", to_conn="D2", to_pin="P2", path_nodes=[(0,0),(100,0)])
+    import uuid
+    wire_id = str(uuid.uuid4())
+    from_conn = str(uuid.uuid4())
+    from_pin = str(uuid.uuid4())
+    to_conn = str(uuid.uuid4())
+    to_pin = str(uuid.uuid4())
+    wire = Wire(id=wire_id, from_conn=from_conn, from_pin=from_pin, to_conn=to_conn, to_pin=to_pin, path_nodes=[(0,0),(100,0)])
     item = WireItem(wire)
     canvas.scene.addItem(item)
     mid = item.path().pointAtPercent(0.5)
@@ -40,8 +48,11 @@ def test_wireitem_contact(canvas):
 def test_pinitem_contact(canvas):
     from core.pin import Pin
     from core.enums import Side
-    pin = Pin(id="P1", x=5, y=5, label="P1", side=Side.TOP)
-    device = Device(id="D2", x=0, y=0, meta={"width_mm": 40, "height_mm": 30}, pins=[pin])
+    import uuid
+    pin_id = str(uuid.uuid4())
+    dev_id = str(uuid.uuid4())
+    pin = Pin(id=pin_id, x=5, y=5, label="P1", side=Side.TOP)
+    device = Device(id=dev_id, x=0, y=0, meta={"width_mm": 40, "height_mm": 30}, pins=[pin])
     item = DeviceItem(device)
     canvas.scene.addItem(item)
     # Find the pin item

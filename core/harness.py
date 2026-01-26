@@ -19,7 +19,11 @@ class DeviceList(list):
         """
         Append a device to the list, enforcing mutation rules.
         Raises RuntimeError if called outside infra/api.commands unless test bypass is enabled.
+        Also logs the call stack for diagnostics.
         """
+        import traceback
+        print(f"[DIAG] DeviceList.append called for device id={getattr(device, 'id', None)}")
+        traceback.print_stack(limit=8)
         if not self._called_from_infra_command() and not DeviceList._test_bypass:
             print("WARNING: Direct mutation of DeviceList is forbidden and was attempted from outside infra/api.commands.")
             raise RuntimeError("Direct mutation of DeviceList is forbidden: use infra/commands only!")
@@ -90,10 +94,13 @@ class Harness:
 
     def add_device(self, device):
         """
-        Add a device to the harness.
+        Add a device to the harness. Logs call stack for diagnostics.
         Args:
             device (Device): The device to add.
         """
+        import traceback
+        print(f"[DIAG] Harness.add_device called for device id={getattr(device, 'id', None)}")
+        traceback.print_stack(limit=8)
         self.devices.append(device)
 
     def increment_revision(self):
