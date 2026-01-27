@@ -67,13 +67,16 @@ toolbar:
   - uuid: 76d4f934-9a88-4fca-8d8b-81503224c354
 context_menu:
   canvas:
-  - uuid: f1831bfa-9f66-461c-8a1d-6c5440dc314b
+  - command: tool.add_generic_device
+    uuid: f1831bfa-9f66-461c-8a1d-6c5440dc314b
   device:
-  - uuid: 2e2e2e2e-2222-4e4e-aaaa-111111111111 # device.add_pin UUID (replace with correct one if needed)
+  - command: device.add_pin
+    uuid: 7a1e2b3c-4d5e-678f-9012-abcdefabcdef # device.add_pin UUID (replace with correct one if needed)
   - separator: true
-  - uuid: 4a88e033-860e-4b9b-9140-338b49c40e61
+  - command: edit.rotate_cw
+    uuid: 4a88e033-860e-4b9b-9140-338b49c40e61 # edit.rotate_cw
   - separator: true
-  - uuid: e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b
+  - uuid: e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b # edit.delete
   wire:
   - uuid: e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b
   pin:

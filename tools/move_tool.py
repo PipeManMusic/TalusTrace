@@ -32,6 +32,8 @@ class MoveTool(BaseTool):
             item: The item to drag.
             pos: Starting position.
         """
+        import logging
+        logging.debug(f"[MoveTool.start_drag] item={item}, pos={pos}")
         self.is_dragging = True
         self.start_pos = pos
         self.last_pos = pos
@@ -46,6 +48,8 @@ class MoveTool(BaseTool):
         Args:
             pos: Current position.
         """
+        import logging
+        logging.debug(f"[MoveTool.update_drag] is_dragging={self.is_dragging}, current_item={self.current_item}, pos={pos}")
         if not self.is_dragging or not self.current_item or not hasattr(self.current_item, 'model'):
             return
         device = self.current_item.model
@@ -53,6 +57,7 @@ class MoveTool(BaseTool):
         dy = pos.y() - self.start_pos.y()
         new_x = self._drag_initial_pos[0] + dx
         new_y = self._drag_initial_pos[1] + dy
+        logging.debug(f"[MoveTool.update_drag] device.id={getattr(device, 'id', None)}, dx={dx}, dy={dy}, new_x={new_x}, new_y={new_y}")
         # Always use API for model update and event dispatch
         if hasattr(self.api, 'move_device') and device is not None:
             self.api.move_device(device.id, new_x, new_y, commit=False)
@@ -63,6 +68,8 @@ class MoveTool(BaseTool):
         Args:
             pos: Final position.
         """
+        import logging
+        logging.debug(f"[MoveTool.finish_drag] is_dragging={self.is_dragging}, current_item={self.current_item}, pos={pos}")
         if not self.is_dragging or not self.current_item or not hasattr(self.current_item, 'model'):
             return
         device = self.current_item.model
@@ -70,6 +77,7 @@ class MoveTool(BaseTool):
         dy = pos.y() - self.start_pos.y()
         final_x = self._drag_initial_pos[0] + dx
         final_y = self._drag_initial_pos[1] + dy
+        logging.debug(f"[MoveTool.finish_drag] device.id={getattr(device, 'id', None)}, dx={dx}, dy={dy}, final_x={final_x}, final_y={final_y}")
         # Commit move to undo stack via API
         if hasattr(self.api, 'move_device') and device is not None:
             self.api.move_device(device.id, final_x, final_y, commit=True)

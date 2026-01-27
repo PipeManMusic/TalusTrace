@@ -1,4 +1,3 @@
-
 import pytest
 from PySide6.QtWidgets import QApplication
 from ui.main_window import MainWindow
@@ -80,20 +79,73 @@ def test_pin_context_menu_delete_removes_pin(qtbot):
     # Find and trigger the 'Delete' action by UUID
     menu = shown_menu['menu']
     delete_uuid = 'e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b'
-    delete_action = next((a for a in menu.actions() if a.data() == delete_uuid), None)
+    delete_action = next((a for a in menu.actions()
+                         if a.data() == delete_uuid or (isinstance(a.data(), dict) and a.data().get('uuid') == delete_uuid)), None)
     assert delete_action is not None, f"Delete action (uuid={delete_uuid}) not found in context menu: {[a.data() for a in menu.actions()]}"
+
+    # Log state before triggering delete, with object IDs
+    print("\n[TEST][DIAG] === BEFORE DELETE ===")
+    print(f"[TEST][DIAG] Device pins: {[getattr(p, 'id', None) for p in harness_device.pins]}")
+    print(f"[TEST][DIAG] Device pins objids: {[id(p) for p in harness_device.pins]}")
+    print(f"[TEST][DIAG] Device objid: {id(harness_device)}")
+    print(f"[TEST][DIAG] Harness devices: {[getattr(d, 'id', None) for d in api.context.harness.devices]}")
+    print(f"[TEST][DIAG] Harness device objids: {[id(d) for d in api.context.harness.devices]}")
+    print(f"[TEST][DIAG] Scene items: {[getattr(item, 'model', None) for item in window.canvas.scene.items()]}")
+    print(f"[TEST][DIAG] Scene item objids: {[id(item) for item in window.canvas.scene.items()]}")
+    print(f"[TEST][DIAG] Scene registry: {list(api._scene_registry.keys()) if hasattr(api, '_scene_registry') else 'N/A'}")
+    from core.selection import SelectionManager
+    print(f"[TEST][DIAG] Selection: {[getattr(m, 'id', None) for m in SelectionManager().selected_models]}")
+    print(f"[TEST][DIAG] Selection objids: {[id(m) for m in SelectionManager().selected_models]}")
+
     with qtbot.waitSignal(menu.triggered, timeout=2000, raising=False):
         delete_action.trigger()
     # Wait for UI event loop to process removal
     qtbot.wait(100)
+
     # Wait for pin to be removed from device and scene
     def pin_removed():
-        # Always check the device in the harness
         harness_device = next((d for d in api.context.harness.devices if getattr(d, 'id', None) == device_id), None)
-        return api.get_scene_item(pin_id) is None and (harness_device is not None and not any(p.id == pin_id for p in harness_device.pins))
+        pin_in_device = any(p.id == pin_id for p in harness_device.pins) if harness_device else False
+        pin_in_scene = api.get_scene_item(pin_id) is not None
+        # Log state during wait, with object IDs
+        print(f"[TEST][DIAG][WAIT] pin_in_device={pin_in_device}, pin_in_scene={pin_in_scene}")
+        print(f"[TEST][DIAG][WAIT] Device pins: {[getattr(p, 'id', None) for p in harness_device.pins]}")
+        print(f"[TEST][DIAG][WAIT] Device pins objids: {[id(p) for p in harness_device.pins]}")
+        print(f"[TEST][DIAG][WAIT] Device objid: {id(harness_device)}")
+        print(f"[TEST][DIAG][WAIT] Harness devices: {[getattr(d, 'id', None) for d in api.context.harness.devices]}")
+        print(f"[TEST][DIAG][WAIT] Harness device objids: {[id(d) for d in api.context.harness.devices]}")
+        print(f"[TEST][DIAG][WAIT] Scene registry: {list(api._scene_registry.keys()) if hasattr(api, '_scene_registry') else 'N/A'}")
+        return not pin_in_device and not pin_in_scene
     try:
         qtbot.waitUntil(pin_removed, timeout=2000)
     except Exception:
+        # Log state after failure, with object IDs
+        print("\n[TEST][DIAG] === AFTER DELETE FAILURE ===")
+        print(f"[TEST][DIAG] Device pins: {[getattr(p, 'id', None) for p in harness_device.pins]}")
+        print(f"[TEST][DIAG] Device pins objids: {[id(p) for p in harness_device.pins]}")
+        print(f"[TEST][DIAG] Device objid: {id(harness_device)}")
+        print(f"[TEST][DIAG] Harness devices: {[getattr(d, 'id', None) for d in api.context.harness.devices]}")
+        print(f"[TEST][DIAG] Harness device objids: {[id(d) for d in api.context.harness.devices]}")
+        print(f"[TEST][DIAG] Scene items: {[getattr(item, 'model', None) for item in window.canvas.scene.items()]}")
+        print(f"[TEST][DIAG] Scene item objids: {[id(item) for item in window.canvas.scene.items()]}")
+        print(f"[TEST][DIAG] Scene registry: {list(api._scene_registry.keys()) if hasattr(api, '_scene_registry') else 'N/A'}")
+        from core.selection import SelectionManager
+        print(f"[TEST][DIAG] Selection: {[getattr(m, 'id', None) for m in SelectionManager().selected_models]}")
+        print(f"[TEST][DIAG] Selection objids: {[id(m) for m in SelectionManager().selected_models]}")
         assert False, "Pin was NOT removed from device and scene after context menu delete (TDD catch)."
+
+    # Log state after successful delete
+    print("\n[TEST][DIAG] === AFTER DELETE SUCCESS ===")
+    print(f"[TEST][DIAG] Device pins: {[getattr(p, 'id', None) for p in harness_device.pins]}")
+    print(f"[TEST][DIAG] Device pins objids: {[id(p) for p in harness_device.pins]}")
+    print(f"[TEST][DIAG] Device objid: {id(harness_device)}")
+    print(f"[TEST][DIAG] Harness devices: {[getattr(d, 'id', None) for d in api.context.harness.devices]}")
+    print(f"[TEST][DIAG] Harness device objids: {[id(d) for d in api.context.harness.devices]}")
+    print(f"[TEST][DIAG] Scene items: {[getattr(item, 'model', None) for item in window.canvas.scene.items()]}")
+    print(f"[TEST][DIAG] Scene item objids: {[id(item) for item in window.canvas.scene.items()]}")
+    print(f"[TEST][DIAG] Scene registry: {list(api._scene_registry.keys()) if hasattr(api, '_scene_registry') else 'N/A'}")
+    from core.selection import SelectionManager
+    print(f"[TEST][DIAG] Selection: {[getattr(m, 'id', None) for m in SelectionManager().selected_models]}")
+    print(f"[TEST][DIAG] Selection objids: {[id(m) for m in SelectionManager().selected_models]}")
     assert pin_removed(), "Pin was not removed from device and scene after context menu delete."
     window.close()

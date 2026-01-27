@@ -2,7 +2,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 from PySide6.QtCore import QPointF, Qt
 from tools.move_tool import MoveTool
-from ui.canvas import CanvasEvent
+ # CanvasEvent is no longer used; test only MoveTool and model/undo stack behavior
 from core.device import Device
 from api.manager import APIManager
 

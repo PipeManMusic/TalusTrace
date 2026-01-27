@@ -11,14 +11,14 @@ class I18N:
     """Handles loading and retrieval of localized UI strings."""
     _strings = None
     _lang = 'en'
-    _lang_path = os.path.join(os.path.dirname(__file__), '../resources/config/langs/en.yaml')
+    _lang_path = os.path.join(os.path.dirname(__file__), '../resources/config/langs/en_with_uuids.yaml')
 
     @classmethod
     def load(cls, lang=None):
         """Load language strings from a YAML file for the given language code."""
         if lang:
             cls._lang = lang
-            cls._lang_path = os.path.join(os.path.dirname(__file__), f'../resources/config/langs/{lang}.yaml')
+            cls._lang_path = os.path.join(os.path.dirname(__file__), f'../resources/config/langs/{lang}_with_uuids.yaml')
         try:
             with open(cls._lang_path, 'r') as f:
                 cls._strings = yaml.safe_load(f) or {}

@@ -1,8 +1,13 @@
 commands:
   # --- Tools ---
   - id: tool.add_generic_device
+    uuid: f1831bfa-9f66-461c-8a1d-6c5440dc314b
     icon: device.svg
     tooltip: Place a generic device on the canvas
+  - id: device.add_pin
+    uuid: 7a1e2b3c-4d5e-678f-9012-abcdefabcdef
+    icon: pin.svg
+    tooltip: Add a pin to the device
   - id: tool.select
     icon: select.svg
     default_key: S
@@ -25,12 +30,14 @@ commands:
 
   # --- Edit ---
   - id: edit.rotate_cw
+    uuid: 4a88e033-860e-4b9b-9140-338b49c40e61
     icon: rotate_cw.svg
     default_key: Space
   - id: edit.rotate_ccw
     icon: rotate_ccw.svg
     default_key: Shift+Space
   - id: edit.delete
+    uuid: e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b
     icon: trash.svg
     default_key: Delete
   - id: edit.undo

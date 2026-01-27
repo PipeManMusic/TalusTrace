@@ -33,7 +33,7 @@ def test_context_menu_delete_command(api_manager, selection_manager):
     api_manager.context.undo_stack = MagicMock()
     selection_manager.set_selection([dev])
     # Simulate context menu delete
-    api_manager.delete()
+    api_manager.delete_device(dev)
     # Should push DeleteDeviceCommand to undo stack
     assert api_manager.context.undo_stack.push.call_count == 1
     cmd = api_manager.context.undo_stack.push.call_args[0][0]

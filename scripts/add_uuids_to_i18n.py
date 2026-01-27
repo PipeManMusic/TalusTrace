@@ -1,3 +1,6 @@
+"""
+Script to add UUIDs to i18n YAML files for Talus Trace actions.
+"""
 import yaml
 import sys
 

@@ -78,7 +78,10 @@ def test_pin_context_menu_delete_logs(qtbot, tmp_path):
     qtbot.wait(200)
     # Find and trigger the delete action from the menu
     menu = window.context_menu_manager.build_menu(menu_type='pin')
-    delete_action = next((a for a in menu.actions() if 'delete' in a.text().lower()), None)
+    delete_uuid = 'e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b'
+    delete_action = next((a for a in menu.actions()
+                         if (a.data() == delete_uuid or (isinstance(a.data(), dict) and a.data().get('uuid') == delete_uuid))
+                         or 'delete' in a.text().lower()), None)
     assert delete_action is not None, "Delete action not found in pin context menu."
     delete_action.trigger()
     qtbot.wait(200)

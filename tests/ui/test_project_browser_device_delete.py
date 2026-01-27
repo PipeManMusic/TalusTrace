@@ -26,9 +26,8 @@ def test_project_browser_updates_on_device_delete(qtbot):
     device_ids = [d.id for d in getattr(project_browser, 'devices', [])]
     assert device.id in device_ids, "Device not listed in project browser before deletion."
     # Delete the device using the command pattern
-    from api.commands.device import DeleteDeviceCommand
-    cmd = DeleteDeviceCommand(device)
-    cmd.execute()
+    # Use APIManager contract for device deletion
+    api.delete_device(device)
     qtbot.wait(100)  # Allow signal processing
     # Confirm device is no longer listed
     device_ids_after = [d.id for d in getattr(project_browser, 'devices', [])]

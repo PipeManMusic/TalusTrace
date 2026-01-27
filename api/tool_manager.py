@@ -19,11 +19,16 @@ class ToolManager:
 
     def register_tool(self, name, tool):
         """
-        Register a tool with the given name.
+        Register a tool with the given name and set its 'api' property to the current APIManager instance.
         Args:
             name (str): The name of the tool.
             tool: The tool instance to register.
         """
+        from api.manager import APIManager
+        api_instance = APIManager.get_instance()
+        # Only set api if it is not a read-only property
+        if not (hasattr(type(tool), 'api') and isinstance(getattr(type(tool), 'api'), property) and not getattr(type(tool), 'api').fset):
+            setattr(tool, 'api', api_instance)
         self._tools[name] = tool
 
     def get_tool(self, name):

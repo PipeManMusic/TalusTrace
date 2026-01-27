@@ -86,8 +86,9 @@ class MainWindow(QMainWindow):
         self.canvas.load_harness(self.api.context.harness)
 
         # 3. Input System (Wired in app.py, now installed here)
+        # Always install InputSystem on the canvas viewport for robust mouse event handling
         if self.api.input_system:
-            self.api.input_system.install(self.canvas)
+            self.api.input_system.install(self.canvas.viewport())
 
         # 4. Menus & Toolbars
         import api.commands.file
@@ -99,16 +100,10 @@ class MainWindow(QMainWindow):
 
         # --- FIX 3: Wire up Context Menu ---
         from ui.context_menu_manager import ContextMenuManager
-        # Map actions to labels/IDs
-        actions_map = {
-            "device.add_pin": {"label": "Add Pin", "action": "device.add_pin"},
-            "edit.delete": {"action": "edit.delete"},
-            "edit.rotate_cw": {"label": "Rotate 90°", "action": "edit.rotate_cw"}
-        }
+        from api.actions import actions_map  # Use the global actions_map
         self.context_menu_manager = ContextMenuManager(self.layout_manager.config, actions_map)
         
-        # CRITICAL: Tell API how to open menus (Canvas calls this!)
-        self.api.open_context_menu = self.context_menu_manager.show_context_menu
+        # API will call context_menu_manager.show_context_menu via main_window.context_menu_manager
 
         # 5. Panels (Dock Widgets)
         self._create_panels()

@@ -42,11 +42,21 @@ def test_context_menu_loaded_from_api_config(qtbot):
     assert len(actions) > 0, "Device context menu is empty! Config loading failed."
     
     # Check for specific known action from the provided YAML
-    action_ids = [a.data() for a in actions if not a.isSeparator()]
-    assert "device.add_pin" in action_ids, \
-        f"Missing 'device.add_pin' in menu. Found: {action_ids}"
-    assert "edit.rotate_cw" in action_ids, \
-        f"Missing 'edit.rotate_cw' in menu. Found: {action_ids}"
+    action_datas = [a.data() for a in actions if not a.isSeparator()]
+    found_commands = set()
+    found_uuids = set()
+    for d in action_datas:
+        if isinstance(d, dict):
+            if "command" in d:
+                found_commands.add(d["command"])
+            if "uuid" in d:
+                found_uuids.add(d["uuid"])
+        elif isinstance(d, str):
+            found_uuids.add(d)
+    assert ("device.add_pin" in found_commands or "7a1e2b3c-4d5e-678f-9012-abcdefabcdef" in found_uuids), \
+        f"Missing 'device.add_pin' in menu. Found: commands={found_commands}, uuids={found_uuids}"
+    assert ("edit.rotate_cw" in found_commands or "4a88e033-860e-4b9b-9140-338b49c40e61" in found_uuids), \
+        f"Missing 'edit.rotate_cw' in menu. Found: commands={found_commands}, uuids={found_uuids}"
 
 def test_context_menu_api_execution_binding(qtbot):
     """
@@ -64,7 +74,7 @@ def test_context_menu_api_execution_binding(qtbot):
     actions = menu.actions()
     
     # Find delete action
-    delete_action = next((a for a in actions if a.data() == "edit.delete"), None)
+    delete_action = next((a for a in actions if (isinstance(a.data(), dict) and (a.data().get("command") == "edit.delete" or a.data().get("uuid") == "e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b")) or a.data() == "edit.delete" or a.data() == "e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b"), None)
     assert delete_action is not None, "Wire menu missing 'edit.delete'"
     
     # Verify connection (Hard to inspect lambda, but we check it's enabled)

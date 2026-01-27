@@ -1,3 +1,6 @@
+"""
+Script to add UUIDs to actions.yaml for Talus Trace.
+"""
 import uuid
 yaml_path = 'resources/config/actions.yaml'
 output_path = 'resources/config/actions_with_uuids.yaml'

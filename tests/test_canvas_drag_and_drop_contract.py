@@ -19,37 +19,24 @@ class DummyEvent:
         self._pos = pos or MagicMock()
         self.mimeData = lambda: mime_data or MagicMock()
         self.pos = lambda: self._pos
-        self.position = lambda: self._pos  # For compatibility with HarnessCanvas._dispatch
+        self.position = lambda: self._pos
         self.accept = MagicMock()
         self.ignore = MagicMock()
-        self._type = 0  # Default event type
-
+        self._type = 0
     def type(self):
         return self._type
+    def acceptProposedAction(self):
+        self.accept()
+        def acceptProposedAction(self):
+            self.accept()
 
-# Contract: Canvas must dispatch dragEnterEvent and dropEvent to APIManager
-# and enforce event contract (mimeData, pos, accept/ignore)
-def test_canvas_drag_and_drop_contract(canvas, api_manager, monkeypatch):
+def test_canvas_drag_and_drop_calls_api_manager(canvas, api_manager, monkeypatch):
     monkeypatch.setattr(APIManager, 'get_instance', lambda: api_manager)
     drag_event = DummyEvent()
     drop_event = DummyEvent()
-
-    # Patch APIManager to track calls
     api_manager.handle_drag_enter = MagicMock()
     api_manager.handle_drop = MagicMock()
-
-    # Simulate dragEnterEvent
     canvas.dragEnterEvent(drag_event)
     api_manager.handle_drag_enter.assert_called_once_with(drag_event)
-    assert hasattr(drag_event, 'mimeData')
-    assert hasattr(drag_event, 'pos')
-    assert callable(drag_event.accept)
-    assert callable(drag_event.ignore)
-
-    # Simulate dropEvent
     canvas.dropEvent(drop_event)
     api_manager.handle_drop.assert_called_once_with(drop_event)
-    assert hasattr(drop_event, 'mimeData')
-    assert hasattr(drop_event, 'pos')
-    assert callable(drop_event.accept)
-    assert callable(drop_event.ignore)

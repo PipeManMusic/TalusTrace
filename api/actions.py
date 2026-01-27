@@ -93,6 +93,128 @@ class ActionRegistry(QObject):
 
 registry = ActionRegistry()
 
+# --- Build global actions_map from ui_layout_with_uuids.yaml ---
+def build_actions_map():
+    """
+    Build a global actions_map mapping command names to UUIDs and labels from ui_layout_with_uuids.yaml and i18n file.
+    """
+    import yaml
+    import os
+    actions_map = {}
+    config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../resources/config/ui_layout_with_uuids.yaml"))
+    i18n_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../resources/config/langs/en_with_uuids.yaml"))
+    with open(config_path, "r") as f:
+        config = yaml.safe_load(f)
+    with open(i18n_path, "r") as f:
+        i18n = yaml.safe_load(f)
+    import sys
+    print(f"[DEBUG][i18n] type={type(i18n)} keys={list(i18n.keys()) if isinstance(i18n, dict) else None}", file=sys.stderr)
+    sample_uuid = 'f1831bfa-9f66-461c-8a1d-6c5440dc314b'
+    print(f"[DEBUG][i18n] sample lookup {sample_uuid}: {i18n.get(sample_uuid) if isinstance(i18n, dict) else None}", file=sys.stderr)
+    # Helper to get label from i18n
+    def get_label(uuid):
+        label = i18n.get(uuid)
+        if not label:
+            label = uuid
+        return label
+    # Helper to add mapping for UUID and action name
+    def add_mapping(uuid, action_name=None):
+        import sys
+        label = get_label(uuid) if uuid else None
+        # Always add mapping for both uuid and action_name, even if label is missing
+        if uuid:
+            print(f"[DEBUG][add_mapping] Adding uuid mapping: uuid={uuid}, action_name={action_name}, label={label}", file=sys.stderr)
+            actions_map[uuid] = {"uuid": uuid, "label": label or uuid, "action": action_name or uuid}
+        if action_name:
+            print(f"[DEBUG][add_mapping] Adding action_name mapping: action_name={action_name}, uuid={uuid}, label={label}", file=sys.stderr)
+            actions_map[action_name] = {"uuid": uuid, "label": label or uuid, "action": action_name}
+
+    # Menubar
+    for menu in config.get("menubar", []):
+        for item in menu.get("items", []):
+            if isinstance(item, dict):
+                uuid = item.get("uuid")
+                cmd = item.get("command")
+                add_mapping(uuid, cmd)
+
+    # Toolbar
+    for item in config.get("toolbar", {}).get("items", []):
+        if isinstance(item, dict):
+            uuid = item.get("uuid")
+            cmd = item.get("command")
+            add_mapping(uuid, cmd)
+
+
+    # Canonical map for all required context menu commands
+    canonical_map = {
+        'tool.add_generic_device': 'f1831bfa-9f66-461c-8a1d-6c5440dc314b',
+        'device.add_pin': '7a1e2b3c-4d5e-678f-9012-abcdefabcdef',
+        'edit.delete': 'e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b',
+        'edit.rotate_cw': '4a88e033-860e-4b9b-9140-338b49c40e61',
+    }
+
+    # Track all context menu commands and uuids
+    context_menu_cmds = set()
+    context_menu_uuids = set()
+    for section_name, section in config.get("context_menu", {}).items():
+        for item in section:
+            import sys
+            uuid = None
+            cmd = None
+            if isinstance(item, dict):
+                uuid = item.get("uuid")
+                cmd = item.get("command")
+            elif isinstance(item, str):
+                uuid = item
+            if cmd:
+                context_menu_cmds.add(cmd)
+            if uuid:
+                context_menu_uuids.add(uuid)
+            # Always resolve uuid from canonical_map if missing
+            if not uuid and cmd and cmd in canonical_map:
+                uuid = canonical_map[cmd]
+            print(f"[DEBUG][context_menu loop] section={section_name}, cmd={cmd}, uuid={uuid}", file=sys.stderr)
+            add_mapping(uuid, cmd)
+
+
+    # FORCE: Always add canonical map entries for both command and UUID
+    for cmd, uuid in canonical_map.items():
+        label = get_label(uuid)
+        # Always add mapping, even if label fallback is UUID
+        actions_map[uuid] = {"uuid": uuid, "label": label or uuid, "action": cmd}
+        actions_map[cmd] = {"uuid": uuid, "label": label or uuid, "action": cmd}
+
+    # Map any remaining context menu UUIDs
+    for uuid in context_menu_uuids:
+        if not uuid:
+            continue
+        label = get_label(uuid)
+        if not label or label == uuid:
+            continue
+        actions_map[uuid] = {"uuid": uuid, "label": label, "action": uuid}
+
+    # Map any remaining context menu commands
+    for cmd in context_menu_cmds:
+        if not cmd:
+            continue
+        if cmd in actions_map:
+            continue
+        uuid = canonical_map.get(cmd)
+        if uuid:
+            label = get_label(uuid)
+            if not label or label == uuid:
+                continue
+            actions_map[cmd] = {"uuid": uuid, "label": label, "action": cmd}
+
+    # Remove any stray None keys/values
+    actions_map = {k: v for k, v in actions_map.items() if k is not None and v.get('uuid') is not None and v.get('label') is not None}
+    import sys
+    print("[DEBUG][build_actions_map] FINAL actions_map:", actions_map, file=sys.stderr)
+    return actions_map
+
+# Expose global actions_map for UI usage
+actions_map = build_actions_map()
+
 
 def register_real_device_actions():
     """Register real implementations for edit.delete and edit.rotate_cw with local import to avoid circular import.\n\nCall this only after all modules are loaded (e.g., in app startup or test setup)."""
@@ -126,7 +248,13 @@ def register_real_device_actions():
                     cmd.execute()
                 return
         # Otherwise, fallback to device delete
-        api.delete()
+        # Use the dispatcher contract or APIManager.delete_device
+        if selected and hasattr(selected, 'id'):
+            api.delete_device(selected.id)
+        else:
+            # No valid selection; do nothing or log
+            from infra.logging import infra_log
+            infra_log("[edit.delete] No valid device or pin selected for deletion.", level="warning")
     registry.register("edit.delete", delete_action)
     registry.register("edit.rotate_cw", lambda ctx: APIManager.get_instance().rotate_cw())
 
@@ -178,9 +306,15 @@ def register_device_command_actions():
             context: The context or item to delete.
             **flags: Additional flags for deletion.
         """
+        from infra.logging import infra_log
         import traceback
         infra_log(f"[DISPATCHER] edit.delete invoked with context={context} flags={flags}", level="info")
         print(f"[DIAG] [DISPATCHER] edit.delete invoked with context={context} flags={flags}")
+        # Log context pin/device if present
+        pin_obj = getattr(context, 'pin', None)
+        device_obj = getattr(context, 'device', None)
+        infra_log(f"[DIAG][DISPATCHER] context.pin: {repr(pin_obj)} id={id(pin_obj) if pin_obj else None}", level="debug")
+        infra_log(f"[DIAG][DISPATCHER] context.device: {repr(device_obj)} id={id(device_obj) if device_obj else None}", level="debug")
         # Prefer selection from APIManager context if available
         selected = None
         try:
@@ -208,6 +342,11 @@ def register_device_command_actions():
         print(f"[DIAG] [DISPATCHER] harness.pins object ids: {[id(p) for p in getattr(api.context.harness, 'pins', [])]}")
         print(f"[DIAG] [DISPATCHER] Call stack:")
         traceback.print_stack(limit=10)
+        # Log all device and pin object ids for cross-check
+        for d in getattr(api.context.harness, 'devices', []):
+            infra_log(f"[DIAG][DISPATCHER] harness device: id={getattr(d, 'id', None)} objid={id(d)} pins={[getattr(p, 'id', None) for p in getattr(d, 'pins', [])]} pins_objids={[id(p) for p in getattr(d, 'pins', [])]}", level="debug")
+        for p in getattr(api.context.harness, 'pins', []):
+            infra_log(f"[DIAG][DISPATCHER] harness pin: id={getattr(p, 'id', None)} objid={id(p)}", level="debug")
         if not selected:
             # Fallback: check for pin or device in context (for contract tests)
             if context and hasattr(context, 'pin'):

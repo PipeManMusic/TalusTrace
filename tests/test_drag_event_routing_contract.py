@@ -16,6 +16,8 @@ def test_drag_event_routes_to_move_tool(qtbot):
     from tools.move_tool import MoveTool
     from unittest.mock import MagicMock
     move_tool = MoveTool()
+    api = APIManager.get_instance()
+    move_tool.api = api
     move_tool.on_mouse_press = MagicMock(wraps=move_tool.on_mouse_press)
     move_tool.on_mouse_move = MagicMock(wraps=move_tool.on_mouse_move)
     move_tool.on_mouse_release = MagicMock(wraps=move_tool.on_mouse_release)

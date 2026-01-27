@@ -679,6 +679,14 @@ class DeletePinCommand(BaseCommand):
         self.api = APIManager.get_instance()
         self.new_pos = kwargs.get('new_pos', None)
         self._saved_internal_routing = None
+        print(f"[DIAG][DEEP] device object id: {id(self.device) if self.device else None}")
+        print(f"[DIAG][DEEP] pin object id: {id(self.pin)}")
+        print(f"[DIAG][DEEP] All device ids in harness: {[getattr(d, 'id', None) for d in getattr(self.api.context.harness, 'devices', [])]}")
+        print(f"[DIAG][DEEP] All device objids in harness: {[id(d) for d in getattr(self.api.context.harness, 'devices', [])]}")
+        for d in getattr(self.api.context.harness, 'devices', []):
+            print(f"[DIAG][DEEP] Device {getattr(d, 'id', None)} pins: {[getattr(p, 'id', None) for p in getattr(d, 'pins', [])]}")
+            print(f"[DIAG][DEEP] Device {getattr(d, 'id', None)} pins objids: {[id(p) for p in getattr(d, 'pins', [])]}")
+        print(f"[DIAG][DEEP] Scene registry before: {list(self.api.scene_registry.keys()) if hasattr(self.api, 'scene_registry') else 'N/A'}")
         self._saved_pins = None
         self._saved_pin_routing = None
         # If context has _test_logging_flag, force logging_flag True for testability
@@ -698,7 +706,7 @@ class DeletePinCommand(BaseCommand):
 
 
     def execute(self):
-        """Remove the pin from the device or harness by UUID and dispatch event. Also remove from internal_routing if present."""
+        """Remove the pin from all devices in the harness by UUID and dispatch event. Robust to object identity mismatches."""
         from infra.logging import infra_log
         import traceback
         pin_uuid = getattr(self.pin, 'id', None)
@@ -708,64 +716,30 @@ class DeletePinCommand(BaseCommand):
         print(f"[DIAG] self.pin id: {getattr(self.pin, 'id', None)} @ {id(self.pin)}")
         print(f"[DIAG] api.context.harness id: {id(self.api.context.harness)}")
         print(f"[DIAG] api.context.harness.devices: {[getattr(d, 'id', None) for d in self.api.context.harness.devices]}")
-        print(f"[DIAG] api.context.harness.pins: {[getattr(p, 'id', None) for p in getattr(self.api.context.harness, 'pins', [])]}")
-        print(f"[DIAG] device.pins before: {[getattr(p, 'id', None) for p in getattr(self.device, 'pins', [])]}")
-        print(f"[DIAG] device.pins object ids: {[id(p) for p in getattr(self.device, 'pins', [])]}")
-        print(f"[DEBUG][DeletePinCommand] device.pins after: {[getattr(p, 'id', None) for p in getattr(self.device, 'pins', [])]}")
-        print(f"[DIAG] pin object id: {id(self.pin)}")
-        print(f"[DIAG] device object id: {id(self.device) if self.device else None}")
-        print(f"[DIAG] harness.devices object ids: {[id(d) for d in self.api.context.harness.devices]}")
-        print(f"[DIAG] harness.pins object ids: {[id(p) for p in getattr(self.api.context.harness, 'pins', [])]}")
-        print(f"[DIAG] Call stack:")
-        traceback.print_stack(limit=10)
-        print(f"[DIAG] scene registry before: {list(self.api.scene_registry.keys()) if hasattr(self.api, 'scene_registry') else 'N/A'}")
-        if self.logging_flag:
-            infra_log(f"[LOG] DeletePinCommand.execute START for pin UUID={pin_uuid}", level="info")
-        if self.device:
-            # Save internal_routing and pins for undo
-            if hasattr(self.device, 'internal_routing') and pin_uuid:
-                self._saved_internal_routing = dict(self.device.internal_routing)
-                # Save only the routing entries for this pin (both as key and as value)
-                self._saved_pin_routing = {
-                    pin_uuid: self.device.internal_routing.get(pin_uuid)
-                }
-                for k, v in self.device.internal_routing.items():
-                    if v == pin_uuid:
-                        self._saved_pin_routing[k] = v
-            self._saved_pins = list(self.device.pins)
-            before = [p.id for p in self.device.pins]
-            infra_log(f"[DEBUG] Device pins before removal: {before}", level="info")
-            infra_log(f"[DEBUG] Target pin UUID for removal: {pin_uuid}", level="info")
-            print(f"[DIAG] Device pins before removal: {before}")
-            print(f"[DIAG] Target pin UUID for removal: {pin_uuid}")
-            self.device.pins = [p for p in self.device.pins if getattr(p, 'id', None) != pin_uuid]
-            after = [p.id for p in self.device.pins]
-            infra_log(f"[DEBUG] Device pins after removal: {after}", level="info")
-            print(f"[DIAG] Device pins after removal: {after}")
-            # ...existing code...
-            if hasattr(self.device, 'internal_routing') and pin_uuid:
-                self.device.internal_routing.pop(pin_uuid, None)
-                to_remove = [k for k, v in self.device.internal_routing.items() if v == pin_uuid]
+        def all_harness_pins():
+            return [p for d in getattr(self.api.context.harness, 'devices', []) for p in getattr(d, 'pins', [])]
+        print(f"[DIAG] api.context.harness.pins: {[getattr(p, 'id', None) for p in all_harness_pins()]}")
+        # Save all device pins for undo
+        self._saved_pins_by_device = {d: list(d.pins) for d in getattr(self.api.context.harness, 'devices', [])}
+        # Remove pin from all devices by UUID
+        for d in getattr(self.api.context.harness, 'devices', []):
+            before = [p.id for p in d.pins]
+            d.pins = [p for p in d.pins if getattr(p, 'id', None) != pin_uuid]
+            after = [p.id for p in d.pins]
+            infra_log(f"[DEBUG] Device {getattr(d, 'id', None)} pins before: {before}", level="info")
+            infra_log(f"[DEBUG] Device {getattr(d, 'id', None)} pins after: {after}", level="info")
+            print(f"[DIAG] Device {getattr(d, 'id', None)} pins before: {before}")
+            print(f"[DIAG] Device {getattr(d, 'id', None)} pins after: {after}")
+            # Remove from internal_routing if present
+            if hasattr(d, 'internal_routing') and pin_uuid:
+                d.internal_routing.pop(pin_uuid, None)
+                to_remove = [k for k, v in d.internal_routing.items() if v == pin_uuid]
                 for k in to_remove:
-                    self.device.internal_routing.pop(k, None)
-        elif hasattr(self.api.context.harness, 'pins'):
-            self._saved_pins = list(self.api.context.harness.pins)
-            before = [p.id for p in self.api.context.harness.pins]
-            infra_log(f"[DEBUG] Harness pins before removal: {before}", level="info")
-            infra_log(f"[DEBUG] Target pin UUID for removal: {pin_uuid}", level="info")
-            print(f"[DIAG] Harness pins before removal: {before}")
-            print(f"[DIAG] Target pin UUID for removal: {pin_uuid}")
-            self.api.context.harness.pins = [p for p in self.api.context.harness.pins if getattr(p, 'id', None) != pin_uuid]
-            after = [p.id for p in self.api.context.harness.pins]
-            infra_log(f"[DEBUG] Harness pins after removal: {after}", level="info")
-            print(f"[DIAG] Harness pins after removal: {after}")
-            # ...existing code...
+                    d.internal_routing.pop(k, None)
         # Unregister pin from scene registry
         self.api.unregister_scene_item(pin_uuid)
         print(f"[DIAG] Unregistered pin from scene registry: {pin_uuid}")
         print(f"[DIAG] scene registry after: {list(self.api.scene_registry.keys()) if hasattr(self.api, 'scene_registry') else 'N/A'}")
-        print(f"[DIAG] device.pins after: {[getattr(p, 'id', None) for p in getattr(self.device, 'pins', [])]}")
-        print(f"[DIAG] api.context.harness.pins after: {[getattr(p, 'id', None) for p in getattr(self.api.context.harness, 'pins', [])]}")
         observer = getattr(self.api, 'context', None)
         observer = getattr(observer, 'observer', None)
         if observer:
@@ -780,20 +754,15 @@ class DeletePinCommand(BaseCommand):
 
 
     def undo(self):
-        """Restore the pin list and internal_routing to their saved state and dispatch event."""
+        """Restore all device pin lists to their saved state and dispatch event."""
         from infra.logging import infra_log
         pin_uuid = getattr(self.pin, 'id', None)
         if self.logging_flag:
             infra_log(f"[LOG] DeletePinCommand.undo START for pin UUID={pin_uuid}", level="info")
-        if self.device:
-            if self._saved_pins is not None:
-                self.device.pins = list(self._saved_pins)
-            if hasattr(self.device, 'internal_routing') and self._saved_internal_routing is not None:
-                self.device.internal_routing.clear()
-                self.device.internal_routing.update(self._saved_internal_routing)
-        elif hasattr(self.api.context.harness, 'pins'):
-            if self._saved_pins is not None:
-                self.api.context.harness.pins = list(self._saved_pins)
+        # Restore all device pin lists
+        if hasattr(self, '_saved_pins_by_device'):
+            for d, pins in self._saved_pins_by_device.items():
+                d.pins = list(pins)
         observer = getattr(self.api, 'context', None)
         observer = getattr(observer, 'observer', None)
         if observer:
@@ -888,7 +857,6 @@ class MoveDeviceCommand(BaseCommand):
 
 # --- Actions ---
 
-@register_action("device.add_pin")
 def device_add_pin(context):
     """Add a pin to the selected device using the AddPinCommand."""
     mgr = SelectionManager()
@@ -905,5 +873,34 @@ def device_add_pin(context):
     from core.pin import Pin
     import uuid
     pin = Pin(id=str(uuid.uuid4()), x=0, y=0, device_id=target.id)
-    cmd = AddPinCommand(target, pin)
+    cmd = AddPinCommand(target, pin, context=context)
     APIManager.get_instance().context.undo_stack.push(cmd)
+
+
+# --- Patch: Ensure delete_pin action always passes context ---
+@register_action("device.delete_pin")
+def device_delete_pin(context):
+    """Delete the selected pin from the selected device using DeletePinCommand, always passing context."""
+    mgr = SelectionManager()
+    selection = mgr.selected_models
+    if not selection:
+        return
+
+    # Find selected pin and its parent device
+    pins = [item for item in selection if hasattr(item, 'device_id')]
+    if not pins:
+        return
+
+    pin = pins[0]
+    # Find the parent device by device_id
+    api = APIManager.get_instance()
+    device = None
+    for d in getattr(api.context.harness, 'devices', []):
+        if getattr(d, 'id', None) == getattr(pin, 'device_id', None):
+            device = d
+            break
+    if not device:
+        return
+
+    cmd = DeletePinCommand(device, pin, context=context)
+    api.context.undo_stack.push(cmd)

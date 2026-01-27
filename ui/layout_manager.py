@@ -1,3 +1,4 @@
+
 """Layout manager for Talus Trace UI, handling dock widgets and layout persistence."""
 
 import yaml
@@ -9,10 +10,10 @@ class LayoutManager:
     """Creates and manages UI layout elements (menubar, toolbar) from config."""
     def __init__(self, config_path=None):
         """Initialize LayoutManager with optional config path."""
+        # Force use of the UUID-driven context menu config for contract compliance
         if config_path is None:
-             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-             config_path = os.path.join(base_dir, "resources", "config", "ui_layout.yaml")
-             
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            config_path = os.path.join(base_dir, "resources", "config", "ui_layout_with_uuids.yaml")
         self.config_path = config_path
         self.config = {}
         self._load_config()

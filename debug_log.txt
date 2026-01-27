@@ -1,0 +1,425 @@
+F                                                                        [100%]
+=================================== FAILURES ===================================
+____________________ test_canvas_context_menu_no_recursion _____________________
+
+qtbot = <pytestqt.qtbot.QtBot object at 0x7bdb347df770>
+
+    def test_canvas_context_menu_no_recursion(qtbot):
+        """
+        Contract: Context menu event on canvas must be routed to APIManager.open_context_menu,
+        must not cause recursion, and must be accepted. The API must handle the event, not call back into the UI event handler.
+        """
+        app = QApplication.instance() or QApplication([])
+        api = APIManager.get_instance()
+        from unittest.mock import patch
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show()
+        canvas = window.canvas
+        # Add a dummy device at (10, 10) so InputSystem finds an item
+        from core.device import Device
+        from ui.items.device import DeviceItem
+        dummy_device = Device(x=10, y=10, meta={"width_mm": 20, "height_mm": 20})
+        device_item = DeviceItem(dummy_device)
+        canvas.scene.addItem(device_item)
+    
+        # Set the active tool to 'move' so InputSystem routes right-clicks for context menu
+        api.tool_manager.set_tool("move")
+        # Explicitly select the device so InputSystem recognizes it as selected
+        from core.selection import SelectionManager
+        SelectionManager().set_selection([dummy_device])
+    
+        # Ensure InputSystem is installed as event filter on viewport for test
+        input_system = getattr(window.api, 'input_system', None)
+        assert input_system is not None, "InputSystem not found on APIManager."
+        input_system.install(canvas.viewport())
+    
+        # Map scene position to canvas widget coordinates
+        from PySide6.QtTest import QTest
+        from PySide6.QtCore import QPointF
+        scene_pos = QPointF(15, 15)
+        view_pos = canvas.mapFromScene(scene_pos)
+    
+        with patch.object(api, "open_context_menu", wraps=api.open_context_menu) as mock_open:
+            try:
+                QTest.mouseClick(canvas.viewport(), Qt.RightButton, Qt.NoModifier, view_pos)
+            except RecursionError:
+                pytest.fail("RecursionError: contextMenuEvent and open_context_menu are calling each other recursively.")
+>           mock_open.assert_called_once()
+
+tests/test_canvas_context_menu_no_recursion.py:50: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <MagicMock name='open_context_menu' id='136180963673152'>
+
+    def assert_called_once(self):
+        """assert that the mock was called only once.
+        """
+        if not self.call_count == 1:
+            msg = ("Expected '%s' to have been called once. Called %s times.%s"
+                   % (self._mock_name or 'mock',
+                      self.call_count,
+                      self._calls_repr()))
+>           raise AssertionError(msg)
+E           AssertionError: Expected 'open_context_menu' to have been called once. Called 0 times.
+
+/usr/lib/python3.13/unittest/mock.py:958: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+DEBUG: undo_stack type: <class 'infra.undo_stack2.UndoStack2'>
+DEBUG: undo_stack module: infra.undo_stack2
+DEBUG: undo_stack dir: ['__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__len__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__weakref__', '_callbacks', '_notify', '_redo_stack', '_undo_stack', 'begin_transaction', 'can_redo', 'can_undo', 'clear', 'do', 'end_transaction', 'in_transaction', 'is_empty', 'push', 'redo', 'redo_stack', 'subscribe', 'undo', 'undo_stack']
+DEBUG: infra.undo_stack file: /home/dworth/Dropbox/Bronco II/talustrace/infra/undo_stack.py
+DEBUG: sys.path: ['/home/dworth/Dropbox/Bronco II/talustrace', '/home/dworth/Dropbox/Bronco II/talustrace/venv/bin', '/usr/lib/python313.zip', '/usr/lib/python3.13', '/usr/lib/python3.13/lib-dynload', '/home/dworth/Dropbox/Bronco II/talustrace/venv/lib/python3.13/site-packages']
+DEBUG: undo_stack.py contents:
+001: """
+002: Undo/Redo Stack and Command Pattern for Talus Trace (PH5-CMD.1)
+003: """
+004: 
+005: 
+006: class BaseCommand:
+007:     """Base class for all undoable commands. Enforces dispatcher-only execution."""
+008:     _allow_execute = False  # Class-level flag for dispatcher enforcement
+009: 
+010:     def __init__(self, description=None):
+011:         """Initialize the base command with an optional description."""
+012:         self.description = description or self.__class__.__name__
+013:         self._executed = False
+014: 
+015:     def execute(self):
+016:         """Execute the command, enforcing dispatcher-only execution."""
+017:         # Enforce that execute() is only called via dispatcher
+018:         if not getattr(self, '_allow_execute', False):
+019:             raise RuntimeError(f"{self.__class__.__name__}.execute() must be called via dispatcher, not directly!")
+020:         try:
+021:             return self._do_execute()
+022:         finally:
+023:             self._allow_execute = False  # Always reset after execution
+024: 
+025:     def _do_execute(self):
+026:         """Override this in subclasses with actual command logic."""
+027:         raise NotImplementedError
+028: 
+029:     def undo(self):
+030:         """Undo the command. Must be implemented by subclasses."""
+031:         raise NotImplementedError
+032: 
+033:     def redo(self):
+034:         """Redo the command by calling execute()."""
+035:         self.execute()
+036: 
+037:     @property
+038:     def executed(self):
+039:         """Return True if the command has been executed."""
+040:         return self._executed
+041: 
+042:     def mark_executed(self):
+043:         """Mark the command as executed."""
+044:         self._executed = True
+045: 
+046:     @staticmethod
+047:     def dispatch(command, *args, **kwargs):
+048:         """Dispatcher entry point: sets flag and calls execute."""
+049:         command._allow_execute = True
+050:         return command.execute(*args, **kwargs)
+051: 
+052: class UndoStack:
+053:     """
+054:     Manages undo/redo for commands in the application.
+055:     Provides stack operations, transaction grouping, and callback subscription.
+056:     """
+057:     def begin_transaction(self, description=None):
+058:         """
+059:         Begin a transaction to group multiple commands as one undoable action.
+060:         Args:
+061:             description (str): Optional description for the transaction.
+062:         """
+063:         if hasattr(self, '_transaction_commands') and self._transaction_commands is not None:
+064:             raise RuntimeError("Transaction already in progress")
+065:         self._transaction_commands = []
+066:         self._transaction_description = description or "Transaction"
+067: 
+068:     def end_transaction(self):
+069:         """
+070:         End the current transaction and push the grouped commands as a single command.
+071:         """
+072:         if not hasattr(self, '_transaction_commands') or self._transaction_commands is None:
+073:             raise RuntimeError("No transaction in progress")
+074:         if not self._transaction_commands:
+075:             self._transaction_commands = None
+076:             return
+077:         group = TransactionCommand(self._transaction_commands, self._transaction_description)
+078:         self.do(group)
+079:         self._transaction_commands = None
+080:         self._transaction_description = None
+081: 
+082:     def in_transaction(self):
+083:         """
+084:         Return True if a transaction is currently in progress.
+085:         """
+086:         return hasattr(self, '_transaction_commands') and self._transaction_commands is not None
+087: 
+088:     def is_empty(self):
+089:         """
+090:         Return True if the undo stack is empty.
+091:         """
+092:         return not self._undo_stack
+093: 
+094:     def __init__(self):
+095:         """
+096:         Initialize the UndoStack with empty undo/redo stacks and callbacks.
+097:         """
+098:         """
+099:         Initialize the UndoStack with empty undo/redo stacks and no active transaction.
+100:         """
+101:         self._undo_stack = []
+102:         self._redo_stack = []
+103:         self._current_transaction = None
+104:         self._transaction_depth = 0
+105: 
+106:     def subscribe(self, callback):
+107:         """
+108:         Subscribe a callback to undo/redo events.
+109:         Args:
+110:             callback (callable): Function to call on undo/redo events.
+111:         """
+112:         if callback not in self._callbacks:
+113:             self._callbacks.append(callback)
+114: 
+115:     def _notify(self, event_type):
+116:         """
+117:         Notify all subscribed callbacks of an event.
+118:         Args:
+119:             event_type (str): The type of event ('undo', 'redo', etc.).
+120:         """
+121:         for cb in self._callbacks:
+122:             try:
+123:                 cb(event_type)
+124:             except Exception as e:
+125:                 # ...removed debug print...
+126:                 pass
+127: 
+128:     def push(self, command: BaseCommand):
+129:         """
+130:         Push a command onto the undo stack and execute it.
+131:         Args:
+132:             command (BaseCommand): The command to execute and push.
+133:         """
+134:         self.do(command)
+135: 
+136:     def do(self, command: BaseCommand):
+137:         """
+138:         Execute a command and add it to the undo stack or current transaction.
+139:         Args:
+140:             command (BaseCommand): The command to execute.
+141:         """
+142:         command.execute()
+143:         command.mark_executed()
+144:         if self.in_transaction():
+145:             self._transaction_commands.append(command)
+146:         else:
+147:             self._undo_stack.append(command)
+148:             self._redo_stack.clear()
+149: 
+150: 
+151: # TransactionCommand groups multiple commands as a single undoable/redoable action
+152: class TransactionCommand(BaseCommand):
+153:     """
+154:     Groups multiple commands as a single undoable/redoable action for transactions.
+155:     """
+156:     def __init__(self, commands, description=None):
+157:         """
+158:         Initialize the TransactionCommand with a list of commands and optional description.
+159:         Args:
+160:             commands (list): List of BaseCommand objects.
+161:             description (str): Optional description for the transaction.
+162:         """
+163:         super().__init__(description or "Transaction")
+164:         self.commands = list(commands)
+165: 
+166:     def execute(self):
+167:         """
+168:         Execute all commands in the transaction.
+169:         """
+170:         for cmd in self.commands:
+171:             cmd.execute()
+172: 
+173:     def undo(self):
+174:         """
+175:         Undo all commands in the transaction in reverse order.
+176:         """
+177:         for cmd in reversed(self.commands):
+178:             cmd.undo()
+179: 
+180:     def redo(self):
+181:         """
+182:         Redo all commands in the transaction in order.
+183:         """
+184:         for cmd in self.commands:
+185:             cmd.redo()
+186: 
+187:     def undo(self):
+188:         """
+189:         Undo the last command on the undo stack.
+190:         """
+191:         if not self._undo_stack:
+192:             return
+193:         command = self._undo_stack.pop()
+194:         command.undo()
+195:         self._redo_stack.append(command)
+196:         self._notify('undo')
+197: 
+198:     def redo(self):
+199:         """
+200:         Redo the last undone command on the redo stack.
+201:         """
+202:         if not self._redo_stack:
+203:             return
+204:         command = self._redo_stack.pop()
+205:         command.redo()
+206:         self._undo_stack.append(command)
+207:         self._notify('redo')
+208: 
+209:     def clear(self):
+210:         """
+211:         Clear both the undo and redo stacks.
+212:         """
+213:         self._undo_stack.clear()
+214:         self._redo_stack.clear()
+215: 
+216:     def can_undo(self):
+217:         """
+218:         Return True if there are commands to undo.
+219:         """
+220:         return bool(self._undo_stack)
+221: 
+222:     def can_redo(self):
+223:         """
+224:         Return True if there are commands to redo.
+225:         """
+226:         return bool(self._redo_stack)
+227: 
+228:     @property
+229:     def undo_stack(self):
+230:         """
+231:         Return the current undo stack.
+232:         """
+233:         return list(self._undo_stack)
+234: 
+235:     @property
+236:     def redo_stack(self):
+237:         """
+238:         Return the current redo stack.
+239:         """
+240:         return list(self._redo_stack)
+241: 
+242:     def __len__(self):
+243:         """
+244:         Return the number of commands in the undo stack.
+245:         """
+246:         return len(self._undo_stack)
+---------------------------- Captured stderr setup -----------------------------
+2026-01-26 15:39:32,188 [DEBUG] root: [INPUT_SYSTEM][INIT] config_path=None, move_tool=None
+------------------------------ Captured log setup ------------------------------
+DEBUG    root:input_system.py:19 [INPUT_SYSTEM][INIT] config_path=None, move_tool=None
+----------------------------- Captured stdout call -----------------------------
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[SELECTION][set_selection] Setting selection: ['6ddd5a0f-54e8-405d-8443-8e25a6e99d7f']
+[SELECTION][set_selection] Previous selection: []
+[SELECTION][set_selection] selected_models: ['6ddd5a0f-54e8-405d-8443-8e25a6e99d7f']
+[SELECTION][set_selection] Call stack:
+[SELECTION][_notify] Notifying listeners. selected_models: ['6ddd5a0f-54e8-405d-8443-8e25a6e99d7f']
+[SELECTION][_notify] Dispatching 'selection_changed' via APIManager. selected_models: ['6ddd5a0f-54e8-405d-8443-8e25a6e99d7f']
+[infra_log] Writing to log_path: talustrace_infra.log
+[infra_log] Successfully wrote to talustrace_infra.log
+[DEBUG] _render_device: meta= {'width_mm': 20, 'height_mm': 20}
+[DEBUG] _render_device: meta _type=None, schema_fields=['width_mm', 'height_mm', 'manufacturer', 'sku']
+----------------------------- Captured stderr call -----------------------------
+2026-01-26 15:39:32,203 [DEBUG] root: [INPUT_SYSTEM][INSTALL] Installing event filter on: <PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>
+2026-01-26 15:39:32,232 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::ScreenChangeInternal)>, type=216 (QEvent)
+2026-01-26 15:39:32,240 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::Polish)>, type=75 (QEvent)
+2026-01-26 15:39:32,243 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtGui.QMoveEvent(1,1, non-spontaneous)>, type=13 (QMoveEvent)
+2026-01-26 15:39:32,243 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtGui.QResizeEvent(1762, 1472, non-spontaneous)>, type=14 (QResizeEvent)
+2026-01-26 15:39:32,243 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::Show)>, type=17 (QShowEvent)
+2026-01-26 15:39:32,243 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::ShowToParent)>, type=26 (QEvent)
+  File "/home/dworth/Dropbox/Bronco II/talustrace/venv/lib/python3.13/site-packages/pluggy/_hooks.py", line 512, in __call__
+    return self._hookexec(self.name, self._hookimpls.copy(), kwargs, firstresult)
+  File "/home/dworth/Dropbox/Bronco II/talustrace/venv/lib/python3.13/site-packages/pluggy/_manager.py", line 120, in _hookexec
+    return self._inner_hookexec(hook_name, methods, kwargs, firstresult)
+  File "/home/dworth/Dropbox/Bronco II/talustrace/venv/lib/python3.13/site-packages/pluggy/_callers.py", line 121, in _multicall
+    res = hook_impl.function(*args)
+  File "/home/dworth/Dropbox/Bronco II/talustrace/venv/lib/python3.13/site-packages/_pytest/python.py", line 166, in pytest_pyfunc_call
+    result = testfunction(**testargs)
+  File "/home/dworth/Dropbox/Bronco II/talustrace/tests/test_canvas_context_menu_no_recursion.py", line 32, in test_canvas_context_menu_no_recursion
+    SelectionManager().set_selection([dummy_device])
+  File "/home/dworth/Dropbox/Bronco II/talustrace/core/selection.py", line 77, in set_selection
+    traceback.print_stack(limit=6)
+2026-01-26 15:39:32,255 [DEBUG] root: [INPUT_SYSTEM][INSTALL] Installing event filter on: <PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>
+2026-01-26 15:39:32,256 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtGui.QMouseEvent(MouseButtonPress ts=2 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>, type=2 (QMouseEvent)
+2026-01-26 15:39:32,256 [DEBUG] root: [InputSystem.eventFilter] Routing mouse event type=2 to handle_canvas_event: event=<PySide6.QtGui.QMouseEvent(MouseButtonPress ts=2 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+2026-01-26 15:39:32,256 [DEBUG] root: [InputSystem.eventFilter] Creating CanvasEvent for event: <PySide6.QtGui.QMouseEvent(MouseButtonPress ts=2 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+2026-01-26 15:39:32,256 [DEBUG] root: [InputSystem.handle_canvas_event] CALLED: etype=2, tool=<tools.move_tool.MoveTool object at 0x7bdb3452da90>, selection_ids={'6ddd5a0f-54e8-405d-8443-8e25a6e99d7f'}, scene_pos=PySide6.QtCore.QPointF(15.000000, 15.000000), item=None, event=<ui.input_system.InputSystem.eventFilter.<locals>.CanvasEvent object at 0x7bdb19f70d70>, orig_event=<PySide6.QtGui.QMouseEvent(MouseButtonPress ts=2 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+2026-01-26 15:39:32,256 [DEBUG] root: [INPUT_SYSTEM][MOUSE_PRESS] event.button=<built-in method button of PySide6.QtGui.QMouseEvent object at 0x7bdb18fab680> (type=<class 'builtin_function_or_method'>), orig_event.button=<built-in method button of PySide6.QtGui.QMouseEvent object at 0x7bdb18fab680> (type=<class 'builtin_function_or_method'>) Qt.RightButton=MouseButton.RightButton
+2026-01-26 15:39:32,256 [DEBUG] root: [INPUT_SYSTEM][MOUSE_PRESS] tool=<tools.move_tool.MoveTool object at 0x7bdb3452da90>, item=None
+2026-01-26 15:39:32,256 [DEBUG] root: [InputSystem.handle_canvas_event] Calling tool.on_mouse_press for tool=<tools.move_tool.MoveTool object at 0x7bdb3452da90>
+2026-01-26 15:39:32,256 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtGui.QMouseEvent(MouseButtonRelease ts=3 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>, type=3 (QMouseEvent)
+2026-01-26 15:39:32,256 [DEBUG] root: [InputSystem.eventFilter] Routing mouse event type=3 to handle_canvas_event: event=<PySide6.QtGui.QMouseEvent(MouseButtonRelease ts=3 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+2026-01-26 15:39:32,256 [DEBUG] root: [InputSystem.eventFilter] Creating CanvasEvent for event: <PySide6.QtGui.QMouseEvent(MouseButtonRelease ts=3 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+2026-01-26 15:39:32,257 [DEBUG] root: [InputSystem.handle_canvas_event] CALLED: etype=3, tool=<tools.move_tool.MoveTool object at 0x7bdb3452da90>, selection_ids={'6ddd5a0f-54e8-405d-8443-8e25a6e99d7f'}, scene_pos=PySide6.QtCore.QPointF(15.000000, 15.000000), item=None, event=<ui.input_system.InputSystem.eventFilter.<locals>.CanvasEvent object at 0x7bdb19f70ec0>, orig_event=<PySide6.QtGui.QMouseEvent(MouseButtonRelease ts=3 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+2026-01-26 15:39:32,257 [DEBUG] root: [INPUT_SYSTEM][MOUSE_RELEASE] tool=<tools.move_tool.MoveTool object at 0x7bdb3452da90>, scene_pos=PySide6.QtCore.QPointF(15.000000, 15.000000)
+------------------------------ Captured log call -------------------------------
+DEBUG    root:input_system.py:70 [INPUT_SYSTEM][INSTALL] Installing event filter on: <PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::ScreenChangeInternal)>, type=216 (QEvent)
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::Polish)>, type=75 (QEvent)
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtGui.QMoveEvent(1,1, non-spontaneous)>, type=13 (QMoveEvent)
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtGui.QResizeEvent(1762, 1472, non-spontaneous)>, type=14 (QResizeEvent)
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::Show)>, type=17 (QShowEvent)
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::ShowToParent)>, type=26 (QEvent)
+DEBUG    root:input_system.py:70 [INPUT_SYSTEM][INSTALL] Installing event filter on: <PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtGui.QMouseEvent(MouseButtonPress ts=2 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>, type=2 (QMouseEvent)
+DEBUG    root:input_system.py:158 [InputSystem.eventFilter] Routing mouse event type=2 to handle_canvas_event: event=<PySide6.QtGui.QMouseEvent(MouseButtonPress ts=2 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+DEBUG    root:input_system.py:179 [InputSystem.eventFilter] Creating CanvasEvent for event: <PySide6.QtGui.QMouseEvent(MouseButtonPress ts=2 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+DEBUG    root:input_system.py:88 [InputSystem.handle_canvas_event] CALLED: etype=2, tool=<tools.move_tool.MoveTool object at 0x7bdb3452da90>, selection_ids={'6ddd5a0f-54e8-405d-8443-8e25a6e99d7f'}, scene_pos=PySide6.QtCore.QPointF(15.000000, 15.000000), item=None, event=<ui.input_system.InputSystem.eventFilter.<locals>.CanvasEvent object at 0x7bdb19f70d70>, orig_event=<PySide6.QtGui.QMouseEvent(MouseButtonPress ts=2 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+DEBUG    root:input_system.py:93 [INPUT_SYSTEM][MOUSE_PRESS] event.button=<built-in method button of PySide6.QtGui.QMouseEvent object at 0x7bdb18fab680> (type=<class 'builtin_function_or_method'>), orig_event.button=<built-in method button of PySide6.QtGui.QMouseEvent object at 0x7bdb18fab680> (type=<class 'builtin_function_or_method'>) Qt.RightButton=MouseButton.RightButton
+DEBUG    root:input_system.py:112 [INPUT_SYSTEM][MOUSE_PRESS] tool=<tools.move_tool.MoveTool object at 0x7bdb3452da90>, item=None
+DEBUG    root:input_system.py:122 [InputSystem.handle_canvas_event] Calling tool.on_mouse_press for tool=<tools.move_tool.MoveTool object at 0x7bdb3452da90>
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtGui.QMouseEvent(MouseButtonRelease ts=3 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>, type=3 (QMouseEvent)
+DEBUG    root:input_system.py:158 [InputSystem.eventFilter] Routing mouse event type=3 to handle_canvas_event: event=<PySide6.QtGui.QMouseEvent(MouseButtonRelease ts=3 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+DEBUG    root:input_system.py:179 [InputSystem.eventFilter] Creating CanvasEvent for event: <PySide6.QtGui.QMouseEvent(MouseButtonRelease ts=3 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+DEBUG    root:input_system.py:88 [InputSystem.handle_canvas_event] CALLED: etype=3, tool=<tools.move_tool.MoveTool object at 0x7bdb3452da90>, selection_ids={'6ddd5a0f-54e8-405d-8443-8e25a6e99d7f'}, scene_pos=PySide6.QtCore.QPointF(15.000000, 15.000000), item=None, event=<ui.input_system.InputSystem.eventFilter.<locals>.CanvasEvent object at 0x7bdb19f70ec0>, orig_event=<PySide6.QtGui.QMouseEvent(MouseButtonRelease ts=3 RightButton pos=896,751 scn=896,751 gbl=1121,808 dev=QInputDevice(QPointingDevice("touchpad" TouchPad id=8589934592 seat=seat0 ptrType=Finger maxPts=10))>
+DEBUG    root:input_system.py:135 [INPUT_SYSTEM][MOUSE_RELEASE] tool=<tools.move_tool.MoveTool object at 0x7bdb3452da90>, scene_pos=PySide6.QtCore.QPointF(15.000000, 15.000000)
+--------------------------- Captured stderr teardown ---------------------------
+2026-01-26 15:39:32,303 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::PolishRequest)>, type=74 (QEvent)
+2026-01-26 15:39:32,304 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::UpdateLater)>, type=78 (QEvent)
+2026-01-26 15:39:32,327 [DEBUG] root: [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::Hide)>, type=18 (QHideEvent)
+---------------------------- Captured log teardown -----------------------------
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::PolishRequest)>, type=74 (QEvent)
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::UpdateLater)>, type=78 (QEvent)
+DEBUG    root:input_system.py:152 [InputSystem.eventFilter] CALLED: obj=<PySide6.QtWidgets.QWidget(0x4132dd90) at 0x7bdb345e7700>, event=<PySide6.QtCore.QEvent(QEvent::Hide)>, type=18 (QHideEvent)
+=========================== short test summary info ============================
+FAILED tests/test_canvas_context_menu_no_recursion.py::test_canvas_context_menu_no_recursion
+1 failed in 0.25s

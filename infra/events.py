@@ -1,4 +1,9 @@
 """
+Event Manager Design:
+---------------------
+The EventManager provides a publish/subscribe (pub/sub) system for decoupled communication between components. Events can be emitted from any part of the application and received by any interested listeners, without direct references. This enables modularity, extensibility, and testability, as new features can subscribe to or emit events without modifying core logic. The EventManager supports event filtering, propagation, and integration with undo/redo and logging systems.
+"""
+"""
 infra/events.py
 
 Event hooks/signals for bundle and wire actions (split, merge, serialize, etc).

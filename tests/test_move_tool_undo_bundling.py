@@ -2,7 +2,7 @@ import pytest
 from PySide6.QtCore import QPointF, Qt
 from unittest.mock import MagicMock
 from tools.move_tool import MoveTool
-from ui.canvas import CanvasEvent
+ # CanvasEvent is no longer used; test only MoveTool and model/undo stack behavior
 from core.device import Device
 from api.manager import APIManager
 
@@ -26,6 +26,7 @@ def test_move_tool_undo_bundling(qtbot):
     
     # Setup Tool
     tool = MoveTool()
+    tool.api = api
     tool.start(dev)
 
     # Create and register a mock QGraphicsItem wrapper for the device

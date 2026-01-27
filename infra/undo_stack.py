@@ -2,20 +2,28 @@
 Undo/Redo Stack and Command Pattern for Talus Trace (PH5-CMD.1)
 """
 
+
 class BaseCommand:
-    """Base class for all undoable commands."""
-    """Base class for all undoable commands."""
+    """Base class for all undoable commands. Enforces dispatcher-only execution."""
+    _allow_execute = False  # Class-level flag for dispatcher enforcement
+
     def __init__(self, description=None):
-        """
-        Initialize the BaseCommand with an optional description.
-        Args:
-            description (str, optional): Description of the command.
-        """
+        """Initialize the base command with an optional description."""
         self.description = description or self.__class__.__name__
         self._executed = False
 
     def execute(self):
-        """Execute the command. Must be implemented by subclasses."""
+        """Execute the command, enforcing dispatcher-only execution."""
+        # Enforce that execute() is only called via dispatcher
+        if not getattr(self, '_allow_execute', False):
+            raise RuntimeError(f"{self.__class__.__name__}.execute() must be called via dispatcher, not directly!")
+        try:
+            return self._do_execute()
+        finally:
+            self._allow_execute = False  # Always reset after execution
+
+    def _do_execute(self):
+        """Override this in subclasses with actual command logic."""
         raise NotImplementedError
 
     def undo(self):
@@ -23,18 +31,23 @@ class BaseCommand:
         raise NotImplementedError
 
     def redo(self):
-        """Redo the last undone command on the redo stack."""
         """Redo the command by calling execute()."""
         self.execute()
 
     @property
     def executed(self):
-        """Return whether the command has been executed."""
+        """Return True if the command has been executed."""
         return self._executed
 
     def mark_executed(self):
         """Mark the command as executed."""
         self._executed = True
+
+    @staticmethod
+    def dispatch(command, *args, **kwargs):
+        """Dispatcher entry point: sets flag and calls execute."""
+        command._allow_execute = True
+        return command.execute(*args, **kwargs)
 
 class UndoStack:
     """

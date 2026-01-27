@@ -33,6 +33,8 @@ def test_right_click_event_routing_and_mvc(qtbot, enforce_device_mvc_fixture):
     api.input_system = input_system
     window = MainWindow()
     qtbot.addWidget(window)
+    # CRITICAL: Re-install the patched InputSystem as event filter on the canvas
+    input_system.install(window.canvas)
     is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
     if not is_headless:
         window.show()

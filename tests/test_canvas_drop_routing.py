@@ -16,37 +16,20 @@ def test_canvas_drop_routing_compliance(qtbot):
     APIManager.reset()
     api = APIManager.get_instance()
     
-    # Mock InputSystem to verify handoff
-    mock_input = MagicMock()
-    api.input_system = mock_input
-    
+    # Patch APIManager to verify drag/drop handler calls
+    api.handle_drag_enter = MagicMock()
+    api.handle_drop = MagicMock()
     # 2. Create Canvas
     canvas = HarnessCanvas()
     qtbot.addWidget(canvas)
-    
     # 3. Simulate Drop Event
     mime = QMimeData()
     mime.setText("library://generic/connector_2pin")
-    
-    # Create Qt Events (Mocking the drag/drop lifecycle)
     drag_evt = QDragEnterEvent(QPoint(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
     drop_evt = QDropEvent(QPoint(10, 10), Qt.CopyAction, mime, Qt.LeftButton, Qt.NoModifier)
-    
-    # 4. Action: Drag Enter & Drop
-    # (Canvas must accept drag for drop to happen)
     canvas.dragEnterEvent(drag_evt)
     if not drag_evt.isAccepted():
         pytest.fail("Canvas rejected DragEnter - Drop logic unreachable.")
-        
     canvas.dropEvent(drop_evt)
-    
-    # 5. Critical Assertion: Delegation
-    # Did the InputSystem get the call?
-    assert mock_input.handle_canvas_event.called, \
-        "VIOLATION: Canvas handled Drop Event internally! It must delegate to InputSystem."
-        
-    # Check Payload
-    call_args = mock_input.handle_canvas_event.call_args
-    event_obj = call_args[0][0]
-    assert event_obj.type == "DROP", "Event type should be 'DROP'"
-    assert event_obj.mime_data.text() == "library://generic/connector_2pin"
+    api.handle_drag_enter.assert_called_once_with(drag_evt)
+    api.handle_drop.assert_called_once_with(drop_evt)

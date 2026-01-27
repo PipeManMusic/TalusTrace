@@ -2,7 +2,7 @@ import pytest
 from PySide6.QtCore import QPointF
 from unittest.mock import MagicMock
 from ui.input_system import InputSystem
-from ui.canvas import CanvasEvent
+ # CanvasEvent is no longer used; test only InputSystem and tool routing
 from api.manager import APIManager
 
 def test_dispatcher_routing_to_active_tool(qtbot):
@@ -25,21 +25,11 @@ def test_dispatcher_routing_to_active_tool(qtbot):
     
     assert api.tool_manager.active_tool == mock_tool
     
-    # 4. Create a Mock Canvas Event
-    mock_view_event = MagicMock()
-    mock_view_event.type.return_value = 2 # QEvent.MouseButtonPress
-    
-    # FIX: Correct Argument Name
-    canvas_event = CanvasEvent(
-        original_event=mock_view_event,
-        scene_pos=QPointF(100, 100),
-        scene_item=None
-    )
-    
-    # 5. Simulate Dispatch (Directly call tool method as Canvas would)
-    # Since we are testing that the tool receives it
+    # 4. Simulate event routing: call the tool's on_mouse_press directly
+    event_obj = MagicMock()
+    event_obj.scene_pos = QPointF(100, 100)
+    event_obj.scene_item = None
     if hasattr(mock_tool, 'on_mouse_press'):
-        mock_tool.on_mouse_press(canvas_event)
-        
+        mock_tool.on_mouse_press(event_obj)
     assert mock_tool.on_mouse_press.called
-    assert mock_tool.on_mouse_press.call_args[0][0] == canvas_event
+    assert mock_tool.on_mouse_press.call_args[0][0] == event_obj

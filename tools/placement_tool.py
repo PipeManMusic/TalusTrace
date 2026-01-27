@@ -2,6 +2,7 @@
 Placement tool for device placement in Talus Trace.
 Implements logic for placing devices on the canvas, drag operations, and ghost item management.
 """
+import logging
 import uuid
 from PySide6.QtCore import Qt, QPointF
 from tools.base_tool import BaseTool
@@ -122,6 +123,8 @@ class PlacementTool(BaseTool):
                 self.ghost_item = None
 
     def on_mouse_press(self, event):
+        import logging
+        logging.debug(f"[PlacementTool.on_mouse_press] called with event={event}")
         """
         Handle mouse press event to place device and commit to model.
         Args:
@@ -153,11 +156,14 @@ class PlacementTool(BaseTool):
         else:
             self.current_pos = QPointF(0, 0)
         # 1. Commit to Model
+        logging.debug(f"[PlacementTool.on_mouse_press] About to add device at {self.current_pos}")
         dev_id = str(uuid.uuid4())
         meta_defaults = MetadataManager.get_instance().get_default_metadata(self.active_type)
         new_device = Device(id=dev_id, x=self.current_pos.x(), y=self.current_pos.y(), meta=meta_defaults)
         # Use APIManager to add device via AddDeviceCommand and undo stack
+        logging.debug(f"[PlacementTool.on_mouse_press] self.api={self.api}")
         if hasattr(self.api, 'add_device'):
+            logging.debug(f"[PlacementTool.on_mouse_press] Calling self.api.add_device")
             self.api.add_device(new_device)
         # Update canvas scene to reflect new device
         if hasattr(self.api.main_window, 'canvas'):

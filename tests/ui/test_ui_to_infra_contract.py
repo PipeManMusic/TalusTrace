@@ -62,7 +62,8 @@ def test_ui_to_infra_pin_delete_contract(qtbot):
     qtbot.waitUntil(lambda: 'menu' in shown_menu, timeout=2000)
     menu = shown_menu['menu']
     delete_uuid = 'e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b'
-    delete_action = next((a for a in menu.actions() if a.data() == delete_uuid), None)
+    delete_action = next((a for a in menu.actions()
+                         if a.data() == delete_uuid or (isinstance(a.data(), dict) and a.data().get('uuid') == delete_uuid)), None)
     assert delete_action is not None, f"Delete action (uuid={delete_uuid}) not found in context menu: {[a.data() for a in menu.actions()]}"
     with qtbot.waitSignal(menu.triggered, timeout=2000, raising=False):
         delete_action.trigger()

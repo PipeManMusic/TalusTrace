@@ -70,6 +70,21 @@ from ui.input_system import InputSystem
 
 
 class APIManager:
+    """
+    APIManager handles the main API logic and command dispatch for Talus Trace.
+    """
+
+    def delete_device(self, device):
+        """
+        Delete a device from the model using DeleteDeviceCommand and push to the undo stack.
+        Ensures device deletion is undoable, emits model_changed, and logs the action.
+        This method MUST be used for all device deletion (UI/dispatcher must not mutate model directly).
+        """
+        from api.commands.device import DeleteDeviceCommand
+        if hasattr(self, 'context') and hasattr(self.context, 'undo_stack'):
+            self.context.undo_stack.push(DeleteDeviceCommand(device, context=self.context))
+        else:
+            DeleteDeviceCommand(device, context=self.context).execute()
     def delete_pin(self, pin):
         """
         Delete a pin from the model using DeletePinCommand and push to the undo stack.
@@ -306,18 +321,6 @@ class APIManager:
                     cmd.execute()
         self.dispatch("model_changed", {"action": "rotate", "items": mgr.selected_models})
 
-    def delete(self):
-        """Delete selected device(s) using command pattern."""
-        from api.commands.device import DeleteDeviceCommand
-        from core.selection import SelectionManager
-        mgr = SelectionManager()
-        for device in list(mgr.selected_models):
-            cmd = DeleteDeviceCommand(device, context=self.context)
-            if hasattr(self.context, 'undo_stack'):
-                self.context.undo_stack.push(cmd)
-            else:
-                cmd.execute()
-        self.dispatch("model_changed", {"action": "delete", "items": mgr.selected_models})
     """
     Main API manager for Talus Trace.
     This singleton class provides high-level methods for manipulating the project state, devices, wires, and UI integration. It manages the tool system, event dispatch, undo/redo, and scene item registry.
@@ -514,6 +517,8 @@ class APIManager:
         If commit is False, update model and dispatch for real-time feedback (drag).
         If commit is True, push MoveCommand for undo/redo (on drag finish).
         """
+        import logging
+        logging.debug(f"[APIManager.move_device] target_or_id={target_or_id}, new_x={new_x}, new_y={new_y}, commit={commit}")
         from api.commands.move import MoveCommand
         device = None
         # Always resolve device and scene item from id if possible
@@ -547,6 +552,7 @@ class APIManager:
                 cmd.execute()
         else:
             # Directly update model for real-time feedback
+            logging.debug(f"[APIManager.move_device] (commit=False) updating device.id={getattr(device, 'id', None)} to x={new_x}, y={new_y}")
             device.x = new_x
             device.y = new_y
             self.dispatch("model_changed", {"action": "move", "item": device})
@@ -560,7 +566,7 @@ class APIManager:
             event.accept()
             return
         if hasattr(view, 'context_menu_manager'):
-            view.context_menu_manager.show_context_menu(event, item=item, menu_type=menu_type)
+            view.context_menu_manager.show_context_menu(menu_type=menu_type, item=item, event=event, parent=None)
         event.accept()
 
     def deselect_all(self):

@@ -59,7 +59,11 @@ def test_device_context_menu_shown_on_right_click(qtbot):
             '4a88e033-860e-4b9b-9140-338b49c40e61',  # Rotate 90°
             'e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b'   # Delete
         ])
-        actual_uuids = set(a.data() for a in menu.actions() if a.data())
+        def extract_uuid(data):
+            if isinstance(data, dict):
+                return data.get('uuid') or data.get('command')
+            return data
+        actual_uuids = set(extract_uuid(a.data()) for a in menu.actions() if a.data())
         missing = expected_uuids - actual_uuids
         assert not missing, f"Device context menu missing actions: {missing}. Actual UUIDs: {actual_uuids}"
     finally:

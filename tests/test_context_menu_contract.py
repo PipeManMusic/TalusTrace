@@ -51,7 +51,7 @@ def canvas_and_api(qtbot):
 
 @pytest.fixture
 def context_menu_config():
-    config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../resources/config/ui_layout.yaml"))
+    config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../resources/config/ui_layout_with_uuids.yaml"))
     with open(config_path, "r") as f:
         config = yaml.safe_load(f)
     return config

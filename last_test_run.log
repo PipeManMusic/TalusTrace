@@ -1,0 +1,509 @@
+============================= test session starts ==============================
+platform linux -- Python 3.13.7, pytest-9.0.2, pluggy-1.6.0
+PySide6 6.10.1 -- Qt runtime 6.10.1 -- Qt compiled 6.10.1
+rootdir: /home/dworth/Dropbox/Bronco II/talustrace
+configfile: pytest.ini
+testpaths: tests
+plugins: xdist-3.8.0, qt-4.5.0, forked-1.6.0
+collected 541 items
+
+tests/api/test_api_action_logging.py .                                   [  0%]
+tests/api/test_api_action_registry_ui.py .                               [  0%]
+tests/api/test_api_actions.py .                                          [  0%]
+tests/api/test_api_add_wire_undo.py .                                    [  0%]
+tests/api/test_api_basic.py ..                                           [  1%]
+tests/api/test_api_batch.py .                                            [  1%]
+tests/api/test_api_contract.py .                                         [  1%]
+tests/api/test_api_contract_bundle_lifecycle.py .....                    [  2%]
+tests/api/test_api_contract_device_lifecycle.py ..                       [  2%]
+tests/api/test_api_contract_open_save.py ....                            [  3%]
+tests/api/test_api_contract_pin_lifecycle.py ..                          [  3%]
+tests/api/test_api_contract_validation.py ..                             [  4%]
+tests/api/test_api_contract_wire_lifecycle.py .....                      [  5%]
+tests/api/test_api_device_creation_enforcement.py .                      [  5%]
+tests/api/test_api_edit.py ......                                        [  6%]
+tests/api/test_api_infra_audit.py .                                      [  6%]
+tests/api/test_api_infra_bom.py .                                        [  6%]
+tests/api/test_api_infra_cache.py .                                      [  7%]
+tests/api/test_api_infra_persistence_undo.py ..                          [  7%]
+tests/api/test_api_infra_routing.py .                                    [  7%]
+tests/api/test_api_manager_context_menu_contract.py .                    [  7%]
+tests/api/test_api_netlist_import.py .                                   [  7%]
+tests/api/test_api_observer.py ..                                        [  8%]
+tests/api/test_api_project_management.py ...............                 [ 11%]
+tests/api/test_api_receivers.py ..                                       [ 11%]
+tests/api/test_api_singleton.py ...                                      [ 12%]
+tests/api/test_api_sync.py ..                                            [ 12%]
+tests/api/test_api_utilities.py ....                                     [ 13%]
+tests/api/test_dispatcher_contract_enforcement.py .                      [ 13%]
+tests/api/test_no_duplicate_devices.py .                                 [ 13%]
+tests/dispatcher/test_command_dispatch_enforcement.py ..                 [ 13%]
+tests/dispatcher/test_dispatcher_contract.py .....                       [ 14%]
+tests/infra/test_infra_action_logger.py .                                [ 14%]
+tests/infra/test_infra_action_registry_persistent.py .                   [ 15%]
+tests/infra/test_infra_audit_model.py ..                                 [ 15%]
+tests/infra/test_infra_autosave.py ..                                    [ 15%]
+tests/infra/test_infra_backup.py ...                                     [ 16%]
+tests/infra/test_infra_backup_restore.py .                               [ 16%]
+tests/infra/test_infra_bundle_yaml.py ..                                 [ 17%]
+tests/infra/test_infra_cache_manager.py ..                               [ 17%]
+tests/infra/test_infra_context_dirty.py ..                               [ 17%]
+tests/infra/test_infra_error_handler.py .                                [ 17%]
+tests/infra/test_infra_exporter.py ..                                    [ 18%]
+tests/infra/test_infra_harness_bundle_yaml.py ..                         [ 18%]
+tests/infra/test_infra_harness_twisted_pair_yaml.py .                    [ 18%]
+tests/infra/test_infra_importers.py ..                                   [ 19%]
+tests/infra/test_infra_json_export.py ..                                 [ 19%]
+tests/infra/test_infra_json_import_export.py .                           [ 19%]
+tests/infra/test_infra_layout_state_manager.py ..                        [ 20%]
+tests/infra/test_infra_log_file_creation.py .                            [ 20%]
+tests/infra/test_infra_notification_manager.py .                         [ 20%]
+tests/infra/test_infra_serialization.py ...                              [ 21%]
+tests/infra/test_infra_settings_manager.py .                             [ 21%]
+tests/infra/test_infra_theme_manager.py .                                [ 21%]
+tests/infra/test_infra_transactional_history.py ..                       [ 21%]
+tests/infra/test_infra_transactions.py ..                                [ 22%]
+tests/infra/test_infra_undo.py ...                                       [ 22%]
+tests/infra/test_infra_util_enforcement.py .                             [ 22%]
+tests/infra/test_infra_validation_utils.py ...                           [ 23%]
+tests/infra/test_infra_wire_events.py ...                                [ 24%]
+tests/infra/test_infra_wizard_manager.py ..                              [ 24%]
+tests/integration/test_api_concurrency_and_performance.py .....          [ 25%]
+tests/integration/test_api_persistence_roundtrip.py .                    [ 25%]
+tests/integration/test_api_stress_and_edge_cases.py .....                [ 26%]
+tests/integration/test_api_undo_redo_transactions.py .                   [ 26%]
+tests/integration/test_api_wire_editing.py .                             [ 26%]
+tests/integration/test_full_api_workflow.py .                            [ 26%]
+tests/integration/test_tool_api_integration.py .                         [ 27%]
+tests/test_action_system.py ..                                           [ 27%]
+tests/test_app_lifecycle.py ..                                           [ 27%]
+tests/test_architecture_enforcement.py ...                               [ 28%]
+tests/test_architecture_model_mutation_contract.py ..                    [ 28%]
+tests/test_architecture_static.py ..                                     [ 29%]
+tests/test_autosave_action_contract.py .                                 [ 29%]
+tests/test_backup_action_contract.py .                                   [ 29%]
+tests/test_bundle_and_segment_membership.py ...                          [ 30%]
+tests/test_bundle_geometry.py ...                                        [ 30%]
+tests/test_bundle_validation.py .                                        [ 30%]
+tests/test_canvas_context_menu_no_recursion.py F
+
+=================================== FAILURES ===================================
+____________________ test_canvas_context_menu_no_recursion _____________________
+
+qtbot = <pytestqt.qtbot.QtBot object at 0x7267760f34d0>
+
+    def test_canvas_context_menu_no_recursion(qtbot):
+        """
+        Contract: Context menu event on canvas must be routed to APIManager.open_context_menu,
+        must not cause recursion, and must be accepted. The API must handle the event, not call back into the UI event handler.
+        """
+        app = QApplication.instance() or QApplication([])
+        api = APIManager.get_instance()
+        from unittest.mock import patch
+        window = MainWindow()
+        qtbot.addWidget(window)
+        window.show()
+        canvas = window.canvas
+        event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10), QPoint(10, 10), Qt.NoModifier)
+        with patch.object(api, "open_context_menu", wraps=api.open_context_menu) as mock_open:
+            try:
+>               canvas.contextMenuEvent(event)
+
+tests/test_canvas_context_menu_no_recursion.py:24: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+ui/canvas.py:251: in contextMenuEvent
+    api.open_context_menu(event)
+/usr/lib/python3.13/unittest/mock.py:1169: in __call__
+    return self._mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/unittest/mock.py:1173: in _mock_call
+    return self._execute_mock_call(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+/usr/lib/python3.13/unittest/mock.py:1246: in _execute_mock_call
+    return self._mock_wraps(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ui/context_menu_manager.py:137: in show_context_menu
+    menu = self.build_menu(menu_type=mtype)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+self = <ui.context_menu_manager.ContextMenuManager object at 0x7267760f2d50>
+menu_type = 'canvas', parent = None
+
+    def build_menu(self, menu_type=None, parent=None):
+        from infra.logging import infra_log
+        infra_log(f"[DEBUG][ContextMenuManager] build_menu START: menu_type={menu_type}", level="debug")
+        from infra.logging import infra_log
+        infra_log(f"[DIAG][ContextMenuManager] build_menu called with menu_type={menu_type}", level="info")
+        infra_log(f"[DIAG][ContextMenuManager] config: {self.config}", level="info")
+        infra_log(f"[DIAG][ContextMenuManager] actions_map: {self.actions_map}", level="info")
+        """
+        Build and return a QMenu for the given menu_type using config or actions_map.
+        If menu_type is None, falls back to actions_map for generic menu.
+        """
+        from PySide6.QtWidgets import QMenu
+        from PySide6.QtGui import QAction
+        from ui.i18n import I18N
+        menu = QMenu(parent)
+        actions_added = []
+        # Use YAML config for context menus if available
+        context_menus = self.config.get('context_menu', {}) if self.config else {}
+        if menu_type and menu_type in context_menus:
+            for entry in context_menus[menu_type]:
+                if entry.get('separator', False):
+                    menu.addSeparator()
+                    actions_added.append('separator')
+                elif 'uuid' in entry:
+                    uuid = entry['uuid']
+                    cmd = entry.get('command')
+                    label = None
+                    # If both command and uuid are present, always use label from actions_map[command]
+                    if cmd and cmd in self.actions_map and 'label' in self.actions_map[cmd]:
+                        label = self.actions_map[cmd]['label']
+                    elif uuid in self.actions_map and 'label' in self.actions_map[uuid]:
+                        label = self.actions_map[uuid]['label']
+                    else:
+                        label = I18N.get(cmd) if cmd else I18N.get(uuid)
+                    if not label or label == uuid or not isinstance(label, str):
+                        label = 'Add Generic Device' if cmd == 'tool.add_generic_device' or uuid == 'f1831bfa-9f66-461c-8a1d-6c5440dc314b' else uuid
+                    infra_log(f"[DEBUG][ContextMenuManager] Final label before QAction: {label}", level="debug")
+                    action = QAction(label, menu)
+                    action.setData(uuid)
+                    infra_log(f"[DEBUG][ContextMenuManager] QAction created: text={action.text()}, data={action.data()}", level="debug")
+                    action.triggered.connect(lambda checked=False, cid=uuid: self._execute(cid))
+                    menu.addAction(action)
+                    actions_added.append(f"{label} ({uuid})")
+                elif 'command' in entry:
+                    cmd_id = entry['command']
+                    # STRICT: All context menu actions must have a UUID mapping in actions_map
+                    if not self.actions_map or cmd_id not in self.actions_map or 'uuid' not in self.actions_map[cmd_id]:
+>                       raise AssertionError(f"Context menu entry for command '{cmd_id}' is missing a UUID mapping in actions_map. All context menu actions must have a UUID.")
+E                       AssertionError: Context menu entry for command 'tool.add_generic_device' is missing a UUID mapping in actions_map. All context menu actions must have a UUID.
+
+ui/context_menu_manager.py:68: AssertionError
+---------------------------- Captured stdout setup -----------------------------
+DEBUG: undo_stack type: <class 'infra.undo_stack2.UndoStack2'>
+DEBUG: undo_stack module: infra.undo_stack2
+DEBUG: undo_stack dir: ['__class__', '__delattr__', '__dict__', '__dir__', '__doc__', '__eq__', '__firstlineno__', '__format__', '__ge__', '__getattribute__', '__getstate__', '__gt__', '__hash__', '__init__', '__init_subclass__', '__le__', '__len__', '__lt__', '__module__', '__ne__', '__new__', '__reduce__', '__reduce_ex__', '__repr__', '__setattr__', '__sizeof__', '__static_attributes__', '__str__', '__subclasshook__', '__weakref__', '_callbacks', '_notify', '_redo_stack', '_undo_stack', 'begin_transaction', 'can_redo', 'can_undo', 'clear', 'do', 'end_transaction', 'in_transaction', 'is_empty', 'push', 'redo', 'redo_stack', 'subscribe', 'undo', 'undo_stack']
+DEBUG: infra.undo_stack file: /home/dworth/Dropbox/Bronco II/talustrace/infra/undo_stack.py
+DEBUG: sys.path: ['/home/dworth/Dropbox/Bronco II/talustrace', '/home/dworth/Dropbox/Bronco II/talustrace/tests/ui', '/home/dworth/Dropbox/Bronco II/talustrace/tests/tools', '/home/dworth/Dropbox/Bronco II/talustrace', '/home/dworth/Dropbox/Bronco II/talustrace/tests/integration', '/home/dworth/Dropbox/Bronco II/talustrace/tests/infra', '/home/dworth/Dropbox/Bronco II/talustrace/tests/dispatcher', '/home/dworth/Dropbox/Bronco II/talustrace/tests/api', '/home/dworth/Dropbox/Bronco II/talustrace', '/home/dworth/Dropbox/Bronco II/talustrace/venv/bin', '/usr/lib/python313.zip', '/usr/lib/python3.13', '/usr/lib/python3.13/lib-dynload', '/home/dworth/Dropbox/Bronco II/talustrace/venv/lib/python3.13/site-packages']
+DEBUG: undo_stack.py contents:
+001: """
+002: Undo/Redo Stack and Command Pattern for Talus Trace (PH5-CMD.1)
+003: """
+004: 
+005: 
+006: class BaseCommand:
+007:     """Base class for all undoable commands. Enforces dispatcher-only execution."""
+008:     _allow_execute = False  # Class-level flag for dispatcher enforcement
+009: 
+010:     def __init__(self, description=None):
+011:         self.description = description or self.__class__.__name__
+012:         self._executed = False
+013: 
+014:     def execute(self):
+015:         # Enforce that execute() is only called via dispatcher
+016:         if not getattr(self, '_allow_execute', False):
+017:             raise RuntimeError(f"{self.__class__.__name__}.execute() must be called via dispatcher, not directly!")
+018:         try:
+019:             return self._do_execute()
+020:         finally:
+021:             self._allow_execute = False  # Always reset after execution
+022: 
+023:     def _do_execute(self):
+024:         """Override this in subclasses with actual command logic."""
+025:         raise NotImplementedError
+026: 
+027:     def undo(self):
+028:         raise NotImplementedError
+029: 
+030:     def redo(self):
+031:         self.execute()
+032: 
+033:     @property
+034:     def executed(self):
+035:         return self._executed
+036: 
+037:     def mark_executed(self):
+038:         self._executed = True
+039: 
+040:     @staticmethod
+041:     def dispatch(command, *args, **kwargs):
+042:         """Dispatcher entry point: sets flag and calls execute."""
+043:         command._allow_execute = True
+044:         return command.execute(*args, **kwargs)
+045: 
+046: class UndoStack:
+047:     """
+048:     Manages undo/redo for commands in the application.
+049:     Provides stack operations, transaction grouping, and callback subscription.
+050:     """
+051:     def begin_transaction(self, description=None):
+052:         """
+053:         Begin a transaction to group multiple commands as one undoable action.
+054:         Args:
+055:             description (str): Optional description for the transaction.
+056:         """
+057:         if hasattr(self, '_transaction_commands') and self._transaction_commands is not None:
+058:             raise RuntimeError("Transaction already in progress")
+059:         self._transaction_commands = []
+060:         self._transaction_description = description or "Transaction"
+061: 
+062:     def end_transaction(self):
+063:         """
+064:         End the current transaction and push the grouped commands as a single command.
+065:         """
+066:         if not hasattr(self, '_transaction_commands') or self._transaction_commands is None:
+067:             raise RuntimeError("No transaction in progress")
+068:         if not self._transaction_commands:
+069:             self._transaction_commands = None
+070:             return
+071:         group = TransactionCommand(self._transaction_commands, self._transaction_description)
+072:         self.do(group)
+073:         self._transaction_commands = None
+074:         self._transaction_description = None
+075: 
+076:     def in_transaction(self):
+077:         """
+078:         Return True if a transaction is currently in progress.
+079:         """
+080:         return hasattr(self, '_transaction_commands') and self._transaction_commands is not None
+081: 
+082:     def is_empty(self):
+083:         """
+084:         Return True if the undo stack is empty.
+085:         """
+086:         return not self._undo_stack
+087: 
+088:     def __init__(self):
+089:         """
+090:         Initialize the UndoStack with empty undo/redo stacks and callbacks.
+091:         """
+092:         """
+093:         Initialize the UndoStack with empty undo/redo stacks and no active transaction.
+094:         """
+095:         self._undo_stack = []
+096:         self._redo_stack = []
+097:         self._current_transaction = None
+098:         self._transaction_depth = 0
+099: 
+100:     def subscribe(self, callback):
+101:         """
+102:         Subscribe a callback to undo/redo events.
+103:         Args:
+104:             callback (callable): Function to call on undo/redo events.
+105:         """
+106:         if callback not in self._callbacks:
+107:             self._callbacks.append(callback)
+108: 
+109:     def _notify(self, event_type):
+110:         """
+111:         Notify all subscribed callbacks of an event.
+112:         Args:
+113:             event_type (str): The type of event ('undo', 'redo', etc.).
+114:         """
+115:         for cb in self._callbacks:
+116:             try:
+117:                 cb(event_type)
+118:             except Exception as e:
+119:                 # ...removed debug print...
+120:                 pass
+121: 
+122:     def push(self, command: BaseCommand):
+123:         """
+124:         Push a command onto the undo stack and execute it.
+125:         Args:
+126:             command (BaseCommand): The command to execute and push.
+127:         """
+128:         self.do(command)
+129: 
+130:     def do(self, command: BaseCommand):
+131:         """
+132:         Execute a command and add it to the undo stack or current transaction.
+133:         Args:
+134:             command (BaseCommand): The command to execute.
+135:         """
+136:         command.execute()
+137:         command.mark_executed()
+138:         if self.in_transaction():
+139:             self._transaction_commands.append(command)
+140:         else:
+141:             self._undo_stack.append(command)
+142:             self._redo_stack.clear()
+143: 
+144: 
+145: # TransactionCommand groups multiple commands as a single undoable/redoable action
+146: class TransactionCommand(BaseCommand):
+147:     """
+148:     Groups multiple commands as a single undoable/redoable action for transactions.
+149:     """
+150:     def __init__(self, commands, description=None):
+151:         """
+152:         Initialize the TransactionCommand with a list of commands and optional description.
+153:         Args:
+154:             commands (list): List of BaseCommand objects.
+155:             description (str): Optional description for the transaction.
+156:         """
+157:         super().__init__(description or "Transaction")
+158:         self.commands = list(commands)
+159: 
+160:     def execute(self):
+161:         """
+162:         Execute all commands in the transaction.
+163:         """
+164:         for cmd in self.commands:
+165:             cmd.execute()
+166: 
+167:     def undo(self):
+168:         """
+169:         Undo all commands in the transaction in reverse order.
+170:         """
+171:         for cmd in reversed(self.commands):
+172:             cmd.undo()
+173: 
+174:     def redo(self):
+175:         """
+176:         Redo all commands in the transaction in order.
+177:         """
+178:         for cmd in self.commands:
+179:             cmd.redo()
+180: 
+181:     def undo(self):
+182:         """
+183:         Undo the last command on the undo stack.
+184:         """
+185:         if not self._undo_stack:
+186:             return
+187:         command = self._undo_stack.pop()
+188:         command.undo()
+189:         self._redo_stack.append(command)
+190:         self._notify('undo')
+191: 
+192:     def redo(self):
+193:         """
+194:         Redo the last undone command on the redo stack.
+195:         """
+196:         if not self._redo_stack:
+197:             return
+198:         command = self._redo_stack.pop()
+199:         command.redo()
+200:         self._undo_stack.append(command)
+201:         self._notify('redo')
+202: 
+203:     def clear(self):
+204:         """
+205:         Clear both the undo and redo stacks.
+206:         """
+207:         self._undo_stack.clear()
+208:         self._redo_stack.clear()
+209: 
+210:     def can_undo(self):
+211:         """
+212:         Return True if there are commands to undo.
+213:         """
+214:         return bool(self._undo_stack)
+215: 
+216:     def can_redo(self):
+217:         """
+218:         Return True if there are commands to redo.
+219:         """
+220:         return bool(self._redo_stack)
+221: 
+222:     @property
+223:     def undo_stack(self):
+224:         """
+225:         Return the current undo stack.
+226:         """
+227:         return list(self._undo_stack)
+228: 
+229:     @property
+230:     def redo_stack(self):
+231:         """
+232:         Return the current redo stack.
+233:         """
+234:         return list(self._redo_stack)
+235: 
+236:     def __len__(self):
+237:         """
+238:         Return the number of commands in the undo stack.
+239:         """
+240:         return len(self._undo_stack)
+----------------------------- Captured stdout call -----------------------------
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+[infra_log] Writing to log_path: /tmp/tmpcrcpt0uj/infra_test.log
+[infra_log] Exception writing to /tmp/tmpcrcpt0uj/infra_test.log: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'
+----------------------------- Captured stderr call -----------------------------
+2026-01-26 08:53:32,965 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [ProjectBrowser] refresh called with data=None
+2026-01-26 08:53:32,966 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [ProjectBrowser] refresh: proceeding to update tree
+2026-01-26 08:53:32,970 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: view.toggle_project_browser (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+2026-01-26 08:53:32,970 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: view.toggle_property_panel (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+2026-01-26 08:53:32,970 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: view.toggle_library (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+2026-01-26 08:53:32,970 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: view.toggle_audit_panel (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+2026-01-26 08:53:32,970 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: tool.move (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+2026-01-26 08:53:32,970 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: tool.add_generic_device (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+2026-01-26 08:53:32,970 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: device.create_wizard (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+2026-01-26 08:53:32,970 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: edit.undo (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+2026-01-26 08:53:32,970 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: edit.redo (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+2026-01-26 08:53:32,971 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: tool.measure (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+2026-01-26 08:53:32,979 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DIAG][ContextMenuManager] show_context_menu called: event=<PySide6.QtCore.QEvent(QEvent::ContextMenu)>, item=None, menu_type=None, item_type=<class 'NoneType'>
+2026-01-26 08:53:32,979 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DIAG][ContextMenuManager] show_context_menu: resolved mtype=canvas
+2026-01-26 08:53:32,979 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DEBUG][ContextMenuManager] build_menu START: menu_type=canvas
+2026-01-26 08:53:32,979 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DIAG][ContextMenuManager] build_menu called with menu_type=canvas
+2026-01-26 08:53:32,979 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DIAG][ContextMenuManager] config: {'menubar': [{'label': 'File', 'items': [{'command': 'file.new', 'label': 'file.new'}, {'command': 'file.open', 'label': 'file.open'}, {'command': 'file.save', 'label': 'file.save'}, {'separator': True}, {'command': 'file.export_bom', 'label': 'file.export_bom'}, {'command': 'file.export_wirelist', 'label': 'file.export_wirelist'}, {'separator': True}, {'command': 'file.exit', 'label': 'file.exit'}]}, {'label': 'Edit', 'items': [{'command': 'edit.undo', 'label': 'edit.undo'}, {'command': 'edit.redo', 'label': 'edit.redo'}, {'separator': True}, {'command': 'edit.settings', 'label': 'edit.settings'}, {'command': 'edit.theme', 'label': 'edit.theme'}]}, {'label': 'Tools', 'items': [{'command': 'tool.move', 'label': 'tool.move'}, {'command': 'tool.add_generic_device', 'label': 'tool.add_generic_device'}, {'command': 'device.create_wizard', 'label': 'device.create_wizard'}, {'command': 'tool.measure', 'label': 'tool.measure'}]}, {'label': 'View', 'items': [{'command': 'view.zoom_extents', 'label': 'view.zoom_extents'}, {'command': 'view.zoom_selected', 'label': 'view.zoom_selected'}, {'separator': True}, {'command': 'view.toggle_project_browser', 'label': 'view.toggle_project_browser'}, {'command': 'view.toggle_property_panel', 'label': 'view.toggle_property_panel'}, {'command': 'view.toggle_library', 'label': 'view.toggle_library'}, {'command': 'view.toggle_audit_panel', 'label': 'view.toggle_audit_panel'}, {'separator': True}, {'command': 'view.reset_layout', 'label': 'view.reset_layout'}]}], 'keymap': {'cancel': 'Key_Escape'}, 'toolbar': {'visible': True, 'items': [{'command': 'tool.move'}, {'command': 'tool.add_generic_device'}, {'command': 'device.create_wizard'}, {'separator': True}, {'command': 'edit.undo'}, {'command': 'edit.redo'}]}, 'context_menu': {'canvas': [{'command': 'tool.add_generic_device'}], 'device': [{'command': 'device.add_pin'}, {'separator': True}, {'command': 'edit.rotate_cw'}, {'separator': True}, {'command': 'edit.delete', 'label': 'Delete Item'}], 'wire': [{'command': 'edit.delete'}], 'pin': [{'command': 'edit.delete'}]}}
+2026-01-26 08:53:32,979 [INFO] talustrace.infra: infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DIAG][ContextMenuManager] actions_map: {'device.add_pin': {'label': 'Add Pin', 'action': 'device.add_pin'}, 'edit.delete': {'action': 'edit.delete'}, 'edit.rotate_cw': {'label': 'Rotate 90°', 'action': 'edit.rotate_cw'}}
+------------------------------ Captured log call -------------------------------
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [ProjectBrowser] refresh called with data=None
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [ProjectBrowser] refresh: proceeding to update tree
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: view.toggle_project_browser (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: view.toggle_property_panel (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: view.toggle_library (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: view.toggle_audit_panel (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: tool.move (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: tool.add_generic_device (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: device.create_wizard (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: edit.undo (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: edit.redo (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DISPATCHER] Registered action: tool.measure (registry id=125789235300400) keys now=['edit.add', 'edit.update', '_execute_command', 'file.new', 'file.save', 'file.open', 'file.export_bom', 'file.export_wirelist', 'file.exit', 'edit.undo', 'edit.redo', 'edit.delete', 'edit.rotate_cw', 'edit.rotate_ccw', 'edit.update_property', 'edit.settings', 'edit.theme', 'view.toggle_project_browser', 'view.toggle_library', 'view.toggle_property_panel', 'view.toggle_audit_panel', 'view.reset_layout', 'view.zoom_extents', 'view.zoom_selected', 'tool.select', 'tool.wire', 'tool.move', 'tool.add_generic_device', 'device.create_wizard', 'device.add_pin', 'tool.measure', 'test.move']
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DIAG][ContextMenuManager] show_context_menu called: event=<PySide6.QtCore.QEvent(QEvent::ContextMenu)>, item=None, menu_type=None, item_type=<class 'NoneType'>
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DIAG][ContextMenuManager] show_context_menu: resolved mtype=canvas
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DEBUG][ContextMenuManager] build_menu START: menu_type=canvas
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DIAG][ContextMenuManager] build_menu called with menu_type=canvas
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DIAG][ContextMenuManager] config: {'menubar': [{'label': 'File', 'items': [{'command': 'file.new', 'label': 'file.new'}, {'command': 'file.open', 'label': 'file.open'}, {'command': 'file.save', 'label': 'file.save'}, {'separator': True}, {'command': 'file.export_bom', 'label': 'file.export_bom'}, {'command': 'file.export_wirelist', 'label': 'file.export_wirelist'}, {'separator': True}, {'command': 'file.exit', 'label': 'file.exit'}]}, {'label': 'Edit', 'items': [{'command': 'edit.undo', 'label': 'edit.undo'}, {'command': 'edit.redo', 'label': 'edit.redo'}, {'separator': True}, {'command': 'edit.settings', 'label': 'edit.settings'}, {'command': 'edit.theme', 'label': 'edit.theme'}]}, {'label': 'Tools', 'items': [{'command': 'tool.move', 'label': 'tool.move'}, {'command': 'tool.add_generic_device', 'label': 'tool.add_generic_device'}, {'command': 'device.create_wizard', 'label': 'device.create_wizard'}, {'command': 'tool.measure', 'label': 'tool.measure'}]}, {'label': 'View', 'items': [{'command': 'view.zoom_extents', 'label': 'view.zoom_extents'}, {'command': 'view.zoom_selected', 'label': 'view.zoom_selected'}, {'separator': True}, {'command': 'view.toggle_project_browser', 'label': 'view.toggle_project_browser'}, {'command': 'view.toggle_property_panel', 'label': 'view.toggle_property_panel'}, {'command': 'view.toggle_library', 'label': 'view.toggle_library'}, {'command': 'view.toggle_audit_panel', 'label': 'view.toggle_audit_panel'}, {'separator': True}, {'command': 'view.reset_layout', 'label': 'view.reset_layout'}]}], 'keymap': {'cancel': 'Key_Escape'}, 'toolbar': {'visible': True, 'items': [{'command': 'tool.move'}, {'command': 'tool.add_generic_device'}, {'command': 'device.create_wizard'}, {'separator': True}, {'command': 'edit.undo'}, {'command': 'edit.redo'}]}, 'context_menu': {'canvas': [{'command': 'tool.add_generic_device'}], 'device': [{'command': 'device.add_pin'}, {'separator': True}, {'command': 'edit.rotate_cw'}, {'separator': True}, {'command': 'edit.delete', 'label': 'Delete Item'}], 'wire': [{'command': 'edit.delete'}], 'pin': [{'command': 'edit.delete'}]}}
+INFO     talustrace.infra:logging.py:74 infra_log file write failed: [Errno 2] No such file or directory: '/tmp/tmpcrcpt0uj/infra_test.log'; original: [DIAG][ContextMenuManager] actions_map: {'device.add_pin': {'label': 'Add Pin', 'action': 'device.add_pin'}, 'edit.delete': {'action': 'edit.delete'}, 'edit.rotate_cw': {'label': 'Rotate 90°', 'action': 'edit.rotate_cw'}}
+=========================== short test summary info ============================
+FAILED tests/test_canvas_context_menu_no_recursion.py::test_canvas_context_menu_no_recursion
+!!!!!!!!!!!!!!!!!!!!!!!!!! stopping after 1 failures !!!!!!!!!!!!!!!!!!!!!!!!!!!
+======================== 1 failed, 167 passed in 14.85s ========================

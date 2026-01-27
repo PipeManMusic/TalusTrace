@@ -1,3 +1,8 @@
+"""
+Dispatch Manager Design:
+------------------------
+The DispatchManager (dispatcher) acts as the central command bus for the application. All user actions, UI events, and tool commands are routed through this dispatcher, which enforces contract compliance, logging, and undo/redo integration. By centralizing command registration and execution, the dispatcher ensures that all actions are validated, tracked, and can be extended or intercepted for features like audit, scripting, or remote control. This design decouples UI and business logic, making the system extensible and testable.
+"""
 
 # DispatcherRegistry class and registry instantiation must come first to avoid circular import issues
 
@@ -51,12 +56,7 @@ def _execute_command_action(cmd, **flags):
     """Dispatcher action to execute a command object via dispatcher contract."""
     return cmd.execute()
 
-registry.register("_execute_command", _execute_command_action)
-# dispatcher.py
-"""
-Centralized action dispatcher for Talus Trace.
-All commands must be registered and executed via this dispatcher.
-"""
+
 
 
 from infra.logging import infra_log
