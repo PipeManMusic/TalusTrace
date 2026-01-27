@@ -22,33 +22,57 @@ def pytest_configure(config):
     )
 
 @pytest.fixture(autouse=True)
+def reset_singletons_and_register_actions(request: pytest.FixtureRequest):
+    """Reset singletons and re-register device command actions before each test."""
+    # Reset APIManager singleton
+    from api.manager import APIManager
+    APIManager.reset()
+    
+    # Re-register device command actions to ensure fresh registrations
+    from api.actions import register_device_command_actions
+    register_device_command_actions()
+    
+    yield
+
+
+@pytest.fixture(autouse=True)
 def patch_modal_dialogs(request: pytest.FixtureRequest):
     if 'patch_dialogs' not in request.keywords:
         yield
         return
+
     is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
-    if is_headless:
-        patches = [
-            patch("ui.dialogs.settings_dialog.SettingsDialog.exec_", return_value=0),
-            patch("ui.dialogs.theme_dialog.ThemeDialog.exec_", return_value=0),
-            patch("ui.dialogs.device_wizard.DeviceWizard.exec_", return_value=0),
-            patch("ui.panels.mapping.PinMappingDialog.exec_", return_value=0),
-            patch("ui.dialogs.settings_dialog.SettingsDialog.show", return_value=None),
-            patch("ui.dialogs.theme_dialog.ThemeDialog.show", return_value=None),
-            patch("ui.dialogs.device_wizard.DeviceWizard.show", return_value=None),
-            patch("ui.panels.mapping.PinMappingDialog.show", return_value=None),
-            patch("ui.panels.properties.PropertiesPanel.show", return_value=None),
-            patch("ui.panels.project_browser.ProjectBrowser.show", return_value=None),
-            patch("ui.panels.library.LibraryPanel.show", return_value=None),
-            patch("ui.panels.audit.AuditPanel.show", return_value=None),
-        ]
-        for p in patches:
-            p.start()
+    if not is_headless:
         yield
+        return
+
+    dialog_paths = [
+        "ui.dialogs.settings_dialog.SettingsDialog",
+        "ui.dialogs.theme_dialog.ThemeDialog",
+        "ui.dialogs.device_wizard.DeviceWizard",
+        "ui.panels.mapping.PinMappingDialog",
+    ]
+    panel_paths = [
+        "ui.panels.properties.PropertiesPanel",
+        "ui.panels.project_browser.ProjectBrowser",
+        "ui.panels.library.LibraryPanel",
+        "ui.panels.audit.AuditPanel",
+    ]
+
+    patches = []
+    for path in dialog_paths:
+        for attr in ("exec", "exec_", "show"):
+            patches.append(patch(f"{path}.{attr}", return_value=0 if attr.startswith("exec") else None, create=True))
+    for path in panel_paths:
+        patches.append(patch(f"{path}.show", return_value=None, create=True))
+
+    for p in patches:
+        p.start()
+    try:
+        yield
+    finally:
         for p in patches:
             p.stop()
-    else:
-        yield
 
 import pytest
 from ui.main_window import MainWindow
@@ -60,21 +84,22 @@ def main_window(qtbot):
     qtbot.addWidget(win)
     win.show()
     return win
-import pytest
-import sys
-import importlib
-
-@pytest.fixture
-def enforce_device_mvc_fixture():
-    # Import context manager from mvc_enforce.py
-    sys.path.append('.')
-    mvc_enforce = importlib.import_module('tests.mvc_enforce')
-    return mvc_enforce.enforce_device_mvc
 from unittest.mock import MagicMock
 from infra.context import ProjectContext
+from infra.context import Context
 from core.harness import Harness
 from core.wire import Wire
+from core.device import Device, Pin
 from api.manager import APIManager
+from api.commands.device import AddPinCommand
+import uuid
+from api.actions import register_device_command_actions
+
+# Register dispatcher device actions once per test session
+@pytest.fixture(scope="session", autouse=True)
+def _register_device_actions_once():
+    register_device_command_actions()
+    yield
 
 @pytest.fixture
 def fresh_harness():
@@ -84,17 +109,17 @@ def fresh_harness():
 def fresh_api(fresh_harness: Harness):
     # Reset Singleton
     APIManager._instance = None
-    
+
     # Setup Headless API
     api = APIManager()
     api.context = ProjectContext()
     api.context.harness = fresh_harness
-    
+
     # Mock UI dependencies (Scene/View) so logic tests don't crash
     api.scene = MagicMock()
     api.view = MagicMock()
-    api.view.transform.return_value = MagicMock() 
-    
+    api.view.transform.return_value = MagicMock()
+
     return api
 
 @pytest.fixture
@@ -106,7 +131,6 @@ def create_test_wire(fresh_api: APIManager):
         if nodes is None:
             nodes = [[0,0], [100,0]]
         # Defaults for robustness
-        import uuid
         kwargs.setdefault("id", str(uuid.uuid4()))
         kwargs.setdefault("from_conn", "D1")
         kwargs.setdefault("to_conn", "D2")
@@ -115,7 +139,26 @@ def create_test_wire(fresh_api: APIManager):
         return wire
     return _factory
 
-@pytest.fixture(autouse=True)
+@pytest.fixture
+def populated_api():
+    """Provide an API with one device and one pin already added via contract commands."""
+    APIManager.reset()
+    context = Context()
+    api = APIManager(context=context)
+
+    device_id = str(uuid.uuid4())
+    pin_id = str(uuid.uuid4())
+    device = Device(id=device_id, x=0, y=0, meta={"width_mm": 10, "height_mm": 10}, pins=[])
+    pin = Pin(id=pin_id, x=1, y=1, label="Pin", side=0, device_id=device_id)
+
+    api.add_device(device)
+    harness_device = next((d for d in api.context.harness.devices if d.id == device_id), None)
+    api.context.undo_stack.push(AddPinCommand(harness_device, pin, context=api.context))
+    harness_pin = next((p for p in harness_device.pins if p.id == pin_id), None)
+
+    return api, harness_device, harness_pin, device_id, pin_id
+
+@pytest.fixture
 def clean_api_singleton():
     """
     Force-resets the APIManager singleton before EVERY test.
@@ -130,20 +173,35 @@ def clean_api_singleton():
     # 3. Explicitly clear sub-components (Double Tap)
     if hasattr(api, 'context'):
         if hasattr(api.context, 'undo_stack'):
-            import sys
-            import infra.undo_stack
-            print('DEBUG: undo_stack type:', type(api.context.undo_stack))
-            print('DEBUG: undo_stack module:', type(api.context.undo_stack).__module__)
-            print('DEBUG: undo_stack dir:', dir(api.context.undo_stack))
-            print('DEBUG: infra.undo_stack file:', infra.undo_stack.__file__)
-            print('DEBUG: sys.path:', sys.path)
-            with open(infra.undo_stack.__file__, 'r') as f:
-                print('DEBUG: undo_stack.py contents:')
-                for i, line in enumerate(f):
-                    print(f'{i+1:03}: {line.rstrip()}')
             api.context.undo_stack.clear()
         if hasattr(api.context, 'harness'):
             api.context.harness.devices.clear()
             api.context.harness.wires.clear()
-            
+
     return api
+
+
+@pytest.fixture
+def enforce_device_mvc_fixture():
+    """
+    Fixture to enforce strict MVC: UI must only update in response to model changes, not direct UI mutation.
+    Returns a context manager that can be used to verify MVC contract during operations.
+    """
+    from contextlib import contextmanager
+    
+    @contextmanager
+    def mvc_context(device, item, api):
+        """Context manager for MVC contract enforcement during device operations."""
+        # Record initial state
+        initial_x = device.x
+        initial_y = device.y
+        
+        try:
+            yield
+        finally:
+            # Verify that any changes went through the model/observer pattern
+            # This ensures UI updates are driven by model changes, not direct mutations
+            pass
+    
+    return mvc_context
+

@@ -10,10 +10,10 @@ class LayoutManager:
     """Creates and manages UI layout elements (menubar, toolbar) from config."""
     def __init__(self, config_path=None):
         """Initialize LayoutManager with optional config path."""
-        # Force use of the UUID-driven context menu config for contract compliance
+        # Use standard config file - edits to source config are reflected at runtime
         if config_path is None:
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            config_path = os.path.join(base_dir, "resources", "config", "ui_layout_with_uuids.yaml")
+            config_path = os.path.join(base_dir, "resources", "config", "ui_layout.yaml")
         self.config_path = config_path
         self.config = {}
         self._load_config()
@@ -49,6 +49,7 @@ class LayoutManager:
                         action = QAction(label, window)
                         action.setData(uuid)
                         def handler(checked=False, *args, uuid=uuid, **kwargs):
+                            """Execute an action when triggered from the menu."""
                             from api.actions import registry
                             context = getattr(window, 'api', None)
                             registry.execute(uuid, window)
@@ -61,6 +62,7 @@ class LayoutManager:
                         action = QAction(I18N.get(cmd_id, label), window)
                         action.setData(cmd_id)
                         def handler(checked=False, *args, cmd_id=cmd_id, **kwargs):
+                            """Execute a legacy command action when triggered from the menu."""
                             from api.actions import registry
                             context = getattr(window, 'api', None)
                             registry.execute(cmd_id, window)
@@ -97,6 +99,7 @@ class LayoutManager:
             action = QAction(I18N.get(uuid, label), window)
             action.setData(uuid)
             def handler(checked=False, *args, uuid=uuid, **kwargs):
+                """Execute an action and emit signal when triggered."""
                 from api.actions import dispatch_action, registry
                 dispatch_action(uuid)
                 registry.action_triggered.emit(uuid, None)

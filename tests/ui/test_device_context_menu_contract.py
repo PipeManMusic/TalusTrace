@@ -22,6 +22,7 @@ def test_device_context_menu_shown_on_right_click(qtbot):
         menu = data['menu']
         pos = data.get('event').globalPos() if data.get('event') else None
         print(f'[TEST HOOK] Context menu shown with actions: {[a.text() for a in menu.actions()]} at pos: {pos}')
+        shown_menu['menu'] = menu  # Store menu object for assertion
         shown_menu['actions'] = [a.text() for a in menu.actions()]
         shown_menu['pos'] = pos
     api.subscribe('context_menu', test_hook)
@@ -53,11 +54,11 @@ def test_device_context_menu_shown_on_right_click(qtbot):
         # Assert a menu was shown with expected device-specific actions (by UUID)
         assert 'menu' in shown_menu, "No context menu was shown."
         menu = shown_menu['menu']
-        # UUIDs from context_menu config: device.add_pin (command), rotate_cw (uuid), delete (uuid)
+        # UUIDs from context_menu config (ui_layout.yaml + actions_map)
         expected_uuids = set([
-            'device.add_pin',
-            '4a88e033-860e-4b9b-9140-338b49c40e61',  # Rotate 90°
-            'e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b'   # Delete
+            '7a1e2b3c-4d5e-678f-9012-abcdefabcdef',  # device.add_pin (Add Pin)
+            '4a88e033-860e-4b9b-9140-338b49c40e61',  # edit.rotate_cw (Rotate 90°)
+            'e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b'   # edit.delete (Delete)
         ])
         def extract_uuid(data):
             if isinstance(data, dict):

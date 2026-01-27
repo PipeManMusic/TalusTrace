@@ -123,6 +123,7 @@ class PlacementTool(BaseTool):
                 self.ghost_item = None
 
     def on_mouse_press(self, event):
+        """Handle mouse press events to complete device placement."""
         import logging
         logging.debug(f"[PlacementTool.on_mouse_press] called with event={event}")
         """

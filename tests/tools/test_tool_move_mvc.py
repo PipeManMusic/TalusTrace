@@ -68,8 +68,9 @@ def test_move_tool_mvc_compliance(api_and_tool):
         event_obj_release.scene_pos = QPointF(10, 10)
         input_system.handle_canvas_event(event_obj_release)
 
-        # Assert APIManager.move_device was called with device.id
-        move_patch.assert_called_with(device.id, 10.0, 10.0, commit=True)
+        # Assert APIManager.move_device was called with the scene item (not device.id)
+        # MoveTool now passes current_item to move_device for proper undo tracking
+        move_patch.assert_called_with(mock_item, 10.0, 10.0, commit=True)
         # Assert device position updated
         assert device.x == 10.0 and device.y == 10.0
         # Assert scene item position updated

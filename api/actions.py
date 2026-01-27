@@ -93,123 +93,36 @@ class ActionRegistry(QObject):
 
 registry = ActionRegistry()
 
-# --- Build global actions_map from ui_layout_with_uuids.yaml ---
+# --- Build global actions_map from canonical command definitions ---
 def build_actions_map():
     """
-    Build a global actions_map mapping command names to UUIDs and labels from ui_layout_with_uuids.yaml and i18n file.
+    Build a global actions_map mapping command IDs to UUIDs and labels using
+    a single canonical map plus i18n labels. Avoids parsing YAML layouts.
     """
-    import yaml
-    import os
-    actions_map = {}
-    config_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../resources/config/ui_layout_with_uuids.yaml"))
-    i18n_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../resources/config/langs/en_with_uuids.yaml"))
-    with open(config_path, "r") as f:
-        config = yaml.safe_load(f)
-    with open(i18n_path, "r") as f:
-        i18n = yaml.safe_load(f)
-    import sys
-    print(f"[DEBUG][i18n] type={type(i18n)} keys={list(i18n.keys()) if isinstance(i18n, dict) else None}", file=sys.stderr)
-    sample_uuid = 'f1831bfa-9f66-461c-8a1d-6c5440dc314b'
-    print(f"[DEBUG][i18n] sample lookup {sample_uuid}: {i18n.get(sample_uuid) if isinstance(i18n, dict) else None}", file=sys.stderr)
-    # Helper to get label from i18n
-    def get_label(uuid):
-        label = i18n.get(uuid)
-        if not label:
-            label = uuid
-        return label
-    # Helper to add mapping for UUID and action name
-    def add_mapping(uuid, action_name=None):
-        import sys
-        label = get_label(uuid) if uuid else None
-        # Always add mapping for both uuid and action_name, even if label is missing
-        if uuid:
-            print(f"[DEBUG][add_mapping] Adding uuid mapping: uuid={uuid}, action_name={action_name}, label={label}", file=sys.stderr)
-            actions_map[uuid] = {"uuid": uuid, "label": label or uuid, "action": action_name or uuid}
-        if action_name:
-            print(f"[DEBUG][add_mapping] Adding action_name mapping: action_name={action_name}, uuid={uuid}, label={label}", file=sys.stderr)
-            actions_map[action_name] = {"uuid": uuid, "label": label or uuid, "action": action_name}
+    i18n_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "../resources/config/langs/en.yaml"))
+    try:
+        with open(i18n_path, "r") as f:
+            i18n = yaml.safe_load(f) or {}
+    except Exception:
+        i18n = {}
 
-    # Menubar
-    for menu in config.get("menubar", []):
-        for item in menu.get("items", []):
-            if isinstance(item, dict):
-                uuid = item.get("uuid")
-                cmd = item.get("command")
-                add_mapping(uuid, cmd)
+    def label_for(uuid):
+        """Get the user-facing label for an action UUID."""
+        return i18n.get(uuid) or uuid
 
-    # Toolbar
-    for item in config.get("toolbar", {}).get("items", []):
-        if isinstance(item, dict):
-            uuid = item.get("uuid")
-            cmd = item.get("command")
-            add_mapping(uuid, cmd)
-
-
-    # Canonical map for all required context menu commands
     canonical_map = {
-        'tool.add_generic_device': 'f1831bfa-9f66-461c-8a1d-6c5440dc314b',
-        'device.add_pin': '7a1e2b3c-4d5e-678f-9012-abcdefabcdef',
-        'edit.delete': 'e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b',
-        'edit.rotate_cw': '4a88e033-860e-4b9b-9140-338b49c40e61',
+        "tool.add_generic_device": "f1831bfa-9f66-461c-8a1d-6c5440dc314b",
+        "device.add_pin": "7a1e2b3c-4d5e-678f-9012-abcdefabcdef",
+        "edit.delete": "e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b",
+        "edit.rotate_cw": "4a88e033-860e-4b9b-9140-338b49c40e61",
     }
 
-    # Track all context menu commands and uuids
-    context_menu_cmds = set()
-    context_menu_uuids = set()
-    for section_name, section in config.get("context_menu", {}).items():
-        for item in section:
-            import sys
-            uuid = None
-            cmd = None
-            if isinstance(item, dict):
-                uuid = item.get("uuid")
-                cmd = item.get("command")
-            elif isinstance(item, str):
-                uuid = item
-            if cmd:
-                context_menu_cmds.add(cmd)
-            if uuid:
-                context_menu_uuids.add(uuid)
-            # Always resolve uuid from canonical_map if missing
-            if not uuid and cmd and cmd in canonical_map:
-                uuid = canonical_map[cmd]
-            print(f"[DEBUG][context_menu loop] section={section_name}, cmd={cmd}, uuid={uuid}", file=sys.stderr)
-            add_mapping(uuid, cmd)
-
-
-    # FORCE: Always add canonical map entries for both command and UUID
+    actions_map: Dict[str, Dict[str, str]] = {}
     for cmd, uuid in canonical_map.items():
-        label = get_label(uuid)
-        # Always add mapping, even if label fallback is UUID
-        actions_map[uuid] = {"uuid": uuid, "label": label or uuid, "action": cmd}
-        actions_map[cmd] = {"uuid": uuid, "label": label or uuid, "action": cmd}
+        lbl = label_for(uuid)
+        actions_map[cmd] = {"uuid": uuid, "label": lbl, "action": cmd}
+        actions_map[uuid] = {"uuid": uuid, "label": lbl, "action": cmd}
 
-    # Map any remaining context menu UUIDs
-    for uuid in context_menu_uuids:
-        if not uuid:
-            continue
-        label = get_label(uuid)
-        if not label or label == uuid:
-            continue
-        actions_map[uuid] = {"uuid": uuid, "label": label, "action": uuid}
-
-    # Map any remaining context menu commands
-    for cmd in context_menu_cmds:
-        if not cmd:
-            continue
-        if cmd in actions_map:
-            continue
-        uuid = canonical_map.get(cmd)
-        if uuid:
-            label = get_label(uuid)
-            if not label or label == uuid:
-                continue
-            actions_map[cmd] = {"uuid": uuid, "label": label, "action": cmd}
-
-    # Remove any stray None keys/values
-    actions_map = {k: v for k, v in actions_map.items() if k is not None and v.get('uuid') is not None and v.get('label') is not None}
-    import sys
-    print("[DEBUG][build_actions_map] FINAL actions_map:", actions_map, file=sys.stderr)
     return actions_map
 
 # Expose global actions_map for UI usage
@@ -298,6 +211,7 @@ def register_device_command_actions():
     from api.commands.device import DeletePinCommand, AddDeviceCommand, UpdateDeviceCommand
     from infra.logging import infra_log
     from dispatcher import registry as dispatcher_registry
+    from dispatcher import dispatch_action as dispatcher_dispatch_action
     infra_log(f"[DEBUG] register_device_command_actions: dispatcher_registry id={id(dispatcher_registry)} before registration, keys={list(dispatcher_registry.keys())}", level="debug")
     def delete_action(context, **flags):
         """
@@ -307,41 +221,54 @@ def register_device_command_actions():
             **flags: Additional flags for deletion.
         """
         from infra.logging import infra_log
-        import traceback
         infra_log(f"[DISPATCHER] edit.delete invoked with context={context} flags={flags}", level="info")
-        print(f"[DIAG] [DISPATCHER] edit.delete invoked with context={context} flags={flags}")
         # Log context pin/device if present
         pin_obj = getattr(context, 'pin', None)
         device_obj = getattr(context, 'device', None)
+        # Capture APIManager instance early for diagnostics
+        try:
+            from api.manager import APIManager
+            api = APIManager.get_instance()
+        except Exception:
+            api = None
         infra_log(f"[DIAG][DISPATCHER] context.pin: {repr(pin_obj)} id={id(pin_obj) if pin_obj else None}", level="debug")
         infra_log(f"[DIAG][DISPATCHER] context.device: {repr(device_obj)} id={id(device_obj) if device_obj else None}", level="debug")
         # Prefer selection from APIManager context if available
         selected = None
+        # Prefer explicit context.pin over context.device (pin is more specific)
+        if context and hasattr(context, 'pin') and getattr(context, 'pin', None) is not None:
+            selected = getattr(context, 'pin')
+            infra_log(f"[DISPATCHER] Using context.pin for delete: {selected}", level="info")
+        elif context and hasattr(context, 'device') and getattr(context, 'device', None) is not None:
+            selected = getattr(context, 'device')
+            infra_log(f"[DISPATCHER] Using context.device for delete: {selected}", level="info")
+        else:
+            try:
+                from api.manager import APIManager
+                api = APIManager.get_instance()
+                mgr = getattr(api.context, 'selection_manager', None)
+                if mgr and getattr(mgr, 'selected_models', None):
+                    selection = mgr.selected_models
+                    if selection:
+                        selected = selection[0]
+                else:
+                    # Fallback to global singleton
+                    from core.selection import SelectionManager
+                    selection = SelectionManager().selected_models
+                    if selection:
+                        selected = selection[0]
+            except Exception as e:
+                infra_log(f"[DISPATCHER] Error extracting selection: {e}", level="error")
+        infra_log(f"[DIAG][DISPATCHER] selected: {selected}", level="debug")
+        infra_log(f"[DIAG][DISPATCHER] context: {context}", level="debug")
         try:
-            from api.manager import APIManager
-            api = APIManager.get_instance()
-            mgr = getattr(api.context, 'selection_manager', None)
-            if mgr and getattr(mgr, 'selected_models', None):
-                selection = mgr.selected_models
-                if selection:
-                    selected = selection[0]
-            else:
-                # Fallback to global singleton
-                from core.selection import SelectionManager
-                selection = SelectionManager().selected_models
-                if selection:
-                    selected = selection[0]
-        except Exception as e:
-            infra_log(f"[DISPATCHER] Error extracting selection: {e}", level="error")
-        print(f"[DIAG] [DISPATCHER] selected: {selected}")
-        print(f"[DIAG] [DISPATCHER] context: {context}")
-        print(f"[DIAG] [DISPATCHER] selection_manager: {getattr(api.context, 'selection_manager', None)}")
-        print(f"[DIAG] [DISPATCHER] harness.devices: {[getattr(d, 'id', None) for d in getattr(api.context.harness, 'devices', [])]}")
-        print(f"[DIAG] [DISPATCHER] harness.devices object ids: {[id(d) for d in getattr(api.context.harness, 'devices', [])]}")
-        print(f"[DIAG] [DISPATCHER] harness.pins: {[getattr(p, 'id', None) for p in getattr(api.context.harness, 'pins', [])]}")
-        print(f"[DIAG] [DISPATCHER] harness.pins object ids: {[id(p) for p in getattr(api.context.harness, 'pins', [])]}")
-        print(f"[DIAG] [DISPATCHER] Call stack:")
-        traceback.print_stack(limit=10)
+            infra_log(f"[DIAG][DISPATCHER] selection_manager: {getattr(api.context, 'selection_manager', None)}", level="debug")
+        except Exception:
+            pass
+        infra_log(f"[DIAG][DISPATCHER] harness.devices: {[getattr(d, 'id', None) for d in getattr(api.context.harness, 'devices', [])]}", level="debug")
+        infra_log(f"[DIAG][DISPATCHER] harness.devices object ids: {[id(d) for d in getattr(api.context.harness, 'devices', [])]}", level="debug")
+        infra_log(f"[DIAG][DISPATCHER] harness.pins: {[getattr(p, 'id', None) for p in getattr(api.context.harness, 'pins', [])]}", level="debug")
+        infra_log(f"[DIAG][DISPATCHER] harness.pins object ids: {[id(p) for p in getattr(api.context.harness, 'pins', [])]}", level="debug")
         # Log all device and pin object ids for cross-check
         for d in getattr(api.context.harness, 'devices', []):
             infra_log(f"[DIAG][DISPATCHER] harness device: id={getattr(d, 'id', None)} objid={id(d)} pins={[getattr(p, 'id', None) for p in getattr(d, 'pins', [])]} pins_objids={[id(p) for p in getattr(d, 'pins', [])]}", level="debug")
@@ -431,7 +358,8 @@ def register_device_command_actions():
         cmd = AddDeviceCommand(device, context=context, logging_flag=logging_flag, **flags)
         infra_log(f"[DISPATCHER] edit.add: dispatching AddDeviceCommand via dispatcher for device={device}", level="debug")
         # Route command execution through dispatcher for contract compliance
-        return dispatch_action("_execute_command", cmd)
+        # Use dispatcher dispatch to hit _execute_command registered in dispatcher.registry
+        return dispatcher_dispatch_action("_execute_command", cmd)
     def update_action(context, **flags):
         """
         Update an existing device in the model or scene using dispatcher contract.
@@ -456,13 +384,20 @@ def register_device_command_actions():
             logging_flag = getattr(context, '_test_logging_flag', True)
         cmd = UpdateDeviceCommand(device, context=context, logging_flag=logging_flag, **flags)
         # Route command execution through dispatcher for contract compliance
-        return dispatch_action("_execute_command", cmd)
+        # Use dispatcher dispatch to hit _execute_command registered in dispatcher.registry
+        return dispatcher_dispatch_action("_execute_command", cmd)
+    # Register actions in ActionRegistry only - DispatcherRegistry is separate concern
     registry.register("edit.delete", delete_action)
     registry.register("edit.add", add_action)
     registry.register("edit.update", update_action)
-    dispatcher_registry.register("edit.delete", delete_action)
-    dispatcher_registry.register("edit.add", add_action)
-    dispatcher_registry.register("edit.update", update_action)
+    # TODO: Split Brain - Consolidate registries instead of duplicate registration
+    try:
+        from dispatcher import registry as dispatcher_registry
+        dispatcher_registry.register("edit.delete", delete_action)
+        dispatcher_registry.register("edit.add", add_action)
+        dispatcher_registry.register("edit.update", update_action)
+    except Exception:
+        pass
     infra_log(f"[DEBUG] register_device_command_actions: dispatcher_registry id={id(dispatcher_registry)} after registration, keys={list(dispatcher_registry.keys())}", level="debug")
 
 # IMPORTANT: Call register_device_command_actions() in app startup or test setup after all modules are loaded to avoid circular imports and ensure all actions are registered.
@@ -605,11 +540,11 @@ def register_action(action_id: str):
             Callable: The registered function.
         """
         registry.register(action_id, func)
-        # Also register with dispatcher registry for contract compliance
+        # TODO: Split Brain - Remove duplicate registration after consolidating to single registry
         try:
             from dispatcher import registry as dispatcher_registry
             dispatcher_registry.register(action_id, func)
         except Exception:
-            pass  # Dispatcher may not be available at import time
+            pass
         return func
     return decorator

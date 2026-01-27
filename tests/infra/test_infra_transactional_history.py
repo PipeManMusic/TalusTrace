@@ -1,7 +1,7 @@
 import pytest
 from api import actions
 from infra.context import Context
-from infra.undo_stack2 import BaseCommand2 as BaseCommand
+from infra.undo_stack import BaseCommand
 
 class DummyCommand(BaseCommand):
     def __init__(self, state, value):
@@ -9,13 +9,13 @@ class DummyCommand(BaseCommand):
         self.state = state
         self.value = value
         self.old = None
-    def execute(self):
+
+    def _do_execute(self):
         self.old = self.state['val']
         self.state['val'] = self.value
+
     def undo(self):
         self.state['val'] = self.old
-    def redo(self):
-        self.execute()
 
 def test_transactional_grouping_and_undo_redo():
     ctx = Context()

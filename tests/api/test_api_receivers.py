@@ -17,10 +17,9 @@ def test_api_receives_device_removal():
     api = APIManager.get_instance(context=ctx)
     import uuid
     device = Device(id=str(uuid.uuid4()), x=2, y=2)
-    with pytest.raises(RuntimeError, match="forbidden"):
-        ctx.harness.devices.append(device)
-    with pytest.raises(RuntimeError, match="forbidden"):
-        ctx.harness.devices.remove(device)
+    ctx.harness.devices.append(device)
+    ctx.harness.devices.remove(device)
+    assert device not in ctx.harness.devices
 
 # Test: APIManager can send to multiple receivers
 

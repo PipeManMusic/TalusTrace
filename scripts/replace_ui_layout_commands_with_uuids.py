@@ -1,3 +1,4 @@
+"""Utility script to replace UI layout commands with UUIDs from the actions configuration."""
 import yaml
 
 actions_path = 'resources/config/actions_with_uuids.yaml'
@@ -13,6 +14,7 @@ with open(ui_layout_path, 'r') as f:
 id_to_uuid = {a['id']: a['uuid'] for a in actions if 'uuid' in a}
 
 def replace_command_with_uuid(item):
+    """Recursively replace command IDs with UUIDs in layout configuration."""
     if isinstance(item, dict):
         if 'command' in item and item['command'] in id_to_uuid:
             item['uuid'] = id_to_uuid[item['command']]

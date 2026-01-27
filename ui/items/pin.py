@@ -12,12 +12,6 @@ from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 class PinItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
     """QGraphicsEllipseItem representing a Pin in the UI. Handles pin rendering and interaction."""
 
-    def __del__(self):
-        from infra.logging import infra_log
-        pin_id = getattr(self.pin, 'id', None) if hasattr(self, 'pin') else None
-        infra_log(f"[PinItem] __del__ called for PinItem id={id(self)}, pin_id={pin_id}, model={repr(getattr(self, 'pin', None))}", level="debug")
-        print(f"[DIAG][PinItem] __del__ called for PinItem id={id(self)}, pin_id={pin_id}, model={repr(getattr(self, 'pin', None))}")
-
     def update_from_model(self):
         """Update the PinItem's position and appearance from the model."""
         self.setPos(self.pin.x, self.pin.y)
@@ -28,8 +22,8 @@ class PinItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
     }
 
     def __init__(self, pin_model, parent=None):
-        from infra.logging import infra_log
         """Initialize PinItem with a pin model and optional parent."""
+        from infra.logging import infra_log
         # Make pin a small ellipse (8x8 px, centered)
         QGraphicsEllipseItem.__init__(self, -4, -4, 8, 8, parent)
         ObservableGraphicsItemMixin.__init__(self)

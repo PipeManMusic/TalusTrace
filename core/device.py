@@ -71,6 +71,29 @@ class Device:
                 return pin
         return None
 
+    def add_pin(self, pin):
+        """Attach a pin to this device if missing."""
+        if pin not in self.pins:
+            self.pins.append(pin)
+
+    def remove_pin(self, pin_id):
+        """Remove a pin by id and clean internal routing references."""
+        removed = None
+        remaining = []
+        for pin in self.pins:
+            if getattr(pin, "id", None) == pin_id and removed is None:
+                removed = pin
+                continue
+            remaining.append(pin)
+        if removed is not None:
+            self.pins = remaining
+            if self.internal_routing is not None:
+                self.internal_routing.pop(pin_id, None)
+                to_remove = [k for k, v in list(self.internal_routing.items()) if v == pin_id]
+                for key in to_remove:
+                    self.internal_routing.pop(key, None)
+        return removed
+
     def to_dict(self):
         """
         Serialize the Device to a dictionary, including pins and metadata.

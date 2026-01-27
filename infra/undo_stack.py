@@ -32,6 +32,7 @@ class BaseCommand:
 
     def redo(self):
         """Redo the command by calling execute()."""
+        self._allow_execute = True
         self.execute()
 
     @property
@@ -75,7 +76,9 @@ class UndoStack:
             self._transaction_commands = None
             return
         group = TransactionCommand(self._transaction_commands, self._transaction_description)
-        self.do(group)
+        # Commands already executed during do(); just record the group for undo/redo history.
+        self._undo_stack.append(group)
+        self._redo_stack.clear()
         self._transaction_commands = None
         self._transaction_description = None
 
@@ -92,16 +95,12 @@ class UndoStack:
         return not self._undo_stack
 
     def __init__(self):
-        """
-        Initialize the UndoStack with empty undo/redo stacks and callbacks.
-        """
-        """
-        Initialize the UndoStack with empty undo/redo stacks and no active transaction.
-        """
+        """Initialize the UndoStack with empty undo/redo stacks and callbacks."""
         self._undo_stack = []
         self._redo_stack = []
         self._current_transaction = None
         self._transaction_depth = 0
+        self._callbacks = []
 
     def subscribe(self, callback):
         """
@@ -139,6 +138,7 @@ class UndoStack:
         Args:
             command (BaseCommand): The command to execute.
         """
+        command._allow_execute = True
         command.execute()
         command.mark_executed()
         if self.in_transaction():
@@ -147,47 +147,8 @@ class UndoStack:
             self._undo_stack.append(command)
             self._redo_stack.clear()
 
-
-# TransactionCommand groups multiple commands as a single undoable/redoable action
-class TransactionCommand(BaseCommand):
-    """
-    Groups multiple commands as a single undoable/redoable action for transactions.
-    """
-    def __init__(self, commands, description=None):
-        """
-        Initialize the TransactionCommand with a list of commands and optional description.
-        Args:
-            commands (list): List of BaseCommand objects.
-            description (str): Optional description for the transaction.
-        """
-        super().__init__(description or "Transaction")
-        self.commands = list(commands)
-
-    def execute(self):
-        """
-        Execute all commands in the transaction.
-        """
-        for cmd in self.commands:
-            cmd.execute()
-
     def undo(self):
-        """
-        Undo all commands in the transaction in reverse order.
-        """
-        for cmd in reversed(self.commands):
-            cmd.undo()
-
-    def redo(self):
-        """
-        Redo all commands in the transaction in order.
-        """
-        for cmd in self.commands:
-            cmd.redo()
-
-    def undo(self):
-        """
-        Undo the last command on the undo stack.
-        """
+        """Undo the last command on the stack."""
         if not self._undo_stack:
             return
         command = self._undo_stack.pop()
@@ -196,9 +157,7 @@ class TransactionCommand(BaseCommand):
         self._notify('undo')
 
     def redo(self):
-        """
-        Redo the last undone command on the redo stack.
-        """
+        """Redo the last undone command."""
         if not self._redo_stack:
             return
         command = self._redo_stack.pop()
@@ -207,40 +166,54 @@ class TransactionCommand(BaseCommand):
         self._notify('redo')
 
     def clear(self):
-        """
-        Clear both the undo and redo stacks.
-        """
+        """Clear undo and redo history."""
         self._undo_stack.clear()
         self._redo_stack.clear()
 
     def can_undo(self):
-        """
-        Return True if there are commands to undo.
-        """
+        """Check if there are commands available to undo."""
         return bool(self._undo_stack)
 
     def can_redo(self):
-        """
-        Return True if there are commands to redo.
-        """
+        """Check if there are commands available to redo."""
         return bool(self._redo_stack)
+
+    def __len__(self):
+        """Return the count of undoable commands currently on the stack."""
+        return len(self._undo_stack)
 
     @property
     def undo_stack(self):
-        """
-        Return the current undo stack.
-        """
+        """Get the list of commands available to undo."""
         return list(self._undo_stack)
 
     @property
     def redo_stack(self):
-        """
-        Return the current redo stack.
-        """
+        """Get the list of commands available to redo."""
         return list(self._redo_stack)
 
-    def __len__(self):
-        """
-        Return the number of commands in the undo stack.
-        """
-        return len(self._undo_stack)
+
+# TransactionCommand groups multiple commands as a single undoable/redoable action
+class TransactionCommand(BaseCommand):
+    """Groups multiple commands as a single undoable/redoable action."""
+
+    def __init__(self, commands, description=None):
+        """Initialize a transaction with a list of commands."""
+        super().__init__(description or "Transaction")
+        self.commands = list(commands)
+
+    def _do_execute(self):
+        """Execute all commands in the transaction."""
+        for cmd in self.commands:
+            cmd._allow_execute = True
+            cmd.execute()
+
+    def undo(self):
+        """Undo all commands in reverse order."""
+        for cmd in reversed(self.commands):
+            cmd.undo()
+
+    def redo(self):
+        """Redo all commands in original order."""
+        for cmd in self.commands:
+            cmd.redo()

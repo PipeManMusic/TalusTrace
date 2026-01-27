@@ -9,13 +9,6 @@ import os
 # Set Qt logging environment variables before any Qt import
 os.environ["QT_LOGGING_RULES"] = "*.debug=false;qt.qpa.*=true"
 os.environ["QT_LOGGING_TO_CONSOLE"] = "0"
-# OS-level redirection of stderr (and optionally stdout) to a log file for Qt/system warnings
-log_path = os.path.join(os.path.expanduser('~'), 'talustrace_app.log')
-log_fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
-os.dup2(log_fd, 2)  # Redirect stderr (fd 2) at the OS level
-# Optionally also redirect stdout:
-# os.dup2(log_fd, 1)
-os.close(log_fd)
 
 from PySide6.QtWidgets import QApplication
 from ui.main_window import MainWindow
@@ -26,8 +19,11 @@ def main():
     """Main entry point for the Talus Trace application UI."""
     # Redirect stderr (and optionally stdout) to a log file for Qt/system warnings
     log_path = os.path.join(os.path.expanduser('~'), 'talustrace_app.log')
-    sys.stderr = open(log_path, 'a')
+    log_fd = os.open(log_path, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o644)
+    os.dup2(log_fd, 2)
+    os.close(log_fd)
     # Optionally also redirect stdout:
+    # os.dup2(log_fd, 1)
     # sys.stdout = sys.stderr
     app = QApplication(sys.argv)
     

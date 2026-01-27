@@ -72,24 +72,19 @@ class SelectableItemMixin:
                 # Ignore deselection if right-click is active
                 return True
             self.update_visual_state()
-            # Sync selection to core SelectionManager if selected
             try:
                 from core.selection import SelectionManager
-                if value:  # Selected
-                    if hasattr(self, 'model'):
-                        SelectionManager().select(self.model)
-                else:  # Deselected
-                    SelectionManager().clear_selection()
+                manager = SelectionManager()
+                # Sync selection to core manager when view selection toggles
+                if value:
+                    manager.select(getattr(self, 'model', None))
+                else:
+                    manager.clear_selection()
             except Exception:
+                # Avoid breaking item selection if selection manager is unavailable
                 pass
-
-        if change == QGraphicsItem.ItemPositionHasChanged and hasattr(self, 'model'):
-            # Model Update: Coordinates are already MM. Direct sync for ghost items only
-            if getattr(self, 'is_ghost', False):
-                try:
-                    if hasattr(self.model, 'x'): self.model.x = self.x()
-                    if hasattr(self.model, 'y'): self.model.y = self.y()
-                except: pass
+            # NOTE: Selection state sync is handled by InputSystem -> API -> SelectionManager
+            # The View does NOT drive selection; it only reflects it
 
         return super().itemChange(change, value)
 

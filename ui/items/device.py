@@ -20,7 +20,6 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
         'expected_child_count': 0
     }
     def __init__(self, device, is_ghost=False, parent=None):
-        from infra.logging import infra_log
         """
         Initialize the DeviceItem.
         Args:
@@ -28,6 +27,7 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
             is_ghost (bool): Whether this is a ghost (preview) item.
             parent: Optional parent QGraphicsItem.
         """
+        from infra.logging import infra_log
         QGraphicsRectItem.__init__(self, parent)
         ObservableGraphicsItemMixin.__init__(self)
         infra_log(f"[DeviceItem] Created DeviceItem for model id={getattr(device, 'id', None)}, obj={device}, DeviceItem id={id(self)}", level="debug")
@@ -49,8 +49,8 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
         self.init_mixin(device, is_ghost)
 
         if not self.is_ghost and hasattr(device, 'pins'):
-            from api.manager import APIManager
-            api = APIManager.get_instance()
+            # NOTE: Registration of scene items is handled by Canvas/LayoutManager after item creation
+            # The Item does NOT register itself - separation of concerns
             for pin in device.pins:
                 pin_item = PinItem(pin, self)
                 # Pin positions in model are relative MM. Use directly.
@@ -58,8 +58,6 @@ class DeviceItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsRect
                 # Ensure PinItem is added to the scene as a child of DeviceItem
                 if self.scene() is not None:
                     self.scene().addItem(pin_item)
-                # Always register PinItem in scene registry by pin id
-                api.register_scene_item(pin.id, pin_item)
 
         # Subscribe to model_changed events for this device
 

@@ -24,4 +24,8 @@ def test_context_menu_action_contract(canvas, api_manager, monkeypatch):
     from PySide6.QtCore import QPoint, Qt
     event = QContextMenuEvent(QContextMenuEvent.Mouse, QPoint(10, 10), QPoint(10, 10), Qt.NoModifier)
     canvas.contextMenuEvent(event)
-    api_manager.open_context_menu.assert_called_once_with(event)
+    # Check that open_context_menu was called with event and item kwargs
+    api_manager.open_context_menu.assert_called_once()
+    call_args = api_manager.open_context_menu.call_args
+    assert call_args[0][0] == event  # First positional arg is the event
+    assert 'item' in call_args[1]  # Second arg is item as keyword

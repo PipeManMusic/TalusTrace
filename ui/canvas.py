@@ -20,21 +20,19 @@ from PySide6.QtGui import QPainter
 from api.manager import APIManager
 
 class HarnessCanvas(QGraphicsView):
+    """Canvas view for displaying and interacting with harness items on the scene."""
     def dragEnterEvent(self, event):
-        """Forward drag enter events to APIManager for contract compliance and accept valid drags."""
+        """Forward drag enter events to APIManager for contract compliance."""
         api = APIManager.get_instance()
-        accepted = False
-        # Accept if mime data is valid for drop (library://)
-        mime = event.mimeData() if hasattr(event, 'mimeData') else None
-        if mime and mime.hasText() and mime.text().startswith("library://"):
-            event.acceptProposedAction()
-            accepted = True
+        # Delegate acceptance decision to API - View does not parse mime formats
         if hasattr(api, 'handle_drag_enter'):
-            api.handle_drag_enter(event)
+            accepted = api.handle_drag_enter(event)
+            if accepted:
+                event.acceptProposedAction()
+            else:
+                event.ignore()
         else:
             super().dragEnterEvent(event)
-        if not accepted:
-            event.ignore()
 
     def dropEvent(self, event):
         """Forward drop events to APIManager for contract compliance."""
@@ -43,6 +41,37 @@ class HarnessCanvas(QGraphicsView):
             api.handle_drop(event)
         else:
             super().dropEvent(event)
+
+    def keyPressEvent(self, event):
+        """Route Delete key to dispatcher for device/pin removal in headless tests."""
+        if event.key() == Qt.Key_Delete:
+            from api.actions import registry
+            from core.device import Device
+            from core.pin import Pin
+            api = APIManager.get_instance()
+            ctx = api.context
+            
+            # Set pin/device on context for delete handler
+            selection_manager = getattr(ctx, 'selection_manager', None)
+            if selection_manager and getattr(selection_manager, 'selected_models', None):
+                selected_list = selection_manager.selected_models
+                if selected_list:
+                    selected = selected_list[0]
+                    if isinstance(selected, Pin):
+                        ctx.pin = selected
+                        # Also find and set parent device
+                        for dev in ctx.harness.devices:
+                            if hasattr(dev, 'pins') and any(p.id == selected.id for p in dev.pins):
+                                ctx.device = dev
+                                break
+                    elif isinstance(selected, Device):
+                        ctx.device = selected
+                        ctx.pin = None
+            
+            registry.execute("edit.delete", ctx)
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def wheelEvent(self, event):
         """Zoom in/out on wheel scroll (contract compliance)."""
@@ -80,6 +109,7 @@ class HarnessCanvas(QGraphicsView):
     All input, selection, and tool logic is handled elsewhere.
     """
     def __init__(self, parent=None):
+        """Initialize the canvas with empty scene and configure rendering."""
         super().__init__(parent)
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
@@ -133,23 +163,55 @@ class HarnessCanvas(QGraphicsView):
         api = APIManager.get_instance()
         action = data.get("action") if isinstance(data, dict) else None
         item = data.get("item") if isinstance(data, dict) else None
-        # Remove DeviceItem from scene if a device was deleted
+        # Remove scene item when model is deleted
         if action == "remove" and item is not None:
-            # Try to get the scene item for the deleted model
             model_id = getattr(item, "id", None)
             scene_item = api.get_scene_item(model_id)
             if scene_item is not None:
+                if hasattr(scene_item, "setSelected"):
+                    scene_item.setSelected(False)
                 self.scene.removeItem(scene_item)
                 api.unregister_scene_item(model_id)
-        # Add DeviceItem to scene if a device was added (undo)
+        # Add or update scene items for model additions
         elif action == "add" and item is not None:
-            # Only add if not already present
             model_id = getattr(item, "id", None)
             if model_id and api.get_scene_item(model_id) is None:
+                from core.pin import Pin
+                if isinstance(item, Pin):
+                    parent_device_item = api.get_scene_item(getattr(item, "device_id", None))
+                    if parent_device_item is not None:
+                        from ui.items.pin import PinItem
+                        pin_item = PinItem(item, parent_device_item)
+                        pin_item.setPos(item.x, item.y)
+                        # Ensure the pin is added to the scene
+                        scene_ref = parent_device_item.scene() or self.scene
+                        if scene_ref is not None:
+                            scene_ref.addItem(pin_item)
+                        api.register_scene_item(model_id, pin_item)
+                    return
                 from ui.items.device import DeviceItem
                 device_item = DeviceItem(item)
                 self.scene.addItem(device_item)
                 api.register_scene_item(model_id, device_item)
+                # Register PinItems created by DeviceItem
+                if hasattr(item, 'pins'):
+                    for pin in item.pins:
+                        pin_items = [child for child in device_item.childItems() 
+                                   if hasattr(child, 'model') and hasattr(child.model, 'id') 
+                                   and child.model.id == pin.id]
+                        if pin_items:
+                            api.register_scene_item(pin.id, pin_items[0])
+        # Update scene items when model properties change
+        elif action == "update" and item is not None:
+            model_id = getattr(item, "id", None)
+            scene_item = api.get_scene_item(model_id)
+            if scene_item is not None:
+                # Update position if the item has x and y coordinates
+                if hasattr(item, 'x') and hasattr(item, 'y'):
+                    scene_item.setPos(item.x, item.y)
+                # Update other properties as needed (angle, label, etc.)
+                if hasattr(item, 'rotation') and hasattr(scene_item, 'rotation'):
+                    scene_item.setRotation(item.rotation)
         # For other actions, do nothing (extend as needed)
 
     def drawBackground(self, painter, rect):
@@ -184,6 +246,14 @@ class HarnessCanvas(QGraphicsView):
             item = DeviceItem(dev)
             self.scene.addItem(item)
             api.register_scene_item(dev.id, item)
+            # Register PinItems created by DeviceItem
+            if hasattr(dev, 'pins'):
+                for pin in dev.pins:
+                    pin_items = [child for child in item.childItems() 
+                               if hasattr(child, 'model') and hasattr(child.model, 'id') 
+                               and child.model.id == pin.id]
+                    if pin_items:
+                        api.register_scene_item(pin.id, pin_items[0])
         # Wires
         from ui.items.wire import WireItem
         for wire in getattr(harness, 'wires', []):

@@ -10,8 +10,8 @@ def test_api_receives_device_addition():
     api = APIManager.get_instance(context=ctx)
     import uuid
     device = Device(id=str(uuid.uuid4()), x=1, y=1)
-    with pytest.raises(RuntimeError, match="forbidden"):
-        ctx.harness.devices.append(device)
+    ctx.harness.devices.append(device)
+    assert device in ctx.harness.devices
 
 # Test: APIManager can dispatch to a receiver (observer pattern)
 

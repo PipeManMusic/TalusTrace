@@ -44,6 +44,11 @@ view_toggle_library: "Toggle Library"
 view_toggle_audit_panel: "Toggle Audit Panel"
 view_reset_layout: "Reset Layout"
 
+# Context menu action UUIDs (canonical mappings)
+7a1e2b3c-4d5e-678f-9012-abcdefabcdef: "Add Pin"
+4a88e033-860e-4b9b-9140-338b49c40e61: "Rotate 90°"
+e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b: "Delete"
+
 file.new: "New"
 file.open: "Open"
 file.save: "Save"

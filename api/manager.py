@@ -511,6 +511,21 @@ class APIManager:
             # Fallback: create a minimal Device class
             return lambda **kwargs: type('Device', (), kwargs)()
         
+    def get_selection(self):
+        """Get current selection IDs from SelectionManager (API facade for InputSystem)."""
+        from core.selection import SelectionManager
+        return SelectionManager().current_selection_ids
+
+    def handle_drag_enter(self, event):
+        """
+        Validate drag enter event and return True if acceptable, False otherwise.
+        API decides acceptance based on mime format, not the View.
+        """
+        mime = event.mimeData() if hasattr(event, 'mimeData') else None
+        if mime and mime.hasText() and mime.text().startswith("library://"):
+            return True
+        return False
+
     def move_device(self, target_or_id, new_x, new_y, commit=False):
         """
         Move a device or scene item. If commit=True, push MoveCommand to undo stack; else, update model and dispatch only.
@@ -520,12 +535,22 @@ class APIManager:
         import logging
         logging.debug(f"[APIManager.move_device] target_or_id={target_or_id}, new_x={new_x}, new_y={new_y}, commit={commit}")
         from api.commands.move import MoveCommand
+        from core.device import Device
         device = None
-        # Always resolve device and scene item from id if possible
+        scene_item = None
+        
+        # Resolve target_or_id to device and scene_item
         if hasattr(target_or_id, 'model'):
+            # It's a scene item (has .model attribute)
             scene_item = target_or_id
             device = getattr(scene_item, 'model', None)
+        elif isinstance(target_or_id, Device):
+            # It's a Device object directly
+            device = target_or_id
+            # Try to get scene item from registry
+            scene_item = self.get_scene_item(device.id) if hasattr(device, 'id') else None
         else:
+            # It's a device ID (string)
             device_id = target_or_id
             for dev in getattr(self.context.harness, 'devices', []):
                 if hasattr(dev, 'id') and dev.id == device_id:
@@ -533,6 +558,7 @@ class APIManager:
                     break
             # Try to get scene item from registry
             scene_item = self.get_scene_item(device_id)
+            
         if device is None:
             return
         if commit:

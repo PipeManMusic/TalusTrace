@@ -516,9 +516,13 @@ class AddDeviceCommand(BaseCommand):
                 infra_log(f"[AddDeviceCommand] Device appended to harness.devices: {device_id}", level="debug")
             else:
                 infra_log(f"[AddDeviceCommand] Device already in harness.devices: {device_id}", level="debug")
-        # Always use the observer from APIManager.context if available
-        observer = getattr(self.api, 'context', None)
-        observer = getattr(observer, 'observer', None)
+        # Prefer observer from the explicit context, fall back to APIManager context
+        observer = None
+        if self.context and hasattr(self.context, 'observer'):
+            observer = getattr(self.context, 'observer', None)
+        if observer is None:
+            api_ctx = getattr(self.api, 'context', None)
+            observer = getattr(api_ctx, 'observer', None)
         if observer:
             infra_log(f"[AddDeviceCommand] Dispatching model_changed via APIManager.context.observer for device id={device_id}", level="debug")
             observer.dispatch("model_changed", {"action": "add", "item": self.device})
@@ -663,7 +667,6 @@ class DeletePinCommand(BaseCommand):
     """Command to delete a pin from the harness, supporting undo/redo."""
     def __init__(self, pin_or_device, pin=None, context=None, logging_flag=False, **kwargs):
         """Initialize DeletePinCommand with pin or device and context."""
-        from infra.logging import infra_log
         BaseCommand.__init__(self, "Delete Pin")
         if hasattr(pin_or_device, 'pins'):
             self.device = pin_or_device
@@ -671,86 +674,48 @@ class DeletePinCommand(BaseCommand):
         else:
             self.device = None
             self.pin = pin_or_device
-        # Debug prints for constructor
-        print(f"[DEBUG][DeletePinCommand] device: {self.device} @ {id(self.device) if self.device else None}")
-        print(f"[DEBUG][DeletePinCommand] device.pins before: {[getattr(p, 'id', None) for p in getattr(self.device, 'pins', [])]}")
-        print(f"[DEBUG][DeletePinCommand] pin: {self.pin} @ {id(self.pin)}")
         self.context = context
         self.api = APIManager.get_instance()
         self.new_pos = kwargs.get('new_pos', None)
-        self._saved_internal_routing = None
-        print(f"[DIAG][DEEP] device object id: {id(self.device) if self.device else None}")
-        print(f"[DIAG][DEEP] pin object id: {id(self.pin)}")
-        print(f"[DIAG][DEEP] All device ids in harness: {[getattr(d, 'id', None) for d in getattr(self.api.context.harness, 'devices', [])]}")
-        print(f"[DIAG][DEEP] All device objids in harness: {[id(d) for d in getattr(self.api.context.harness, 'devices', [])]}")
-        for d in getattr(self.api.context.harness, 'devices', []):
-            print(f"[DIAG][DEEP] Device {getattr(d, 'id', None)} pins: {[getattr(p, 'id', None) for p in getattr(d, 'pins', [])]}")
-            print(f"[DIAG][DEEP] Device {getattr(d, 'id', None)} pins objids: {[id(p) for p in getattr(d, 'pins', [])]}")
-        print(f"[DIAG][DEEP] Scene registry before: {list(self.api.scene_registry.keys()) if hasattr(self.api, 'scene_registry') else 'N/A'}")
-        self._saved_pins = None
-        self._saved_pin_routing = None
+        self._saved_state = {}
         # If context has _test_logging_flag, force logging_flag True for testability
         if context and getattr(context, '_test_logging_flag', False):
             self.logging_flag = True
         else:
             self.logging_flag = logging_flag
         pin_uuid = getattr(self.pin, 'id', None)
-        device_id = getattr(self.device, 'id', None) if self.device else None
-        print(f"[DIAG][DeletePinCommand.__init__] pin_uuid={pin_uuid}, pin_objid={id(self.pin)}, device_id={device_id}, device_objid={id(self.device) if self.device else None}")
-        # Print all harness device ids and objids for comparison
-        if self.api and hasattr(self.api.context, 'harness'):
-            harness_devices = getattr(self.api.context.harness, 'devices', [])
-            print(f"[DIAG][DeletePinCommand.__init__] harness devices: {[getattr(d, 'id', None) for d in harness_devices]}")
-            print(f"[DIAG][DeletePinCommand.__init__] harness device objids: {[id(d) for d in harness_devices]}")
-        infra_log(f"[LOG] DeletePinCommand.__init__ for pin UUID={pin_uuid}, logging_flag={self.logging_flag}", level="info")
+        if self.logging_flag:
+            from infra.logging import infra_log
+            infra_log(f"[LOG] DeletePinCommand.__init__ for pin UUID={pin_uuid}", level="info")
 
 
     def execute(self):
-        """Remove the pin from all devices in the harness by UUID and dispatch event. Robust to object identity mismatches."""
+        """Remove the pin from all devices in the harness by UUID and dispatch event."""
         from infra.logging import infra_log
-        import traceback
         pin_uuid = getattr(self.pin, 'id', None)
-        infra_log(f"[LOG] DeletePinCommand.execute CALLED for pin UUID={pin_uuid}, logging_flag={self.logging_flag}", level="info")
-        print(f"[DIAG] DeletePinCommand.execute CALLED for pin UUID={pin_uuid}")
-        print(f"[DIAG] self.device id: {getattr(self.device, 'id', None)} @ {id(self.device) if self.device else None}")
-        print(f"[DIAG] self.pin id: {getattr(self.pin, 'id', None)} @ {id(self.pin)}")
-        print(f"[DIAG] api.context.harness id: {id(self.api.context.harness)}")
-        print(f"[DIAG] api.context.harness.devices: {[getattr(d, 'id', None) for d in self.api.context.harness.devices]}")
-        def all_harness_pins():
-            return [p for d in getattr(self.api.context.harness, 'devices', []) for p in getattr(d, 'pins', [])]
-        print(f"[DIAG] api.context.harness.pins: {[getattr(p, 'id', None) for p in all_harness_pins()]}")
-        # Save all device pins for undo
-        self._saved_pins_by_device = {d: list(d.pins) for d in getattr(self.api.context.harness, 'devices', [])}
-        # Remove pin from all devices by UUID
-        for d in getattr(self.api.context.harness, 'devices', []):
-            before = [p.id for p in d.pins]
-            d.pins = [p for p in d.pins if getattr(p, 'id', None) != pin_uuid]
-            after = [p.id for p in d.pins]
-            infra_log(f"[DEBUG] Device {getattr(d, 'id', None)} pins before: {before}", level="info")
-            infra_log(f"[DEBUG] Device {getattr(d, 'id', None)} pins after: {after}", level="info")
-            print(f"[DIAG] Device {getattr(d, 'id', None)} pins before: {before}")
-            print(f"[DIAG] Device {getattr(d, 'id', None)} pins after: {after}")
-            # Remove from internal_routing if present
-            if hasattr(d, 'internal_routing') and pin_uuid:
-                d.internal_routing.pop(pin_uuid, None)
-                to_remove = [k for k, v in d.internal_routing.items() if v == pin_uuid]
-                for k in to_remove:
-                    d.internal_routing.pop(k, None)
-        # Unregister pin from scene registry
-        self.api.unregister_scene_item(pin_uuid)
-        print(f"[DIAG] Unregistered pin from scene registry: {pin_uuid}")
-        print(f"[DIAG] scene registry after: {list(self.api.scene_registry.keys()) if hasattr(self.api, 'scene_registry') else 'N/A'}")
+        if self.logging_flag:
+            infra_log(f"[LOG] DeletePinCommand.execute START for pin UUID={pin_uuid}", level="info")
+        # Save state for undo
+        harness_devices = getattr(self.api.context.harness, 'devices', [])
+        self._saved_state = {
+            getattr(d, 'id', id(d)): {
+                'pins': list(getattr(d, 'pins', [])),
+                'routing': dict(getattr(d, 'internal_routing', {}) or {})
+            }
+            for d in harness_devices
+        }
+        # Remove pin from all devices
+        for d in harness_devices:
+            if d.get_pin_by_uuid(pin_uuid):
+                d.remove_pin(pin_uuid)
         observer = getattr(self.api, 'context', None)
         observer = getattr(observer, 'observer', None)
         if observer:
-            print(f"[DIAG] Dispatching model_changed 'remove' for pin UUID={pin_uuid} via observer")
             observer.dispatch("model_changed", {"action": "remove", "item": self.pin})
         else:
-            print(f"[DIAG] Dispatching model_changed 'remove' for pin UUID={pin_uuid} via api.dispatch")
             self.api.dispatch("model_changed", {"action": "remove", "item": self.pin})
         if self.logging_flag:
             infra_log(f"[LOG] DeletePinCommand.execute COMPLETE for pin UUID={pin_uuid}", level="info")
-        print(f"[DIAG] DeletePinCommand.execute COMPLETE for pin UUID={pin_uuid}")
 
 
     def undo(self):
@@ -759,10 +724,15 @@ class DeletePinCommand(BaseCommand):
         pin_uuid = getattr(self.pin, 'id', None)
         if self.logging_flag:
             infra_log(f"[LOG] DeletePinCommand.undo START for pin UUID={pin_uuid}", level="info")
-        # Restore all device pin lists
-        if hasattr(self, '_saved_pins_by_device'):
-            for d, pins in self._saved_pins_by_device.items():
-                d.pins = list(pins)
+        if self._saved_state:
+            harness_devices = getattr(self.api.context.harness, 'devices', [])
+            for d in harness_devices:
+                state = self._saved_state.get(getattr(d, 'id', id(d)))
+                if state:
+                    d.pins = list(state.get('pins', []))
+                    if getattr(d, 'internal_routing', None) is not None:
+                        d.internal_routing.clear()
+                        d.internal_routing.update(state.get('routing', {}))
         observer = getattr(self.api, 'context', None)
         observer = getattr(observer, 'observer', None)
         if observer:

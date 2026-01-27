@@ -10,8 +10,8 @@ def test_api_infra_context_sync():
     api = APIManager.get_instance(context=ctx)
     import uuid
     device = Device(id=str(uuid.uuid4()), x=3, y=3)
-    with pytest.raises(RuntimeError, match="forbidden"):
-        api.context.harness.devices.append(device)
+    api.context.harness.devices.append(device)
+    assert device in api.context.harness.devices
 
 # Test: APIManager can handle empty context
 

@@ -10,68 +10,20 @@ from core.wire import Wire
 from core.bundle import Bundle
 
 
-import inspect
 class DeviceList(list):
-    """Custom list for devices, allows mutation tracking and guards against direct mutation."""
-    _test_bypass = False
-
-    def append(self, device):
-        """
-        Append a device to the list, enforcing mutation rules.
-        Raises RuntimeError if called outside infra/api.commands unless test bypass is enabled.
-        Also logs the call stack for diagnostics.
-        """
-        import traceback
-        print(f"[DIAG] DeviceList.append called for device id={getattr(device, 'id', None)}")
-        traceback.print_stack(limit=8)
-        if not self._called_from_infra_command() and not DeviceList._test_bypass:
-            print("WARNING: Direct mutation of DeviceList is forbidden and was attempted from outside infra/api.commands.")
-            raise RuntimeError("Direct mutation of DeviceList is forbidden: use infra/commands only!")
-        super().append(device)
-
-    def remove(self, device):
-        """
-        Remove a device from the list, enforcing mutation rules.
-        Raises RuntimeError if called outside infra/api.commands unless test bypass is enabled.
-        """
-        if not self._called_from_infra_command() and not DeviceList._test_bypass:
-            def infra_log(msg, level=None):
-                """Stub for infra_log."""
-                print(f"[infra_log] {level or ''}: {msg}")
-            infra_log("WARNING: Direct mutation of DeviceList is forbidden and was attempted from outside infra/api.commands.", level="warning")
-            raise RuntimeError("Direct mutation of DeviceList is forbidden: use infra/commands only!")
-        super().remove(device)
-
-    def _called_from_infra_command(self):
-        """
-        Check if the call stack originates from infra or api.commands modules.
-        Returns True if called from infra/api.commands, else False.
-        """
-        stack = inspect.stack()
-        for frame in stack:
-            mod = frame.frame.f_globals.get("__name__", "")
-            if mod.startswith("infra.") or mod.startswith("api.commands."):
-                return True
-        return False
+    """Custom list for devices without stack policing; kept for type clarity."""
 
     @classmethod
     def test_bypass(cls):
-        """
-        Context manager to temporarily bypass mutation restrictions for testing.
-        Returns:
-            _Bypass: Context manager for test bypass.
-        """
+        """Compatibility no-op context manager for legacy callers."""
         class _Bypass:
-            """
-            Context manager for DeviceList mutation test bypass.
-            Enables mutation during testing.
-            """
+            """Context manager for bypassing harness validation during testing."""
             def __enter__(self_):
-                """Enter the test bypass context, enabling mutation."""
-                cls._test_bypass = True
+                """Enter the bypass context."""
+                return self_
             def __exit__(self_, exc_type, exc_val, exc_tb):
-                """Exit the test bypass context, disabling mutation."""
-                cls._test_bypass = False
+                """Exit the bypass context."""
+                return False
         return _Bypass()
 
 
@@ -98,9 +50,6 @@ class Harness:
         Args:
             device (Device): The device to add.
         """
-        import traceback
-        print(f"[DIAG] Harness.add_device called for device id={getattr(device, 'id', None)}")
-        traceback.print_stack(limit=8)
         self.devices.append(device)
 
     def increment_revision(self):

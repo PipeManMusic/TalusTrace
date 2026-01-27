@@ -7,6 +7,7 @@ The input system is a pure event router. It receives all user input events (mous
 
 import logging
 def _log_input_event(event_name, **kwargs):
+    """Log input system events for debugging."""
     logging.debug(f"[INPUT_SYSTEM][EVENT] {event_name} | " + ", ".join(f"{k}={v}" for k, v in kwargs.items()))
 
 import yaml
@@ -15,7 +16,9 @@ from PySide6.QtCore import QObject, QEvent, Qt
 from api.actions import registry
 
 class InputSystem(QObject):
+    """System for managing and routing input events to appropriate tools and handlers."""
     def __init__(self, config_path=None, move_tool=None):
+        """Initialize the input system with optional configuration and tool."""
         logging.debug(f"[INPUT_SYSTEM][INIT] config_path={config_path}, move_tool={move_tool}")
         super().__init__()
         self.canvas = None
@@ -79,13 +82,14 @@ class InputSystem(QObject):
     def handle_canvas_event(self, event):
         """Route mouse events from the Canvas to the active tool or injected MoveTool."""
         etype = event.original_event.type()
+        import sys
+        print(f"[DEBUG][handle_canvas_event] EVENT TYPE: {etype} ({event.original_event.__class__.__name__})", file=sys.stderr)
         tool = self._move_tool if self._move_tool is not None else self.api.tool_manager.active_tool
-        from core.selection import SelectionManager
-        selection_ids = SelectionManager().current_selection_ids
+        # Use API facade instead of direct Core access
+        selection_ids = self.api.get_selection()
         is_move_tool = tool.__class__.__name__ == "MoveTool"
         scene_pos = getattr(event, 'scene_pos', None)
         item = getattr(event, 'scene_item', None) or getattr(event, 'item_at', None)
-        import sys
         print(f"[DEBUG][handle_canvas_event] BEFORE itemAt: item={item}, scene_pos={scene_pos}", file=sys.stderr)
         print(f"[DEBUG][handle_canvas_event] has main_window={hasattr(self.api, 'main_window')}, has canvas={hasattr(self.api.main_window, 'canvas') if hasattr(self.api, 'main_window') else False}", file=sys.stderr)
         # If item is still None and we have a main_window with canvas, query the scene directly
@@ -93,16 +97,16 @@ class InputSystem(QObject):
             try:
                 if hasattr(self.api, 'main_window') and hasattr(self.api.main_window, 'canvas'):
                     canvas = self.api.main_window.canvas
-                    print(f"[DEBUG][handle_canvas_event] canvas={canvas}, has scene={hasattr(canvas, 'scene') if canvas else False}, callable={callable(canvas.scene) if canvas and hasattr(canvas, 'scene') else False}", file=sys.stderr)
-                    if canvas and hasattr(canvas, 'scene') and callable(canvas.scene) and canvas.scene():
+                    print(f"[DEBUG][handle_canvas_event] canvas={canvas}, has scene attr={hasattr(canvas, 'scene')}", file=sys.stderr)
+                    if canvas and hasattr(canvas, 'scene'):
                         from PySide6.QtGui import QTransform
-                        scene = canvas.scene()
+                        scene = canvas.scene
                         print(f"[DEBUG][handle_canvas_event] scene={scene}, about to call itemAt", file=sys.stderr)
                         if scene:
                             item = scene.itemAt(scene_pos, QTransform())
                             print(f"[DEBUG][handle_canvas_event] AFTER itemAt: item={item}, type={type(item)}, hasattr model={hasattr(item, 'model') if item else None}", file=sys.stderr)
                     else:
-                        print(f"[DEBUG][handle_canvas_event] scene() check failed", file=sys.stderr)
+                        print(f"[DEBUG][handle_canvas_event] scene check failed", file=sys.stderr)
             except Exception as e:
                 logging.warning(f"[InputSystem.handle_canvas_event] Failed to get item at scene position: {e}")
                 import traceback
@@ -116,7 +120,7 @@ class InputSystem(QObject):
             logging.debug(f"[INPUT_SYSTEM][MOUSE_PRESS] event.button={btn_val} (type={type(btn_val)}), orig_event.button={orig_btn_val} (type={type(orig_btn_val)}) Qt.RightButton={Qt.RightButton}")
             is_right_click = btn_val == Qt.RightButton or orig_btn_val == Qt.RightButton
             if is_right_click:
-                item = getattr(event, 'scene_item', None) or getattr(event, 'item_at', None)
+                # NOTE: Use the item we detected above from scene.itemAt(), don't overwrite it
                 logging.debug(f"[INPUT_SYSTEM][RIGHT_CLICK DETECTED] item={item} type={type(item)} id={id(item) if item else None}, calling open_context_menu if available.")
                 # Extra diagnostics for context menu contract
                 from ui.items.device import DeviceItem
@@ -203,7 +207,9 @@ class InputSystem(QObject):
                 # obj is likely the viewport; get its parent QGraphicsView
                 view = obj.parent()
             class CanvasEvent:
+                """Wrapper for canvas input events with scene context."""
                 def __init__(self, original_event):
+                    """Initialize a canvas event with the original Qt event."""
                     self.original_event = original_event
                     self.button = getattr(original_event, 'button', None)
                     # Get scene position as QPointF

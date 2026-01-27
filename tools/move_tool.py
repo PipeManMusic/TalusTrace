@@ -25,6 +25,7 @@ class MoveTool(BaseTool):
         self.last_pos = QPointF(0, 0)
         self.target_override = None
         self.ghost_item = None # Legacy test compatibility
+        self.current_item = None  # Initialize current_item
     def start_drag(self, item, pos):
         """
         Start dragging an item from the given position.
@@ -38,6 +39,8 @@ class MoveTool(BaseTool):
         self.start_pos = pos
         self.last_pos = pos
         self._drag_initial_pos = (float(getattr(item.model, 'x', 0)), float(getattr(item.model, 'y', 0)))
+        # Store initial position on the item so move_device can find it for undo
+        item._drag_initial_pos = self._drag_initial_pos
         self.cursor = Qt.ClosedHandCursor
         self.current_item = item
         self._last_drag_pos = self._drag_initial_pos
@@ -59,8 +62,9 @@ class MoveTool(BaseTool):
         new_y = self._drag_initial_pos[1] + dy
         logging.debug(f"[MoveTool.update_drag] device.id={getattr(device, 'id', None)}, dx={dx}, dy={dy}, new_x={new_x}, new_y={new_y}")
         # Always use API for model update and event dispatch
+        # Pass device directly (update_drag doesn't need undo, so ID vs item doesn't matter)
         if hasattr(self.api, 'move_device') and device is not None:
-            self.api.move_device(device.id, new_x, new_y, commit=False)
+            self.api.move_device(device, new_x, new_y, commit=False)
 
     def finish_drag(self, pos):
         """
@@ -79,8 +83,9 @@ class MoveTool(BaseTool):
         final_y = self._drag_initial_pos[1] + dy
         logging.debug(f"[MoveTool.finish_drag] device.id={getattr(device, 'id', None)}, dx={dx}, dy={dy}, final_x={final_x}, final_y={final_y}")
         # Commit move to undo stack via API
+        # Pass current_item so move_device can access _drag_initial_pos for undo
         if hasattr(self.api, 'move_device') and device is not None:
-            self.api.move_device(device.id, final_x, final_y, commit=True)
+            self.api.move_device(self.current_item, final_x, final_y, commit=True)
         self.is_dragging = False
         self.current_item = None
         self.target_override = None
@@ -117,3 +122,7 @@ class MoveTool(BaseTool):
                 self.target_override.x += dx
             if hasattr(self.target_override, 'y'):
                 self.target_override.y += dy
+
+    def eventFilter(self, obj, event):
+        """Dummy eventFilter for compatibility when installed on Qt objects."""
+        return False

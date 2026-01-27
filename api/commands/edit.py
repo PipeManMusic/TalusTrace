@@ -195,12 +195,12 @@ def edit_redo(context):
 
 @register_action("edit.delete")
 def edit_delete(context):
+    """Dispatcher contract: delete action (calls APIManager.delete_device or delete_pin)."""
     print(f"[DEBUG][edit_delete] context: {context}")
     if hasattr(context, 'pin'):
         print(f"[DEBUG][edit_delete] context.pin: {context.pin} @ {id(context.pin)}")
     if hasattr(context, 'device'):
         print(f"[DEBUG][edit_delete] context.device: {context.device} @ {id(context.device)}")
-    """Dispatcher contract: delete action (calls APIManager.delete_device or delete_pin)."""
     from infra.logging import infra_log
     api = APIManager.get_instance()
     from api.commands.device import DeletePinCommand

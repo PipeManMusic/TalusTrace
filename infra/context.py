@@ -7,7 +7,7 @@ import yaml
 from pathlib import Path
 from core.harness import Harness
 from infra.observer import Observer
-from infra.undo_stack2 import UndoStack2
+from infra.undo_stack import UndoStack
 
 
 class Context:
@@ -113,8 +113,8 @@ class Context:
         self.dirty = False
         # Event Bus
         self.observer = Observer()
-        # Undo Stack
-        self.undo_stack = UndoStack2()
+        # Undo Stack (single implementation)
+        self.undo_stack = UndoStack()
 
     def mark_clean(self):
         """Mark the context as clean (not dirty)."""

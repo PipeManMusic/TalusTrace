@@ -1,15 +1,16 @@
 import pytest
 from unittest.mock import MagicMock
-from infra.undo_stack2 import UndoStack2 as UndoStack, BaseCommand2 as BaseCommand
+from infra.undo_stack import UndoStack, BaseCommand
 
 class MockCommand(BaseCommand):
     def __init__(self, target_list, value):
+        super().__init__("mock")
         self.target_list = target_list
         self.value = value
-    
-    def execute(self):
+
+    def _do_execute(self):
         self.target_list.append(self.value)
-        
+
     def undo(self):
         self.target_list.remove(self.value)
 

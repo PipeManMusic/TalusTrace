@@ -19,6 +19,7 @@ class ContextMenuManager:
         self.actions_map = actions_map_override if actions_map_override is not None else actions_map
 
     def build_menu(self, menu_type=None, parent=None):
+        """Build a context menu for the specified menu type."""
         from infra.logging import infra_log
         infra_log(f"[TRACE][ContextMenuManager] build_menu CALLED: menu_type={menu_type}", level="info")
         if self.config and 'context_menu' in self.config:
@@ -101,11 +102,11 @@ class ContextMenuManager:
         return menu
 
     def show_context_menu(self, menu_type=None, item=None, event=None, parent=None):
+        """Show context menu at cursor position, dispatching events for observers. Resolves menu_type from item if not provided."""
         from infra.logging import infra_log
         import inspect
         type_chain = [cls.__name__ for cls in inspect.getmro(type(item))] if item is not None else []
         infra_log(f"[TRACE][ContextMenuManager] show_context_menu CALLED: menu_type={menu_type}, item={repr(item)}, type_chain={type_chain}", level="info")
-        """Show context menu at cursor position, dispatching events for observers. Resolves menu_type from item if not provided."""
         # Debug: Log the type and id of the item received
         infra_log(f"[DEBUG][ContextMenuManager] show_context_menu called with item={item} type={type(item)} id={id(item) if item else None}", level="debug")
         # Dynamically resolve menu_type if not provided
@@ -222,11 +223,21 @@ class ContextMenuManager:
             # Log context just before execution
             infra_log(f"[DIAG][ContextMenuManager._execute] context.pin: {repr(getattr(api.context, 'pin', None))} id={id(getattr(api.context, 'pin', None)) if hasattr(api.context, 'pin') else None}", level="debug")
             infra_log(f"[DIAG][ContextMenuManager._execute] context.device: {repr(getattr(api.context, 'device', None))} id={id(getattr(api.context, 'device', None)) if hasattr(api.context, 'device') else None}", level="debug")
-            # Prefer uuid if available
-            if action_uuid and action_uuid in registry:
+            # Resolve UUIDs back to canonical action ids so dispatcher-backed handlers run
+            action_id = action_uuid
+            try:
+                from api.actions import actions_map  # local import to avoid cycles
+                if action_uuid in getattr(actions_map, 'keys', lambda: [])():
+                    mapped = actions_map.get(action_uuid, {})
+                    action_id = mapped.get("action") or mapped.get("uuid") or action_uuid
+            except Exception:
+                action_id = action_uuid
+            # Execute using resolved id; fallback to uuid match on metadata
+            if action_id and action_id in registry:
+                registry.execute(action_id, api.context)
+            elif action_uuid and action_uuid in registry:
                 registry.execute(action_uuid, api.context)
             else:
-                # fallback: try legacy string id
                 for k, v in registry._actions.items():
                     if hasattr(v, 'uuid') and v.uuid == action_uuid:
                         registry.execute(k, api.context)

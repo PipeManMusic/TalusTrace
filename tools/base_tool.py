@@ -42,6 +42,10 @@ class BaseTool:
         """
         pass
 
+    def eventFilter(self, obj, event):
+        """Compatibility hook so tools can be installed as Qt event filters."""
+        return False
+
     # Stub event handlers to prevent AttributeErrors
     def on_mouse_press(self, event):
         """
