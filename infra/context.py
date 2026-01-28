@@ -3,18 +3,35 @@ Context management for Talus Trace application.
 Provides project/session state, undo/redo, autosave, and backup logic.
 """
 
-import yaml
 from pathlib import Path
 from core.harness import Harness
 from infra.observer import Observer
 from infra.undo_stack import UndoStack
+from infra.persistence import YAMLPersistence
 
 
 class Context:
     """
     Application context for managing project/session state, undo/redo, autosave, and backups.
+    Delegates all file I/O to infra.persistence.
     """
     AUTOSAVE_FILENAME = ".autosave.yaml"
+    BACKUP_DIRNAME = "backups"
+    BACKUP_LIMIT = 10  # Max number of backups to keep
+
+    def __init__(self, harness: Harness = None):
+        """
+        Initialize the Context with a harness, observer, and undo stack.
+        Args:
+            harness (Harness, optional): The harness to use. Defaults to a new Harness.
+        """
+        self.harness = harness or Harness(meta={"name": "New Harness", "trunk_length_mm": 1000})
+        self.current_file = None
+        self.dirty = False
+        # Event Bus
+        self.observer = Observer()
+        # Undo Stack (single unified implementation)
+        self.undo_stack = UndoStack()
 
     def replay_action_log(self, action_log, registry=None):
         """
@@ -28,93 +45,59 @@ class Context:
             action_id = entry['action_id']
             context = entry['context']
             registry.execute(action_id, context)
-    BACKUP_DIRNAME = "backups"
-    BACKUP_LIMIT = 10  # Max number of backups to keep
 
     def backup_project(self, directory=None):
-        """Create a timestamped backup of the current harness."""
-        import os, datetime, shutil
-        dirpath = directory or (os.path.dirname(self.current_file) if self.current_file else os.getcwd())
-        backup_dir = Path(dirpath) / self.BACKUP_DIRNAME
+        """Create a timestamped backup of the current harness via YAMLPersistence."""
+        import datetime
+        dirpath = directory or (Path(self.current_file).parent if self.current_file else Path.cwd())
+        backup_dir = dirpath / self.BACKUP_DIRNAME
         backup_dir.mkdir(exist_ok=True)
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = backup_dir / f"backup_{timestamp}.yaml"
-        data = self.harness.to_dict()
-        with open(backup_file, 'w') as f:
-            yaml.safe_dump(data, f, sort_keys=False)
+        backup_path = backup_dir / f"backup_{timestamp}.yaml"
+        YAMLPersistence.save(self.harness, str(backup_path))
         # Rotate old backups
         backups = sorted(backup_dir.glob("backup_*.yaml"), key=lambda p: p.stat().st_mtime, reverse=True)
         for old in backups[self.BACKUP_LIMIT:]:
             old.unlink()
-        return backup_file
+        return backup_path
 
     def list_backups(self, directory=None):
-        """List available backup files, newest first."""
-        import os
-        dirpath = directory or (os.path.dirname(self.current_file) if self.current_file else os.getcwd())
-        backup_dir = Path(dirpath) / self.BACKUP_DIRNAME
+        """List available backup files via YAMLPersistence."""
+        dirpath = directory or (Path(self.current_file).parent if self.current_file else Path.cwd())
+        backup_dir = dirpath / self.BACKUP_DIRNAME
         if not backup_dir.exists():
             return []
         return sorted(backup_dir.glob("backup_*.yaml"), key=lambda p: p.stat().st_mtime, reverse=True)
 
     def restore_backup(self, backup_path):
-        """Restore harness from a backup file."""
-        with open(backup_path, 'r') as f:
-            data = yaml.safe_load(f)
-        self.harness = Harness.from_dict(data)
+        """Restore harness from a backup file via YAMLPersistence."""
+        self.harness = YAMLPersistence.load(str(backup_path))
         self.dirty = True
         self.observer.dispatch("model_changed", {"action": "restore_backup"})
         return self.harness
-    AUTOSAVE_FILENAME = ".autosave.yaml"
 
     def autosave(self, directory=None):
-        """Write a snapshot of the current harness to an autosave file."""
-        import os
-        dirpath = directory or (os.path.dirname(self.current_file) if self.current_file else os.getcwd())
-        path = Path(dirpath) / self.AUTOSAVE_FILENAME
-        data = self.harness.to_dict()
-        with open(path, 'w') as f:
-            yaml.safe_dump(data, f, sort_keys=False)
+        """Write a snapshot of the current harness to an autosave file via YAMLPersistence."""
+        dirpath = directory or (Path(self.current_file).parent if self.current_file else Path.cwd())
+        path = dirpath / self.AUTOSAVE_FILENAME
+        YAMLPersistence.save(self.harness, str(path))
         return path
 
     def clear_autosave(self, directory=None):
         """Remove the autosave file if it exists."""
-        import os
-        dirpath = directory or (os.path.dirname(self.current_file) if self.current_file else os.getcwd())
-        path = Path(dirpath) / self.AUTOSAVE_FILENAME
+        dirpath = directory or (Path(self.current_file).parent if self.current_file else Path.cwd())
+        path = dirpath / self.AUTOSAVE_FILENAME
         if path.exists():
             path.unlink()
 
     def restore_autosave(self, directory=None):
-        """Restore harness from the autosave file if it exists."""
-        import os
-        dirpath = directory or (os.path.dirname(self.current_file) if self.current_file else os.getcwd())
-        path = Path(dirpath) / self.AUTOSAVE_FILENAME
-        if not path.exists():
-            raise FileNotFoundError(f"No autosave file found at {path}")
-        with open(path, 'r') as f:
-            data = yaml.safe_load(f)
-        self.harness = Harness.from_dict(data)
+        """Restore harness from the autosave file if it exists via YAMLPersistence."""
+        dirpath = directory or (Path(self.current_file).parent if self.current_file else Path.cwd())
+        path = dirpath / self.AUTOSAVE_FILENAME
+        self.harness = YAMLPersistence.load(str(path))
         self.dirty = True
         self.observer.dispatch("model_changed", {"action": "restore_autosave"})
         return self.harness
-    """
-    Application context for managing the harness, file state, observer, and undo stack.
-    Provides project-level operations and state tracking.
-    """
-    def __init__(self, harness: Harness = None):
-        """
-        Initialize the Context with a harness, observer, and undo stack.
-        Args:
-            harness (Harness, optional): The harness to use. Defaults to a new Harness.
-        """
-        self.harness = harness or Harness(meta={"name": "New Harness", "trunk_length_mm": 1000})
-        self.current_file = None
-        self.dirty = False
-        # Event Bus
-        self.observer = Observer()
-        # Undo Stack (single implementation)
-        self.undo_stack = UndoStack()
 
     def mark_clean(self):
         """Mark the context as clean (not dirty)."""
@@ -143,43 +126,22 @@ class Context:
         self.observer.dispatch("model_changed", {"action": "new_project"})
 
     def load(self, path: Path):
-        """Load a harness from the given file path."""
+        """Load a harness from the given file path via YAMLPersistence."""
         path = Path(path)
-        if not path.exists():
-            raise FileNotFoundError(f"Harness file not found: {path}")
-
-        with open(path, 'r') as f:
-            data = yaml.safe_load(f)
-        # Coerce devices to DeviceList if needed
-        if data and 'devices' in data:
-            from core.harness import DeviceList
-            from core.device import Device
-            if not isinstance(data['devices'], DeviceList):
-                devices = []
-                for d in data['devices']:
-                    if isinstance(d, dict):
-                        devices.append(Device(**d))
-                    else:
-                        devices.append(d)
-                data['devices'] = DeviceList(devices)
-            self.harness = Harness.from_dict(data)
+        self.harness = YAMLPersistence.load(str(path))
         self.current_file = path
         self.dirty = False
         self.observer.dispatch("model_changed", {"action": "load"})
 
     def save_as(self, path: Path):
         """
-        Save the current harness to a new file path.
+        Save the current harness to a new file path via YAMLPersistence.
         Args:
             path (Path): The file path to save the harness to.
         """
         path = Path(path)
         self.harness.increment_revision()
-        data = self.harness.to_dict()
-        
-        with open(path, 'w') as f:
-            yaml.safe_dump(data, f, sort_keys=False)
-            
+        YAMLPersistence.save(self.harness, str(path))
         self.current_file = path
         self.dirty = False
 

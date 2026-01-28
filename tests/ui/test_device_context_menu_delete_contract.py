@@ -40,6 +40,9 @@ def test_device_context_menu_delete_removes_device(qtbot):
     scene_pos = device_item.scenePos()
     viewport_pos = canvas.mapFromScene(scene_pos)
     device_item.setSelected(True)
+    # Update SelectionManager to match (proper MVC flow)
+    from core.selection import SelectionManager
+    SelectionManager().select(device)
     shown_menu = {}
     def test_hook(data):
         menu = data['menu']

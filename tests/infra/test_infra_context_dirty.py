@@ -53,9 +53,9 @@ def test_dirty_flag_on_save_and_load(tmp_path, monkeypatch):
     assert ctx.is_dirty is True
     # Patch from_dict for load
     DummyHarness.from_dict = classmethod(lambda cls, d: DummyHarness())
-    # Write a dummy file
+    # Write a dummy file with schema version
     with open(save_path, 'w') as f:
-        f.write('meta: {}\nrev: 1\n')
+        f.write('meta: {}\nrev: 1\n__schema_version__: 2026-01\n')
     # Load should clear dirty
     ctx.load(save_path)
     assert ctx.is_dirty is False

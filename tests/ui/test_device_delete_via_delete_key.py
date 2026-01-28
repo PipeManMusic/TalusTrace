@@ -30,9 +30,12 @@ def test_device_delete_via_delete_key(canvas_and_api):
         items = [item for item in canvas.scene.items() if hasattr(item, "model") and getattr(item.model, "id", None) == device.id]
         assert items, "DeviceItem not added to scene."
         device_item = items[0]
-        # Select the device visually
+        # Select the device visually AND in SelectionManager (proper MVC flow)
         if hasattr(device_item, 'setSelected'):
             device_item.setSelected(True)
+        # Update SelectionManager to match (this is what the controller would do)
+        from core.selection import SelectionManager
+        SelectionManager().select(device)
         qtbot.wait(50)
         # Simulate Delete key event to the canvas
         qtbot.keyClick(canvas, Qt.Key_Delete)

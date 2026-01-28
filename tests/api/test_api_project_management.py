@@ -102,8 +102,10 @@ def test_backup_and_restore_end_to_end(tmp_path, monkeypatch):
         def from_dict(cls, d):
             return cls(d["value"])
     
-    # Patch Harness in context
+    # Patch Harness in context and persistence
     monkeypatch.setattr(infra_context, "Harness", DummyHarness)
+    import infra.persistence
+    monkeypatch.setattr(infra.persistence, "Harness", DummyHarness)
     ctx = infra_context.global_context
     ctx.harness = DummyHarness("original-data")
     ctx.current_file = str(tmp_path / "project.yaml")

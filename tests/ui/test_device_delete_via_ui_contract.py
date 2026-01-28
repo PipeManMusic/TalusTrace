@@ -10,6 +10,9 @@ from api.manager import APIManager
 def canvas_and_api(qtbot: QtBot):
     APIManager.reset()
     api = APIManager.get_instance()
+    # Clear SelectionManager state from previous tests
+    from core.selection import SelectionManager
+    SelectionManager().clear_selection()
     canvas = HarnessCanvas()
     qtbot.addWidget(canvas)
     canvas.show()

@@ -82,12 +82,14 @@ class YAMLPersistence:
         Args:
             file_path (Path): The file to back up.
             retention (int): Number of backups to retain.
+        Returns:
+            Path: The path to the backup file created, or None if source file doesn't exist.
         """
         import shutil
         import datetime
         file_path = Path(file_path)  # Accept str or Path
         if not file_path.exists():
-            return
+            return None
         ts = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
         backup_path = file_path.parent / f"{file_path.name}.bak-{ts}"
         shutil.copy2(file_path, backup_path)
@@ -98,6 +100,7 @@ class YAMLPersistence:
                 old.unlink()
             except Exception:
                 pass
+        return backup_path
 
     @staticmethod
     def list_backups(file_path: Path):
