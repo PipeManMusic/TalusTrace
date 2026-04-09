@@ -32,9 +32,9 @@ def _simulate_wire_add(api, device_a, device_b):
     return wire
 
 def _simulate_bundle_add(api, device_list):
-    from api.commands.device import AddBundleCommand
+    from api.commands.bundle import AddBundleCommand
     bundle = type('Bundle', (), {'id': 'testbundle', 'members': [d.id for d in device_list]})()
-    AddBundleCommand(bundle, context=api.context).execute()
+    AddBundleCommand(bundle, api.context.harness).execute()
     return bundle
 
 @pytest.mark.parametrize("entity,add_fn,remove_cmd,update_cmd,copy_cmd,paste_cmd", [
@@ -67,12 +67,14 @@ def test_entity_lifecycle_contract(entity, add_fn, remove_cmd, update_cmd, copy_
         obj = add_fn(api, [device_a, device_b])
     # Patch and test remove, update, copy, paste commands
     for cmd_name in [remove_cmd, update_cmd, copy_cmd, paste_cmd]:
-        with patch(f"api.commands.device.{cmd_name}.__init__", return_value=None) as cmd_init, \
+        # Bundle commands live in api.commands.bundle, others in api.commands.device
+        cmd_module = "api.commands.bundle" if entity == "bundle" else "api.commands.device"
+        with patch(f"{cmd_module}.{cmd_name}.__init__", return_value=None) as cmd_init, \
              patch.object(api.context.undo_stack, "push") as push_mock:
             # Simulate command usage
             # (In real code, call the actual API method or UI action)
             # Here, just instantiate and push the command
-            cmd_class = getattr(__import__('api.commands.device', fromlist=[cmd_name]), cmd_name)
+            cmd_class = getattr(__import__(cmd_module, fromlist=[cmd_name]), cmd_name)
             cmd = cmd_class(obj, context=api.context)
             api.context.undo_stack.push(cmd)
             assert cmd_init.called, f"{cmd_name} was not constructed for {entity}!"

@@ -32,9 +32,13 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         self.pin_lookup = pin_lookup
         # New flag for compliance
         self.is_violation = False
+        self.elbow_grips = []
+        self.segment_grips = []
         self.update_from_model(wire_model)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)
         self.setFlag(QGraphicsItem.ItemIsMovable, False)
+        self._no_drag_cursor = True
+        self.setAcceptHoverEvents(True)
 
     @property
     def model(self):
@@ -47,17 +51,68 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         self._model = value
         self.update_from_model(value)
 
+    @property
+    def path_nodes(self):
+        """Proxy to the wire model's path_nodes."""
+        return getattr(self._model, 'path_nodes', [])
+
     def update_from_model(self, wire_model):
         """Update the item's path and style from the given wire model."""
         self._model = wire_model
-        nodes = getattr(wire_model, 'path_nodes', [])
+        self._rebuild_path()
+        self._apply_style()
+
+    def _rebuild_path(self):
+        """Rebuild the QPainterPath from the model's path_nodes."""
+        nodes = getattr(self._model, 'path_nodes', [])
         qpath = QPainterPath()
         if nodes:
             qpath.moveTo(nodes[0][0], nodes[0][1])
             for node in nodes[1:]:
                 qpath.lineTo(node[0], node[1])
         self.setPath(qpath)
-        self._apply_style()
+
+    def _build_path_and_grips(self):
+        """Rebuild path and create/position elbow and segment grips."""
+        # Guard against recursion (e.g. from api.select triggering itemChange)
+        if getattr(self, '_building_grips', False):
+            return
+        self._building_grips = True
+        try:
+            from ui.items.elbow_grip import ElbowGripItem
+            from ui.items.segment_grip import SegmentGripItem
+            # Remove old grips from the scene
+            old_grips = self.elbow_grips + self.segment_grips
+            self.elbow_grips = []
+            self.segment_grips = []
+            for grip in old_grips:
+                scene = grip.scene()
+                if scene:
+                    scene.removeItem(grip)
+            # Rebuild path from model
+            self._rebuild_path()
+            nodes = self.path_nodes
+            if not nodes or len(nodes) < 2:
+                return
+            my_scene = self.scene()
+            # Create elbow grips for interior nodes (not endpoints)
+            for i in range(1, len(nodes) - 1):
+                grip = ElbowGripItem(self, i, nodes[i])
+                if my_scene:
+                    my_scene.addItem(grip)
+                self.elbow_grips.append(grip)
+            # Create segment grips at midpoints between consecutive nodes
+            # Skip if both nodes are endpoints (nothing moveable)
+            num = len(nodes)
+            for i in range(num - 1):
+                if i == 0 and i + 1 == num - 1:
+                    continue  # Both nodes are pin-anchored endpoints
+                grip = SegmentGripItem(self, i, i + 1, nodes[i], nodes[i + 1])
+                if my_scene:
+                    my_scene.addItem(grip)
+                self.segment_grips.append(grip)
+        finally:
+            self._building_grips = False
 
     def update_compliance_visuals(self, is_violation=True):
         """Called by Audit System to highlight violations."""
@@ -95,12 +150,32 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
             painter.setBrush(QBrush(QColor(0, 200, 255)))
             painter.setPen(Qt.NoPen)
             radius = 0.5
-            elbow_indices = set(grip.index for grip in getattr(self, 'elbow_grips', []))
+            elbow_indices = set(grip.index for grip in self.elbow_grips)
             for i in range(1, len(self.path_nodes) - 1):
                 # Only draw if not covered by a grip (avoid double dot under grip)
                 if i not in elbow_indices:
                     pt = self.path_nodes[i]
                     painter.drawEllipse(QPointF(pt[0], pt[1]), radius, radius)
+
+    def itemChange(self, change, value):
+        """Show/hide grips when selection changes."""
+        if change == QGraphicsItem.ItemSelectedChange:
+            if value:
+                # Becoming selected — build grips
+                self._build_path_and_grips()
+            else:
+                # Becoming deselected — remove grips
+                self._remove_grips()
+        return super().itemChange(change, value)
+
+    def _remove_grips(self):
+        """Remove all grips from the scene."""
+        for grip in self.elbow_grips + self.segment_grips:
+            scene = grip.scene()
+            if scene:
+                scene.removeItem(grip)
+        self.elbow_grips = []
+        self.segment_grips = []
 
 class GhostWireItem(ObservableGraphicsItemMixin, QGraphicsPathItem):
     """Scene item for rendering a temporary (ghost) wire during interactive operations."""

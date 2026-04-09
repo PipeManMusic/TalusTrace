@@ -44,6 +44,7 @@ class MoveTool(BaseTool):
         self.cursor = Qt.ClosedHandCursor
         self.current_item = item
         self._last_drag_pos = self._drag_initial_pos
+        self._last_snapped_pos = None
 
     def update_drag(self, pos):
         """
@@ -60,6 +61,15 @@ class MoveTool(BaseTool):
         dy = pos.y() - self.start_pos.y()
         new_x = self._drag_initial_pos[0] + dx
         new_y = self._drag_initial_pos[1] + dy
+        # Snap to grid for visible snapping during drag
+        if hasattr(self.api, 'settings') and hasattr(self.api.settings, 'snap'):
+            new_x = self.api.settings.snap(new_x)
+            new_y = self.api.settings.snap(new_y)
+        # Skip update if snapped position hasn't changed
+        last = getattr(self, '_last_snapped_pos', None)
+        if last is not None and last[0] == new_x and last[1] == new_y:
+            return
+        self._last_snapped_pos = (new_x, new_y)
         logging.debug(f"[MoveTool.update_drag] device.id={getattr(device, 'id', None)}, dx={dx}, dy={dy}, new_x={new_x}, new_y={new_y}")
         # Always use API for model update and event dispatch
         # Pass device directly (update_drag doesn't need undo, so ID vs item doesn't matter)
@@ -81,6 +91,10 @@ class MoveTool(BaseTool):
         dy = pos.y() - self.start_pos.y()
         final_x = self._drag_initial_pos[0] + dx
         final_y = self._drag_initial_pos[1] + dy
+        # Snap to grid
+        if hasattr(self.api, 'settings') and hasattr(self.api.settings, 'snap'):
+            final_x = self.api.settings.snap(final_x)
+            final_y = self.api.settings.snap(final_y)
         logging.debug(f"[MoveTool.finish_drag] device.id={getattr(device, 'id', None)}, dx={dx}, dy={dy}, final_x={final_x}, final_y={final_y}")
         # Commit move to undo stack via API
         # Pass current_item so move_device can access _drag_initial_pos for undo
@@ -92,6 +106,7 @@ class MoveTool(BaseTool):
         self.ghost_item = None
         if hasattr(self, '_drag_initial_pos'):
             del self._drag_initial_pos
+        self._last_snapped_pos = None
 
     def start(self, target=None, *args, **kwargs):
         """

@@ -160,6 +160,8 @@ class ContextMenuManager:
             infra_log(f"[TRACE][ContextMenuManager] Using config['context_menu']['{mtype}']: {self.config['context_menu'][mtype]}", level="info")
         else:
             infra_log(f"[TRACE][ContextMenuManager] No config['context_menu']['{mtype}'] found", level="info")
+        # Store item for _execute to use when SelectionManager has no selection
+        self._context_item = item
         menu = self.build_menu(menu_type=mtype, parent=parent)
         infra_log(f"[DIAG][ContextMenuManager] show_context_menu: menu actions={[a.text() for a in menu.actions()]}", level="info")
         # Dispatch 'context_menu' event for test hooks and observers
@@ -187,31 +189,33 @@ class ContextMenuManager:
                 action_uuid = action_data
             api = APIManager.get_instance()
             from infra.logging import infra_log
-            # Attach selected model to context for dispatcher contract actions
-            from core.selection import SelectionManager
-            mgr = SelectionManager()
-            selected = mgr.selected_models
+            # Clear stale context attributes
             for attr in ("pin", "device", "wire"):
                 if hasattr(api.context, attr):
                     delattr(api.context, attr)
-            if selected:
-                model = selected[0]
-                infra_log(f"[DIAG][ContextMenuManager._execute] selected model: {repr(model)} id={id(model)}", level="debug")
+            # Resolve context from the actual right-clicked item (_context_item),
+            # NOT from SelectionManager. The selection may contain a different item
+            # (e.g. device selected but user right-clicked a pin on it).
+            context_item = getattr(self, '_context_item', None)
+            model = context_item.model if context_item is not None and hasattr(context_item, 'model') else None
+            if model is None:
+                # Fallback to selection only if no context item
+                from core.selection import SelectionManager
+                mgr = SelectionManager()
+                selected = mgr.selected_models
+                if selected:
+                    model = selected[0]
+            if model is not None:
+                infra_log(f"[DIAG][ContextMenuManager._execute] resolved model: {repr(model)} id={id(model)}", level="debug")
                 if hasattr(model, "device_id") and hasattr(model, "id"):
                     api.context.pin = model
-                    if hasattr(model, "device_id"):
-                        device = next((d for d in api.context.harness.devices if getattr(d, "id", None) == getattr(model, "device_id", None)), None)
-                        if device:
-                            api.context.device = device
-                            infra_log(f"[DIAG][ContextMenuManager._execute] resolved device: {repr(device)} id={id(device)}", level="debug")
+                    device = next((d for d in api.context.harness.devices if getattr(d, "id", None) == getattr(model, "device_id", None)), None)
+                    if device:
+                        api.context.device = device
                 elif hasattr(model, "pins"):
                     api.context.device = model
-                    infra_log(f"[DIAG][ContextMenuManager._execute] resolved device: {repr(model)} id={id(model)}", level="debug")
                 elif hasattr(model, "segments"):
                     api.context.wire = model
-                    infra_log(f"[DIAG][ContextMenuManager._execute] resolved wire: {repr(model)} id={id(model)}", level="debug")
-            else:
-                infra_log(f"[DIAG][ContextMenuManager._execute] No selection found", level="debug")
             # For delete, set logging flag for testability (legacy support)
             if action_uuid in ("edit.delete", "e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b"):
                 if hasattr(api.context, '__dict__'):

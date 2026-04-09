@@ -24,8 +24,8 @@ class PinItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
     def __init__(self, pin_model, parent=None):
         """Initialize PinItem with a pin model and optional parent."""
         from infra.logging import infra_log
-        # Make pin a small ellipse (8x8 px, centered)
-        QGraphicsEllipseItem.__init__(self, -4, -4, 8, 8, parent)
+        # Make pin a small ellipse (5x5, centered) — same size as elbow grips
+        QGraphicsEllipseItem.__init__(self, -2.5, -2.5, 5, 5, parent)
         ObservableGraphicsItemMixin.__init__(self)
         infra_log(f"[PinItem] Created PinItem for model id={getattr(pin_model, 'id', None)}, obj={pin_model}, PinItem id={id(self)}, parent={parent}", level="debug")
         self.setZValue(20)  # Pins above devices and wires

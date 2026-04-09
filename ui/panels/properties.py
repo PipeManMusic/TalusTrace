@@ -82,6 +82,23 @@ class PropertiesPanel(QWidget):
         Args:
             data (optional): Data passed from the model_changed event.
         """
+        # Re-resolve current_item from the harness so we always render
+        # the live model (not a stale copy from selection time).
+        if self.current_item and hasattr(self.current_item, 'id'):
+            item_id = self.current_item.id
+            harness = self.api.context.harness
+            live = None
+            for dev in getattr(harness, 'devices', []):
+                if getattr(dev, 'id', None) == item_id:
+                    live = dev
+                    break
+            if live is None:
+                for w in getattr(harness, 'wires', []):
+                    if getattr(w, 'id', None) == item_id:
+                        live = w
+                        break
+            if live is not None:
+                self.current_item = live
         # Clear existing rows
         while self.form.count():
             child = self.form.takeAt(0)

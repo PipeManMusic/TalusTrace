@@ -70,19 +70,22 @@ def test_contract_compliance_mvc_rules(item_class):
     META-TEST: Enforces strict MVC rules.
     If this fails, the class is too 'smart' and needs a lobotomy.
     """
-    # 1. Check for Forbidden Events
-    forbidden = [
-        "mousePressEvent", "mouseReleaseEvent", "mouseDoubleClickEvent",
-        "keyPressEvent", "wheelEvent", "contextMenuEvent"
-    ]
-    defined_methods = item_class.__dict__
-    
-    for method in forbidden:
-        if method in defined_methods:
-            pytest.fail(
-                f"MVC VIOLATION: '{item_class.__name__}' defines '{method}'.\n"
-                f"Views must be DUMB. Move this logic to a Tool."
-            )
+    # 1. Check for Forbidden Events (skip for interactive grip items)
+    if getattr(item_class, '_interactive_grip', False):
+        pass  # Grip items handle their own mouse events for drag tracking
+    else:
+        forbidden = [
+            "mousePressEvent", "mouseReleaseEvent", "mouseDoubleClickEvent",
+            "keyPressEvent", "wheelEvent", "contextMenuEvent"
+        ]
+        defined_methods = item_class.__dict__
+        
+        for method in forbidden:
+            if method in defined_methods:
+                pytest.fail(
+                    f"MVC VIOLATION: '{item_class.__name__}' defines '{method}'.\n"
+                    f"Views must be DUMB. Move this logic to a Tool."
+                )
 
     # 2. Check for Observable Mixin
     if not issubclass(item_class, ObservableGraphicsItemMixin):

@@ -7,3 +7,7 @@ venv/
 *.bak
 *.tmp
 manage_issues.py.cache/
+backups/
+*.bak-*
+talustrace_infra.log
+talus-project.json

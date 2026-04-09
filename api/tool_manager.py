@@ -50,12 +50,9 @@ class ToolManager:
             return
 
         # Deactivate existing tool before switching
-        """
-        ToolManager for registering, activating, and managing tools in Talus Trace.
-        Handles tool lifecycle, transitions, and integration with the global ActionRegistry.
-        """
+        if self.active_tool and hasattr(self.active_tool, 'deactivate'):
+            self.active_tool.deactivate()
 
-        from api.actions import registry
         self.active_tool = self._tools[name]
         # ...removed debug print...
         # Pass args/kwargs to start() for event context (MAP-compliant)

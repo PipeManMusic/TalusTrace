@@ -28,28 +28,50 @@ class MoveSegmentCommand:
         self.api = api
         self.executed = False
 
+    def _sync_scene(self):
+        """Update the wire scene item and grips from the current model state."""
+        if not self.api:
+            return
+        wire_item = self.api.get_scene_item(self.wire.id)
+        if wire_item:
+            wire_item._rebuild_path()
+            if wire_item.isSelected():
+                wire_item._build_path_and_grips()
+            wire_item.update()
+
     def execute(self):
         """
         Execute the segment movement by applying dx, dy.
+        Only moves interior nodes — endpoints (0 and last) are anchored to pins.
         """
-        # Actually move the segment by dx, dy
         nodes = self.wire.path_nodes
-        nodes[self.start_idx][0] += self.dx
-        nodes[self.start_idx][1] += self.dy
-        nodes[self.end_idx][0] += self.dx
-        nodes[self.end_idx][1] += self.dy
+        num = len(nodes)
+        if 0 < self.start_idx < num - 1:
+            nodes[self.start_idx][0] += self.dx
+            nodes[self.start_idx][1] += self.dy
+        if 0 < self.end_idx < num - 1:
+            nodes[self.end_idx][0] += self.dx
+            nodes[self.end_idx][1] += self.dy
+        self._sync_scene()
+        if self.api:
+            self.api.dispatch("model_changed", {"action": "move_segment", "item": self.wire})
         self.executed = True
 
     def undo(self):
         """
         Undo the segment movement by reversing dx, dy.
         """
-        # Inverse move
         nodes = self.wire.path_nodes
-        nodes[self.start_idx][0] -= self.dx
-        nodes[self.start_idx][1] -= self.dy
-        nodes[self.end_idx][0] -= self.dx
-        nodes[self.end_idx][1] -= self.dy
+        num = len(nodes)
+        if 0 < self.start_idx < num - 1:
+            nodes[self.start_idx][0] -= self.dx
+            nodes[self.start_idx][1] -= self.dy
+        if 0 < self.end_idx < num - 1:
+            nodes[self.end_idx][0] -= self.dx
+            nodes[self.end_idx][1] -= self.dy
+        self._sync_scene()
+        if self.api:
+            self.api.dispatch("model_changed", {"action": "move_segment", "item": self.wire})
 
     def redo(self):
         """

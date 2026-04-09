@@ -536,6 +536,7 @@ class APIManager:
         logging.debug(f"[APIManager.move_device] target_or_id={target_or_id}, new_x={new_x}, new_y={new_y}, commit={commit}")
         from api.commands.move import MoveCommand
         from core.device import Device
+        from core.pin import Pin
         device = None
         scene_item = None
         
@@ -544,8 +545,8 @@ class APIManager:
             # It's a scene item (has .model attribute)
             scene_item = target_or_id
             device = getattr(scene_item, 'model', None)
-        elif isinstance(target_or_id, Device):
-            # It's a Device object directly
+        elif isinstance(target_or_id, (Device, Pin)):
+            # It's a Device or Pin object directly
             device = target_or_id
             # Try to get scene item from registry
             scene_item = self.get_scene_item(device.id) if hasattr(device, 'id') else None
@@ -577,11 +578,96 @@ class APIManager:
             else:
                 cmd.execute()
         else:
-            # Directly update model for real-time feedback
-            logging.debug(f"[APIManager.move_device] (commit=False) updating device.id={getattr(device, 'id', None)} to x={new_x}, y={new_y}")
+            # Directly update model and scene item for real-time feedback.
+            # Skip the full dispatch cycle to avoid stuttering during drag.
             device.x = new_x
             device.y = new_y
-            self.dispatch("model_changed", {"action": "move", "item": device})
+            if scene_item is None:
+                scene_item = self.get_scene_item(getattr(device, 'id', None))
+            if scene_item is not None and hasattr(scene_item, 'setPos'):
+                scene_item.setPos(new_x, new_y)
+            # Update connected wire endpoints during drag
+            self._update_connected_wires(device)
+
+    def _update_connected_wires(self, moved_item):
+        """Update wire endpoints connected to a moved device or pin."""
+        from core.pin import Pin
+        from PySide6.QtCore import QPointF
+        harness = getattr(self.context, 'harness', None)
+        if not harness:
+            return
+        wires = getattr(harness, 'wires', [])
+        if not wires:
+            return
+
+        # Determine which device/pin IDs are affected
+        if isinstance(moved_item, Pin):
+            # Moving a single pin — find its device for scene position calculation
+            affected_pin_ids = {moved_item.id}
+            device_id = getattr(moved_item, 'device_id', None)
+            affected_device_ids = {device_id} if device_id else set()
+        else:
+            # Moving a device — all its pins are affected
+            device_id = getattr(moved_item, 'id', None)
+            affected_device_ids = {device_id} if device_id else set()
+            affected_pin_ids = set()
+            for pin in getattr(moved_item, 'pins', []):
+                affected_pin_ids.add(pin.id)
+
+        for wire in wires:
+            if not getattr(wire, 'path_nodes', None) or len(wire.path_nodes) < 2:
+                continue
+            updated = False
+            # Check from-endpoint
+            if wire.from_pin in affected_pin_ids or wire.from_conn in affected_device_ids:
+                pos = self._resolve_pin_scene_pos(wire.from_pin, wire.from_conn)
+                if pos is not None:
+                    wire.path_nodes[0] = [pos.x(), pos.y()]
+                    updated = True
+            # Check to-endpoint
+            if wire.to_pin in affected_pin_ids or wire.to_conn in affected_device_ids:
+                pos = self._resolve_pin_scene_pos(wire.to_pin, wire.to_conn)
+                if pos is not None:
+                    wire.path_nodes[-1] = [pos.x(), pos.y()]
+                    updated = True
+            if updated:
+                wire_scene_item = self.get_scene_item(wire.id)
+                if wire_scene_item and hasattr(wire_scene_item, 'update_from_model'):
+                    wire_scene_item.update_from_model(wire)
+                    # Sync grip positions if the wire is selected and has grips
+                    nodes = wire.path_nodes
+                    for grip in getattr(wire_scene_item, 'elbow_grips', []):
+                        if 0 <= grip.index < len(nodes):
+                            grip.setPos(QPointF(nodes[grip.index][0], nodes[grip.index][1]))
+                    for sg in getattr(wire_scene_item, 'segment_grips', []):
+                        if len(nodes) > max(sg.start_idx, sg.end_idx):
+                            mx = (nodes[sg.start_idx][0] + nodes[sg.end_idx][0]) / 2
+                            my = (nodes[sg.start_idx][1] + nodes[sg.end_idx][1]) / 2
+                            sg.setPos(QPointF(mx, my))
+
+    def _resolve_pin_scene_pos(self, pin_id, device_id):
+        """Resolve a pin's absolute scene position from model coordinates."""
+        from PySide6.QtCore import QPointF
+        harness = self.context.harness
+        # Find the device
+        device = None
+        for dev in getattr(harness, 'devices', []):
+            if dev.id == device_id:
+                device = dev
+                break
+        if device is None:
+            return None
+        # Find the pin on the device
+        pin = None
+        for p in getattr(device, 'pins', []):
+            if p.id == pin_id:
+                pin = p
+                break
+        if pin is None:
+            return None
+        # Pin position is relative to device; compute absolute scene position
+        return QPointF(device.x + pin.x, device.y + pin.y)
+
     def open_context_menu(self, event, item=None, menu_type=None):
         """
         Open a context menu at the event location, dispatching a 'context_menu' event.
@@ -607,6 +693,19 @@ class APIManager:
         """
         from api.commands.device import AddWireCommand
         self.context.undo_stack.push(AddWireCommand(wire))
+
+    def delete_wire(self, wire):
+        """
+        Delete a wire from the model using DeleteWireCommand and push to the undo stack.
+        Ensures wire deletion is undoable, emits model_changed, and logs the action.
+        This method MUST be used for all wire deletion (UI/dispatcher must not mutate model directly).
+        """
+        from api.commands.device import DeleteWireCommand
+        if hasattr(self, 'context') and hasattr(self.context, 'undo_stack'):
+            self.context.undo_stack.push(DeleteWireCommand(wire, context=self.context))
+        else:
+            DeleteWireCommand(wire, context=self.context).execute()
+
     @classmethod
     def reset(cls):
         """Reset the singleton instance (for test compatibility)."""

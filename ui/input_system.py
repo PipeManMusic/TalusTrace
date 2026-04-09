@@ -82,37 +82,81 @@ class InputSystem(QObject):
     def handle_canvas_event(self, event):
         """Route mouse events from the Canvas to the active tool or injected MoveTool."""
         etype = event.original_event.type()
-        import sys
-        print(f"[DEBUG][handle_canvas_event] EVENT TYPE: {etype} ({event.original_event.__class__.__name__})", file=sys.stderr)
+        scene_pos = getattr(event, 'scene_pos', None)
+
+        # Fast path: active drag in progress — skip all hit-testing and selection queries
+        active_drag = getattr(self, '_active_drag_tool', None)
+        if active_drag is not None:
+            if etype == QEvent.MouseMove and hasattr(active_drag, 'update_drag'):
+                active_drag.update_drag(scene_pos)
+                return True
+            if etype == QEvent.MouseButtonRelease and hasattr(active_drag, 'finish_drag'):
+                active_drag.finish_drag(scene_pos)
+                self._active_drag_tool = None
+                return True
+
         tool = self._move_tool if self._move_tool is not None else self.api.tool_manager.active_tool
         # Use API facade instead of direct Core access
         selection_ids = self.api.get_selection()
         is_move_tool = tool.__class__.__name__ == "MoveTool"
-        scene_pos = getattr(event, 'scene_pos', None)
         item = getattr(event, 'scene_item', None) or getattr(event, 'item_at', None)
-        print(f"[DEBUG][handle_canvas_event] BEFORE itemAt: item={item}, scene_pos={scene_pos}", file=sys.stderr)
-        print(f"[DEBUG][handle_canvas_event] has main_window={hasattr(self.api, 'main_window')}, has canvas={hasattr(self.api.main_window, 'canvas') if hasattr(self.api, 'main_window') else False}", file=sys.stderr)
         # If item is still None and we have a main_window with canvas, query the scene directly
         if item is None and scene_pos is not None:
             try:
                 if hasattr(self.api, 'main_window') and hasattr(self.api.main_window, 'canvas'):
                     canvas = self.api.main_window.canvas
-                    print(f"[DEBUG][handle_canvas_event] canvas={canvas}, has scene attr={hasattr(canvas, 'scene')}", file=sys.stderr)
                     if canvas and hasattr(canvas, 'scene'):
                         from PySide6.QtGui import QTransform
                         scene = canvas.scene
-                        print(f"[DEBUG][handle_canvas_event] scene={scene}, about to call itemAt", file=sys.stderr)
                         if scene:
                             item = scene.itemAt(scene_pos, QTransform())
-                            print(f"[DEBUG][handle_canvas_event] AFTER itemAt: item={item}, type={type(item)}, hasattr model={hasattr(item, 'model') if item else None}", file=sys.stderr)
-                    else:
-                        print(f"[DEBUG][handle_canvas_event] scene check failed", file=sys.stderr)
             except Exception as e:
                 logging.warning(f"[InputSystem.handle_canvas_event] Failed to get item at scene position: {e}")
-                import traceback
-                traceback.print_exc()
                 item = None
-        logging.debug(f"[InputSystem.handle_canvas_event] CALLED: etype={etype}, tool={tool}, selection_ids={selection_ids}, scene_pos={scene_pos}, item={item}, event={event}, orig_event={event.original_event}")
+        logging.debug(f"[InputSystem.handle_canvas_event] CALLED: etype={etype}, tool={tool}, selection_ids={selection_ids}, scene_pos={scene_pos}, item={item}")
+
+        # Double-click on a pin starts a wire
+        if etype == QEvent.MouseButtonDblClick:
+            from ui.items.pin import PinItem
+            from ui.items.wire import WireItem
+            if isinstance(item, PinItem) and hasattr(item, 'pin'):
+                device_item = item.parentItem()
+                if device_item and hasattr(device_item, 'model'):
+                    wire_tool = self.api.tool_manager.get_tool('wire')
+                    if wire_tool:
+                        self.api.tool_manager.set_tool('wire')
+                        wire_tool.begin_wire_from_pin(item.pin, device_item.model, scene_pos)
+                        return True
+            elif isinstance(item, WireItem) and hasattr(item, 'model'):
+                wire_model = item.model
+                nodes = getattr(wire_model, 'path_nodes', [])
+                if nodes and len(nodes) >= 2:
+                    # Find the segment closest to the click and insert an elbow there
+                    best_idx = 1
+                    best_dist = float('inf')
+                    sx, sy = scene_pos.x(), scene_pos.y()
+                    for i in range(len(nodes) - 1):
+                        ax, ay = nodes[i][0], nodes[i][1]
+                        bx, by = nodes[i + 1][0], nodes[i + 1][1]
+                        # Distance from point to line segment
+                        dx, dy = bx - ax, by - ay
+                        seg_len_sq = dx * dx + dy * dy
+                        if seg_len_sq == 0:
+                            t = 0
+                        else:
+                            t = max(0, min(1, ((sx - ax) * dx + (sy - ay) * dy) / seg_len_sq))
+                        px, py = ax + t * dx, ay + t * dy
+                        dist = ((sx - px) ** 2 + (sy - py) ** 2) ** 0.5
+                        if dist < best_dist:
+                            best_dist = dist
+                            best_idx = i + 1
+                    # Snap elbow position to grid
+                    if hasattr(self.api, 'settings') and hasattr(self.api.settings, 'snap'):
+                        sx = self.api.settings.snap(sx)
+                        sy = self.api.settings.snap(sy)
+                    self.api.add_elbow(wire_model, best_idx, [sx, sy])
+                    return True
+            return True  # Consume other double-clicks
         # 1. Right Click Handling (Context Menu)
         if etype == QEvent.MouseButtonPress:
             btn_val = event.button() if hasattr(event, 'button') and callable(event.button) else getattr(event, 'button', None)
@@ -120,6 +164,11 @@ class InputSystem(QObject):
             logging.debug(f"[INPUT_SYSTEM][MOUSE_PRESS] event.button={btn_val} (type={type(btn_val)}), orig_event.button={orig_btn_val} (type={type(orig_btn_val)}) Qt.RightButton={Qt.RightButton}")
             is_right_click = btn_val == Qt.RightButton or orig_btn_val == Qt.RightButton
             if is_right_click:
+                # Select the right-clicked item so context menu commands apply to it
+                if item is not None and hasattr(item, 'model'):
+                    model_id = getattr(item.model, 'id', None)
+                    if model_id:
+                        self.api.select([model_id])
                 # NOTE: Use the item we detected above from scene.itemAt(), don't overwrite it
                 logging.debug(f"[INPUT_SYSTEM][RIGHT_CLICK DETECTED] item={item} type={type(item)} id={id(item) if item else None}, calling open_context_menu if available.")
                 # Extra diagnostics for context menu contract
@@ -147,42 +196,55 @@ class InputSystem(QObject):
                         self.api.open_context_menu(event.original_event)
                 else:
                     logging.debug(f"[INPUT_SYSTEM][NO OPEN_CONTEXT_MENU] api={self.api}")
-                if tool and hasattr(tool, 'on_mouse_press'):
-                    tool.on_mouse_press(event)
+                # Do NOT forward right-click to the active tool after context menu;
+                # the menu has already been handled and the item may have been deleted.
                 return True
+        # Populate scene_item on the event so tools can use the already-resolved item
+        if item is not None:
+            event.scene_item = item
         # 2. Tool Handling
         if tool:
             if etype == QEvent.MouseButtonPress:
                 logging.debug(f"[INPUT_SYSTEM][MOUSE_PRESS] tool={tool}, item={item}")
-                if hasattr(tool, 'start_drag'):
-                    if is_move_tool:
-                        if selection_ids and item is not None and hasattr(item, 'model') and getattr(item.model, 'id', None) in selection_ids:
-                            tool.start_drag(item, scene_pos)
-                        elif item is not None and hasattr(item, 'model') and getattr(item.model, 'id', None) not in selection_ids:
-                            self.api.select([item.model.id], tool_name="move")
-                    else:
-                        tool.start_drag(item, scene_pos)
-                if hasattr(tool, 'on_mouse_press'):
-                    logging.debug(f"[InputSystem.handle_canvas_event] Calling tool.on_mouse_press for tool={tool}")
-                    tool.on_mouse_press(event)
+                btn_val = event.button() if hasattr(event, 'button') and callable(event.button) else getattr(event, 'button', None)
+                is_left = btn_val == Qt.LeftButton
+                # Resolve drag tool: if the active tool supports drag, use it directly.
+                # Otherwise, on left-click with an item, grab the registered MoveTool.
+                # Skip drag initiation if the active tool handles its own clicks
+                # (e.g. WireTool clicking on pins to complete a wire).
+                drag_tool = None
+                tool_handles_own_clicks = tool.__class__.__name__ in ("WireTool", "PlacementTool")
+                from ui.items.wire import WireItem
+                item_is_draggable = item is not None and hasattr(item, 'model') and not isinstance(item, WireItem)
+                if item_is_draggable and not tool_handles_own_clicks:
+                    if hasattr(tool, 'start_drag'):
+                        drag_tool = tool
+                    elif is_left:
+                        drag_tool = self.api.tool_manager.get_tool("move")
+                if drag_tool and hasattr(drag_tool, 'start_drag'):
+                    model_id = getattr(item.model, 'id', None)
+                    if model_id and model_id not in (selection_ids or []):
+                        self.api.select([model_id], tool_name="move")
+                    drag_tool.start_drag(item, scene_pos)
+                    self._active_drag_tool = drag_tool
+                    return True  # Consume event so Qt doesn't interfere
+                # Interactive grip items (elbow/segment grips) handle their
+                # own mouse events.  Do NOT route to the tool — that would
+                # trigger deselect_all and destroy the grips mid-click.
+                if item is not None and getattr(item, '_interactive_grip', False):
+                    return False
+                # Only forward on_mouse_press to the active tool if we didn't
+                # start a drag via a different tool (e.g. MoveTool while SelectTool
+                # is active).  If the active tool IS the drag tool, let it handle both.
+                if drag_tool is None or drag_tool is tool:
+                    if hasattr(tool, 'on_mouse_press'):
+                        logging.debug(f"[InputSystem.handle_canvas_event] Calling tool.on_mouse_press for tool={tool}")
+                        tool.on_mouse_press(event)
             elif etype == QEvent.MouseMove:
-                logging.debug(f"[INPUT_SYSTEM][MOUSE_MOVE] tool={tool}, scene_pos={scene_pos}")
-                if hasattr(tool, 'update_drag'):
-                    if is_move_tool:
-                        if selection_ids:
-                            tool.update_drag(scene_pos)
-                    else:
-                        tool.update_drag(scene_pos)
                 if hasattr(tool, 'on_mouse_move'):
                     tool.on_mouse_move(event)
             elif etype == QEvent.MouseButtonRelease:
-                logging.debug(f"[INPUT_SYSTEM][MOUSE_RELEASE] tool={tool}, scene_pos={scene_pos}")
-                if hasattr(tool, 'finish_drag'):
-                    if is_move_tool:
-                        if selection_ids:
-                            tool.finish_drag(scene_pos)
-                    else:
-                        tool.finish_drag(scene_pos)
+                self._active_drag_tool = None
                 if hasattr(tool, 'on_mouse_release'):
                     tool.on_mouse_release(event)
         return False
@@ -193,13 +255,36 @@ class InputSystem(QObject):
         Always install this on the QGraphicsView's viewport for robust mouse event handling.
         This method will resolve the parent QGraphicsView for coordinate mapping.
         """
-        logging.debug(f"[InputSystem.eventFilter] CALLED: obj={obj}, event={event}, type={event.type()} ({event.__class__.__name__})")
+        logging.debug(f"[InputSystem.eventFilter] CALLED: type={event.type()}")
         if event.type() == QEvent.KeyPress:
             if self._handle_key(event):
                 return True
+
+        # Middle-button pan: handle directly, bypass tool routing
+        if event.type() == QEvent.MouseButtonPress and event.button() == Qt.MiddleButton:
+            self._is_panning = True
+            self._pan_start = event.position().toPoint() if hasattr(event.position(), 'toPoint') else event.pos()
+            if self.canvas:
+                self.canvas.setCursor(Qt.ClosedHandCursor)
+            return True
+        if event.type() == QEvent.MouseMove and getattr(self, '_is_panning', False):
+            pos = event.position().toPoint() if hasattr(event.position(), 'toPoint') else event.pos()
+            delta = pos - self._pan_start
+            self._pan_start = pos
+            if self.canvas:
+                self.canvas.horizontalScrollBar().setValue(
+                    self.canvas.horizontalScrollBar().value() - delta.x())
+                self.canvas.verticalScrollBar().setValue(
+                    self.canvas.verticalScrollBar().value() - delta.y())
+            return True
+        if event.type() == QEvent.MouseButtonRelease and event.button() == Qt.MiddleButton:
+            self._is_panning = False
+            if self.canvas:
+                self.canvas.setCursor(Qt.ArrowCursor)
+            return True
+
         # Route mouse and context menu events to handle_canvas_event
-        if event.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonRelease, QEvent.MouseMove, QEvent.ContextMenu):
-            logging.debug(f"[InputSystem.eventFilter] Routing mouse event type={event.type()} to handle_canvas_event: event={event}")
+        if event.type() in (QEvent.MouseButtonPress, QEvent.MouseButtonRelease, QEvent.MouseMove, QEvent.ContextMenu, QEvent.MouseButtonDblClick):
             from PySide6.QtCore import QPoint
             # Find the QGraphicsView (canvas) for coordinate mapping
             view = obj
@@ -211,7 +296,11 @@ class InputSystem(QObject):
                 def __init__(self, original_event):
                     """Initialize a canvas event with the original Qt event."""
                     self.original_event = original_event
-                    self.button = getattr(original_event, 'button', None)
+                    # Extract button value by calling the method if callable
+                    if hasattr(original_event, 'button') and callable(original_event.button):
+                        self.button = original_event.button()
+                    else:
+                        self.button = getattr(original_event, 'button', None)
                     # Get scene position as QPointF
                     if hasattr(original_event, 'position'):
                         pos = original_event.position().toPoint()
@@ -235,6 +324,14 @@ class InputSystem(QObject):
         logging.debug(f"[INPUT_SYSTEM][_HANDLE_KEY] key={key}, modifiers={modifiers}")
 
         # 1. Check Global Keymap
+        # Escape: cancel active tool and return to select tool
+        if key == Qt.Key_Escape:
+            tool = self.api.tool_manager.active_tool
+            if hasattr(tool, 'deactivate'):
+                tool.deactivate()
+            self.api.tool_manager.set_tool('select')
+            return True
+
         # Handle Modifier Logic (Simple implementation for Ctrl+Z)
         if modifiers & Qt.ControlModifier:
             if key == Qt.Key_Z:

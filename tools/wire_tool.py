@@ -61,6 +61,27 @@ class WireTool(Tool):
         if hasattr(self.api, 'main_window') and self.api.main_window:
             self.api.main_window.canvas.setCursor(Qt.CrossCursor)
 
+    def begin_wire_from_pin(self, pin_model, device_model, scene_pos):
+        """
+        Begin wire drawing from a specific pin (e.g. on double-click).
+        Sets up the same state as clicking a pin in IDLE mode.
+        Args:
+            pin_model: The pin to start from.
+            device_model: The device owning the pin.
+            scene_pos: Current scene position for the ghost line endpoint.
+        """
+        self.start_pin = pin_model
+        self.start_device = device_model
+        self.state = "DRAGGING"
+        if self.scene:
+            self.ghost_line = QGraphicsLineItem()
+            pen = QPen(QColor(0, 255, 0), 0, Qt.DashLine)
+            pen.setCosmetic(True)
+            self.ghost_line.setPen(pen)
+            start_pos = self._get_pin_scene_pos(pin_model, device_model)
+            self.ghost_line.setLine(start_pos.x(), start_pos.y(), scene_pos.x(), scene_pos.y())
+            self.scene.addItem(self.ghost_line)
+
     def _get_pin_at_pos(self, scene_pos):
         """
         Hit test for PinItem under cursor in World Space (MM).
@@ -171,26 +192,8 @@ class WireTool(Tool):
             type="STANDARD",
             path_nodes=path_nodes
         )
-        # Directly add wire to harness
-        if hasattr(self.api.context, 'harness') and hasattr(self.api.context.harness, 'wires'):
-            self.api.context.harness.wires.append(new_wire)
-            # For test: ensure undo command is pushed
-            if hasattr(self.api.context, 'undo_stack') and hasattr(self.api.context.undo_stack, 'push'):
-                class MockWireCommand:
-                    """Mock command for wire placement undo/redo in tests."""
-                    def __init__(self, wire):
-                        """Initialize MockWireCommand with wire."""
-                        self.wire = wire
-                    def execute(self):
-                        """Execute the mock command (no-op)."""
-                        pass
-                    def undo(self):
-                        """Undo the mock command (no-op)."""
-                        pass
-                    def mark_executed(self):
-                        """Mark the mock command as executed (no-op)."""
-                        pass
-                self.api.context.undo_stack.push(MockWireCommand(new_wire))
+        # Add wire via API contract (undoable AddWireCommand)
+        self.api.add_wire(new_wire)
         
         # Reset tool
         if hasattr(self.api.tool_manager, 'set_tool'):

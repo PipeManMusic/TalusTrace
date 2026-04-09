@@ -1,8 +1,0 @@
-revision: 2
-meta:
-  name: New Harness
-  trunk_length_mm: 1000
-devices: []
-wires: []
-bundles: []
-__schema_version__: 2026-01

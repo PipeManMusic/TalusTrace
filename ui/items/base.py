@@ -61,6 +61,17 @@ class SelectableItemMixin:
             self.setGraphicsEffect(None)
         self._apply_style()
 
+    def hoverEnterEvent(self, event):
+        """Show four-way arrow cursor when hovering over a movable item."""
+        if not getattr(self, 'is_ghost', False) and not getattr(self, '_no_drag_cursor', False):
+            self.setCursor(Qt.SizeAllCursor)
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        """Restore default cursor when leaving a movable item."""
+        self.unsetCursor()
+        super().hoverLeaveEvent(event)
+
     def _apply_style(self):
         """Apply custom style to the item (to be implemented by subclasses)."""
         pass

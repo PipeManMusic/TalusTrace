@@ -36,126 +36,7 @@ class RotateDeviceCommand(BaseCommand):
             self.context.observer.dispatch("model_changed", {"action": "rotate", "item": self.device})
         else:
             self.api.dispatch("model_changed", {"action": "rotate", "item": self.device})
-"""
-Device, pin, and wire command implementations for undo/redo and contract enforcement in Talus Trace.
-Implements Add, Delete, Update, Copy, and Paste commands for devices, pins, and wires.
-"""
-from infra.undo_stack import BaseCommand
-class UpdateBundleCommand(BaseCommand):
-    """
-    Command to update a bundle's data in the system.
-    """
-    def __init__(self, bundle, context=None, logging_flag=False, **kwargs):
-        """
-        Initialize the UpdateBundleCommand.
-        Args:
-            bundle: The bundle object to update.
-            context: Optional context for the update operation.
-            **kwargs: Additional keyword arguments for extensibility.
-        """
-        super().__init__("Update Bundle")
-        self.bundle = bundle
-        self.context = context
-        self.logging_flag = logging_flag
-
-    def execute(self):
-        """
-        Execute the command to update the bundle.
-        """
-        pass
-
-    def undo(self):
-        """
-        Undo the update to the bundle.
-        """
-        pass
-
-class CopyBundleCommand(BaseCommand):
-    """
-    Command to copy a bundle in the system.
-    """
-    def __init__(self, bundle, context=None, logging_flag=False, **kwargs):
-        """
-        Initialize the CopyBundleCommand.
-        Args:
-            bundle: The bundle object to copy.
-            context: Optional context for the copy operation.
-            **kwargs: Additional keyword arguments for extensibility.
-        """
-        super().__init__("Copy Bundle")
-        self.bundle = bundle
-        self.context = context
-        self.logging_flag = logging_flag
-
-    def execute(self):
-        """
-        Execute the command to copy the bundle.
-        """
-        pass
-
-    def undo(self):
-        """
-        Undo the copy operation for the bundle.
-        """
-        pass
-
-class PasteBundleCommand(BaseCommand):
-    """
-    Command to paste a bundle into the system.
-    """
-    def __init__(self, bundle, context=None, logging_flag=False, **kwargs):
-        """
-        Initialize the PasteBundleCommand.
-        Args:
-            bundle: The bundle object to paste.
-            context: Optional context for the paste operation.
-            **kwargs: Additional keyword arguments for extensibility.
-        """
-        super().__init__("Paste Bundle")
-        self.bundle = bundle
-        self.context = context
-        self.logging_flag = logging_flag
-
-    def execute(self):
-        """
-        Execute the command to paste the bundle.
-        """
-        pass
-
-    def undo(self):
-        """
-        Undo the paste operation for the bundle.
-        """
-        pass
-from infra.undo_stack import BaseCommand
-class DeleteBundleCommand(BaseCommand):
-    """
-    Command to delete a bundle from the system.
-    """
-    def __init__(self, bundle, context=None, logging_flag=False, **kwargs):
-        """
-        Initialize the DeleteBundleCommand.
-        Args:
-            bundle: The bundle object to delete.
-            context: Optional context for the delete operation.
-            **kwargs: Additional keyword arguments for extensibility.
-        """
-        super().__init__("Delete Bundle")
-        self.bundle = bundle
-        self.context = context
-        self.logging_flag = logging_flag
-
-    def execute(self):
-        """
-        Execute the command to delete the bundle.
-        """
-        pass
-
-    def undo(self):
-        """
-        Undo the deletion of the bundle.
-        """
-        pass
+# Bundle commands (Add, Delete, Update, Copy, Paste) are in api/commands/bundle.py
 from infra.undo_stack import BaseCommand
 class UpdateDeviceCommand(BaseCommand):
     """
@@ -362,7 +243,7 @@ class UpdateWireCommand(BaseCommand):
 
 class DeleteWireCommand(BaseCommand):
     """
-    Command to delete a wire from the system.
+    Command to delete a wire from the harness, supporting undo/redo.
     """
     def __init__(self, wire, context=None, logging_flag=False, **kwargs):
         """
@@ -375,19 +256,34 @@ class DeleteWireCommand(BaseCommand):
         super().__init__("Delete Wire")
         self.wire = wire
         self.context = context
+        self.api = APIManager.get_instance()
         self.logging_flag = logging_flag
 
     def execute(self):
         """
-        Execute the command to delete the wire.
+        Execute the command to delete the wire from the harness.
         """
-        pass
+        harness = self.context.harness if self.context and hasattr(self.context, 'harness') else self.api.context.harness
+        if self.wire in harness.wires:
+            harness.wires.remove(self.wire)
+        if self.context and hasattr(self.context, "observer"):
+            self.context.observer.dispatch("model_changed", {"action": "remove", "item": self.wire})
+        else:
+            self.api.dispatch("model_changed", {"action": "remove", "item": self.wire})
+        self.api.dispatch("wire_removed", self.wire)
 
     def undo(self):
         """
-        Undo the deletion of the wire.
+        Undo the deletion of the wire (re-add to harness).
         """
-        pass
+        harness = self.context.harness if self.context and hasattr(self.context, 'harness') else self.api.context.harness
+        if self.wire not in harness.wires:
+            harness.wires.append(self.wire)
+        if self.context and hasattr(self.context, "observer"):
+            self.context.observer.dispatch("model_changed", {"action": "add", "item": self.wire})
+        else:
+            self.api.dispatch("model_changed", {"action": "add", "item": self.wire})
+        self.api.dispatch("wire_added", self.wire)
 
 class CopyWireCommand(BaseCommand):
     """
@@ -447,34 +343,6 @@ class PasteWireCommand(BaseCommand):
         """
         pass
 
-class AddBundleCommand(BaseCommand):
-    """
-    Command to add a bundle to the system.
-    """
-    def __init__(self, bundle, context=None, logging_flag=False, **kwargs):
-        """
-        Initialize the AddBundleCommand.
-        Args:
-            bundle: The bundle object to add.
-            context: Optional context for the add operation.
-            **kwargs: Additional keyword arguments for extensibility.
-        """
-        super().__init__("Add Bundle")
-        self.bundle = bundle
-        self.context = context
-        self.logging_flag = logging_flag
-
-    def execute(self):
-        """
-        Execute the command to add the bundle.
-        """
-        pass
-
-    def undo(self):
-        """
-        Undo the addition of the bundle.
-        """
-        pass
 """
 Device, pin, and wire command implementations for Talus Trace API.
 Implements command patterns for APIManager, supporting undo/redo and event dispatch.
@@ -827,18 +695,18 @@ class MoveDeviceCommand(BaseCommand):
 
 # --- Actions ---
 
+@register_action("device.add_pin")
 def device_add_pin(context):
     """Add a pin to the selected device using the AddPinCommand."""
     mgr = SelectionManager()
     selection = mgr.selected_models
-    if not selection:
+    devices = [item for item in selection if hasattr(item, 'pins')] if selection else []
+    if devices:
+        target = devices[0]
+    elif getattr(context, 'device', None) is not None:
+        target = context.device
+    else:
         return
-
-    devices = [item for item in selection if hasattr(item, 'pins')]
-    if not devices:
-        return
-
-    target = devices[0]
     # Example: create a new Pin instance as needed
     from core.pin import Pin
     import uuid
@@ -853,16 +721,14 @@ def device_delete_pin(context):
     """Delete the selected pin from the selected device using DeletePinCommand, always passing context."""
     mgr = SelectionManager()
     selection = mgr.selected_models
-    if not selection:
+    pins = [item for item in selection if hasattr(item, 'device_id')] if selection else []
+    if pins:
+        pin = pins[0]
+    elif getattr(context, 'pin', None) is not None:
+        pin = context.pin
+    else:
         return
 
-    # Find selected pin and its parent device
-    pins = [item for item in selection if hasattr(item, 'device_id')]
-    if not pins:
-        return
-
-    pin = pins[0]
-    # Find the parent device by device_id
     api = APIManager.get_instance()
     device = None
     for d in getattr(api.context.harness, 'devices', []):

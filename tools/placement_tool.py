@@ -169,7 +169,10 @@ class PlacementTool(BaseTool):
         # Update canvas scene to reflect new device
         if hasattr(self.api.main_window, 'canvas'):
             self.api.main_window.canvas.load_harness(self.api.context.harness)
-        # 2. Reset / Switch Tool
+        # 3. Select the newly placed device so Properties Panel updates
+        if hasattr(self.api, 'select'):
+            self.api.select([dev_id], tool_name="select")
+        # 4. Reset / Switch Tool
         if hasattr(self.api.tool_manager, 'set_tool'):
             self.api.tool_manager.set_tool("select")
 

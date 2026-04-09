@@ -113,6 +113,7 @@ class HarnessCanvas(QGraphicsView):
         super().__init__(parent)
         self.scene = QGraphicsScene(self)
         self.setScene(self.scene)
+        self.scene.setSceneRect(-5000, -5000, 10000, 10000)
 
         # Theme
         try:
@@ -126,6 +127,7 @@ class HarnessCanvas(QGraphicsView):
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
 
         # Visuals
         from PySide6.QtGui import QColor
@@ -189,6 +191,13 @@ class HarnessCanvas(QGraphicsView):
                             scene_ref.addItem(pin_item)
                         api.register_scene_item(model_id, pin_item)
                     return
+                from core.wire import Wire
+                if isinstance(item, Wire):
+                    from ui.items.wire import WireItem
+                    wire_item = WireItem(item)
+                    self.scene.addItem(wire_item)
+                    api.register_scene_item(model_id, wire_item)
+                    return
                 from ui.items.device import DeviceItem
                 device_item = DeviceItem(item)
                 self.scene.addItem(device_item)
@@ -201,8 +210,8 @@ class HarnessCanvas(QGraphicsView):
                                    and child.model.id == pin.id]
                         if pin_items:
                             api.register_scene_item(pin.id, pin_items[0])
-        # Update scene items when model properties change
-        elif action == "update" and item is not None:
+        # Update scene items when model properties change (includes position moves)
+        elif action in ("update", "move") and item is not None:
             model_id = getattr(item, "id", None)
             scene_item = api.get_scene_item(model_id)
             if scene_item is not None:
@@ -212,6 +221,9 @@ class HarnessCanvas(QGraphicsView):
                 # Update other properties as needed (angle, label, etc.)
                 if hasattr(item, 'rotation') and hasattr(scene_item, 'rotation'):
                     scene_item.setRotation(item.rotation)
+            # Update connected wire endpoints when a device or pin moves
+            if action == "move":
+                api._update_connected_wires(item)
         # For other actions, do nothing (extend as needed)
 
     def drawBackground(self, painter, rect):

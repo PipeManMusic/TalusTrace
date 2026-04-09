@@ -9,7 +9,7 @@ class MoveElbowCommand:
     """
     Command to move a wire elbow to a new position, supporting undo/redo.
     """
-    def __init__(self, wire, index, old_pos, new_pos):
+    def __init__(self, wire, index, old_pos, new_pos, api=None):
         """
         Initialize the MoveElbowCommand.
         Args:
@@ -17,18 +17,34 @@ class MoveElbowCommand:
             index: Index of the elbow in path_nodes.
             old_pos: Previous position.
             new_pos: New position.
+            api: APIManager instance for dispatch.
         """
         self.wire = wire
         self.index = index
         self.old_pos = old_pos
         self.new_pos = new_pos
+        self.api = api
         self.executed = False
+
+    def _sync_scene(self):
+        """Update the wire scene item and grips from the current model state."""
+        if not self.api:
+            return
+        wire_item = self.api.get_scene_item(self.wire.id)
+        if wire_item:
+            wire_item._rebuild_path()
+            if wire_item.isSelected():
+                wire_item._build_path_and_grips()
+            wire_item.update()
 
     def execute(self):
         """
         Move the wire elbow to the new position.
         """
         self.wire.path_nodes[self.index] = self.new_pos
+        self._sync_scene()
+        if self.api:
+            self.api.dispatch("model_changed", {"action": "move_elbow", "item": self.wire})
         self.executed = True
 
     def undo(self):
@@ -36,6 +52,9 @@ class MoveElbowCommand:
         Move the wire elbow back to the old position.
         """
         self.wire.path_nodes[self.index] = self.old_pos
+        self._sync_scene()
+        if self.api:
+            self.api.dispatch("model_changed", {"action": "move_elbow", "item": self.wire})
         self.executed = False
 
     def redo(self):

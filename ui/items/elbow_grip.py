@@ -12,6 +12,7 @@ from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
 
 class ElbowGripItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
     """Draggable handle for wire elbows, supporting geometry updates and tool integration."""
+    _interactive_grip = True
     __test_scenario__ = {
         'model_data': {'index': 0, 'pos': (0, 0)},
         'expected_child_count': 0
@@ -23,60 +24,72 @@ class ElbowGripItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
         self.setPos(QPointF(pos[0], pos[1]))
         self.setBrush(QBrush(QColor(255, 200, 0)))
         self.setPen(QPen(Qt.black, 0.5))
-        self.setFlag(QGraphicsEllipseItem.ItemIsMovable, True)
-        self.setFlag(QGraphicsEllipseItem.ItemIsSelectable, True)
-        self.setFlag(QGraphicsEllipseItem.ItemIsFocusable, True)
+        self.setFlag(QGraphicsEllipseItem.ItemIsMovable, False)
+        self.setFlag(QGraphicsEllipseItem.ItemIsSelectable, False)
+        self.setFlag(QGraphicsEllipseItem.ItemIsFocusable, False)
         self.setAcceptHoverEvents(True)
-        self.setZValue(2000)  # Ensure it's above the wire and other items
+        self.setZValue(2000)
         self.setAcceptedMouseButtons(Qt.LeftButton | Qt.RightButton)
         self.wire_item = wire_item
         self.index = index
         self.radius = radius
-        # Subscribe to wire geometry changes
-        if hasattr(self.wire_item, 'subscribe'):
-            self.wire_item.subscribe('geometry_changed', self._on_wire_geometry_changed)
+        self._drag_start_pos = None
 
-    def _on_wire_geometry_changed(self, *args, **kwargs):
-        """Update position to match wire's current node and trigger wire repaint."""
-        # Update position to match wire's current node
-        if hasattr(self.wire_item, 'path_nodes') and len(self.wire_item.path_nodes) > self.index:
-            pos = self.wire_item.path_nodes[self.index]
-            self.setPos(QPointF(pos[0], pos[1]))
-        # Force wire to repaint so blue dot follows elbow in real time
-        if hasattr(self.wire_item, 'update'):
+    def mousePressEvent(self, event):
+        """Record the starting position for undo on drag start."""
+        if event.button() == Qt.LeftButton:
+            nodes = self.wire_item.path_nodes
+            if 0 <= self.index < len(nodes):
+                self._drag_start_pos = list(nodes[self.index])
+                # Track raw (unsnapped) position so small deltas accumulate
+                self._raw_pos = list(nodes[self.index])
+        event.accept()
+
+    def _snap(self, x, y):
+        """Snap coordinates to the grid."""
+        from api.manager import APIManager
+        api = APIManager.get_instance()
+        if hasattr(api, 'settings') and hasattr(api.settings, 'snap'):
+            return api.settings.snap(x), api.settings.snap(y)
+        return x, y
+
+    def mouseMoveEvent(self, event):
+        """Update model path_nodes directly during drag for real-time feedback."""
+        delta = event.scenePos() - event.lastScenePos()
+        nodes = self.wire_item.path_nodes
+        if 0 <= self.index < len(nodes):
+            # Accumulate raw position so small deltas aren't lost to snapping
+            self._raw_pos[0] += delta.x()
+            self._raw_pos[1] += delta.y()
+            sx, sy = self._snap(self._raw_pos[0], self._raw_pos[1])
+            nodes[self.index][0] = sx
+            nodes[self.index][1] = sy
+            self.setPos(QPointF(sx, sy))
+            self.wire_item._rebuild_path()
+            # Sync segment grips to updated node positions
+            for sg in self.wire_item.segment_grips:
+                if len(nodes) > max(sg.start_idx, sg.end_idx):
+                    mx = (nodes[sg.start_idx][0] + nodes[sg.end_idx][0]) / 2
+                    my = (nodes[sg.start_idx][1] + nodes[sg.end_idx][1]) / 2
+                    sg.setPos(QPointF(mx, my))
             self.wire_item.update()
-
-    def mouseMoveEvent(self, event):
-        """Handle mouse move events, updating elbow position and forwarding to active tool."""
-        # Route elbow move through APIManager
-        scene_pos = event.scenePos()
-        from api.manager import APIManager
-        api = APIManager.get_instance()
-        api.move_elbow(self.wire_item.model, self.index, [scene_pos.x(), scene_pos.y()])
-        # Forward to tool if needed
-        tool = api.tool_manager.active_tool
-        if hasattr(tool, 'on_mouse_move'):
-            from ui.utils import get_scene_pos
-            scene_pos2 = get_scene_pos(event, api.input_system.canvas)
-            from ui.canvas import CanvasEvent
-            canvas_event = CanvasEvent(event, scene_pos2, api.input_system.canvas.scene if api.input_system.canvas else None)
-            tool.on_mouse_move(canvas_event)
         event.accept()
 
-    def mouseMoveEvent(self, event):
-        """Handle mouse move events, updating elbow position and forwarding to active tool."""
-        # ...removed debug print...
-        from api.manager import APIManager
-        api = APIManager.get_instance()
-        tool = api.tool_manager.active_tool
-        if hasattr(tool, 'on_mouse_move'):
-            from ui.utils import get_scene_pos
-            scene_pos = get_scene_pos(event, api.input_system.canvas)
-            # ...removed debug print...
-            from ui.canvas import CanvasEvent
-            canvas_event = CanvasEvent(event, scene_pos, api.input_system.canvas.scene if api.input_system.canvas else None)
-            tool.on_mouse_move(canvas_event)
-        event.accept()
-
-
+    def mouseReleaseEvent(self, event):
+        """Commit the move as a single undoable command."""
+        if event.button() == Qt.LeftButton and self._drag_start_pos is not None:
+            nodes = self.wire_item.path_nodes
+            new_pos = list(nodes[self.index]) if 0 <= self.index < len(nodes) else None
+            if new_pos and self._drag_start_pos != new_pos:
+                from api.manager import APIManager
+                api = APIManager.get_instance()
+                from tools.elbow_move_tool import MoveElbowCommand
+                cmd = MoveElbowCommand(
+                    self.wire_item.model, self.index,
+                    self._drag_start_pos, new_pos, api=api
+                )
+                # execute() sets absolute pos (idempotent), safe to re-execute
+                api.context.undo_stack.push(cmd)
+            self._drag_start_pos = None
+        super().mouseReleaseEvent(event)
 

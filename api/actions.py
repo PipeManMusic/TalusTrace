@@ -135,7 +135,7 @@ def register_real_device_actions():
     from api.commands.device import DeletePinCommand
     def delete_action(ctx):
         """
-        Delete the selected pin or device from the model or scene.
+        Delete the selected pin, wire, or device from the model or scene.
         Args:
             ctx: The context or selection manager to use for deletion.
         """
@@ -160,6 +160,11 @@ def register_real_device_actions():
                 else:
                     cmd.execute()
                 return
+        # Check if selected is a wire
+        from core.wire import Wire
+        if selected and isinstance(selected, Wire):
+            api.delete_wire(selected)
+            return
         # Otherwise, fallback to device delete
         # Use the dispatcher contract or APIManager.delete_device
         if selected and hasattr(selected, 'id'):
@@ -167,7 +172,7 @@ def register_real_device_actions():
         else:
             # No valid selection; do nothing or log
             from infra.logging import infra_log
-            infra_log("[edit.delete] No valid device or pin selected for deletion.", level="warning")
+            infra_log("[edit.delete] No valid device, wire, or pin selected for deletion.", level="warning")
     registry.register("edit.delete", delete_action)
     registry.register("edit.rotate_cw", lambda ctx: APIManager.get_instance().rotate_cw())
 
@@ -292,13 +297,21 @@ def register_device_command_actions():
         # Determine if selected is a device or a pin
         from core.device import Device
         from core.pin import Pin
-        from api.commands.device import DeleteDeviceCommand, DeletePinCommand
+        from api.commands.device import DeleteDeviceCommand, DeletePinCommand, DeleteWireCommand
+        from core.wire import Wire
         if isinstance(selected, Device):
             infra_log(f"[DISPATCHER] DeleteDeviceCommand will be constructed for device UUID={getattr(selected, 'id', None)} logging_flag={logging_flag}", level="info")
             cmd = DeleteDeviceCommand(selected, context=context, logging_flag=logging_flag, **flags)
             infra_log(f"[DISPATCHER] DeleteDeviceCommand constructed: {cmd}", level="info")
             cmd.execute()
             infra_log(f"[DISPATCHER] DeleteDeviceCommand.execute() called", level="info")
+            return cmd
+        elif isinstance(selected, Wire):
+            infra_log(f"[DISPATCHER] DeleteWireCommand will be constructed for wire UUID={getattr(selected, 'id', None)} logging_flag={logging_flag}", level="info")
+            cmd = DeleteWireCommand(selected, context=context, logging_flag=logging_flag, **flags)
+            infra_log(f"[DISPATCHER] DeleteWireCommand constructed: {cmd}", level="info")
+            cmd.execute()
+            infra_log(f"[DISPATCHER] DeleteWireCommand.execute() called", level="info")
             return cmd
         elif isinstance(selected, Pin):
             # Find parent device for the pin

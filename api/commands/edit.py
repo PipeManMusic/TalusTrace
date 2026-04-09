@@ -172,14 +172,14 @@ class RotateItemsCommand(BaseCommand):
         for item in self.items:
             if hasattr(item, 'rotation'):
                 item.rotation = (item.rotation + self.angle) % 360
-        self.api.dispatch("model_changed", {"action": "rotate"})
+                self.api.dispatch("model_changed", {"action": "update", "item": item})
 
     def undo(self):
         """Undo the rotation, restoring the previous angle."""
         for item in self.items:
             if hasattr(item, 'rotation'):
                 item.rotation = (item.rotation - self.angle) % 360
-        self.api.dispatch("model_changed", {"action": "rotate"})
+                self.api.dispatch("model_changed", {"action": "update", "item": item})
 
 # --- Action Registrations ---
 
@@ -237,6 +237,9 @@ def edit_delete(context):
         print(f"[DIAG][DISPATCHER] context.device id={getattr(context.device, 'id', None)}, obj={context.device}, @ {id(context.device)}")
         infra_log(f"[DISPATCHER] edit.delete: context.device id={getattr(context.device, 'id', None)}, obj={context.device}", level="debug")
         api.delete_device(context.device)
+    elif hasattr(context, 'wire'):
+        infra_log(f"[DISPATCHER] edit.delete: context.wire id={getattr(context.wire, 'id', None)}", level="debug")
+        api.delete_wire(context.wire)
     else:
         print(f"[DIAG][DISPATCHER] context has neither device nor pin. Context: {context}")
         infra_log(f"[DISPATCHER] edit.delete: context has neither device nor pin. Context: {context}", level="debug")
@@ -258,6 +261,9 @@ def edit_delete(context):
                 else:
                     print(f"[DIAG][DISPATCHER] fallback: calling api.delete_pin({item})")
                     api.delete_pin(item)
+            elif hasattr(item, 'path_nodes'):
+                infra_log(f"[DISPATCHER] edit.delete: fallback wire id={getattr(item, 'id', None)}", level="debug")
+                api.delete_wire(item)
 
 # --- PinDeleteCommand ---
 class PinDeleteCommand(BaseCommand):

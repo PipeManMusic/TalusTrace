@@ -18,9 +18,9 @@ def test_drag_event_routes_to_move_tool(qtbot):
     move_tool = MoveTool()
     api = APIManager.get_instance()
     move_tool.api = api
-    move_tool.on_mouse_press = MagicMock(wraps=move_tool.on_mouse_press)
-    move_tool.on_mouse_move = MagicMock(wraps=move_tool.on_mouse_move)
-    move_tool.on_mouse_release = MagicMock(wraps=move_tool.on_mouse_release)
+    move_tool.start_drag = MagicMock(wraps=move_tool.start_drag)
+    move_tool.update_drag = MagicMock(wraps=move_tool.update_drag)
+    move_tool.finish_drag = MagicMock(wraps=move_tool.finish_drag)
     # Inject the mocked MoveTool into InputSystem
     from ui.input_system import InputSystem
     input_system = InputSystem(move_tool=move_tool)
@@ -61,8 +61,8 @@ def test_drag_event_routes_to_move_tool(qtbot):
     qtbot.mousePress(view.viewport(), Qt.LeftButton, pos=start_viewport_pos)
     qtbot.mouseMove(view.viewport(), pos=end_viewport_pos)
     qtbot.mouseRelease(view.viewport(), Qt.LeftButton, pos=end_viewport_pos)
-    # Check that MoveTool received the events
-    assert move_tool.on_mouse_press.called, "MoveTool did not receive mouse press event."
-    assert move_tool.on_mouse_move.called, "MoveTool did not receive mouse move event."
-    assert move_tool.on_mouse_release.called, "MoveTool did not receive mouse release event."
+    # Check that MoveTool received the drag events
+    assert move_tool.start_drag.called, "MoveTool did not receive start_drag event."
+    assert move_tool.update_drag.called, "MoveTool did not receive update_drag event."
+    assert move_tool.finish_drag.called, "MoveTool did not receive finish_drag event."
     window.close()

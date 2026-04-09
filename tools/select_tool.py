@@ -109,8 +109,8 @@ class SelectTool(BaseTool):
         # Standard selection
         if event.button == Qt.LeftButton:
             if item and hasattr(item, 'model'):
-                # Additive selection: add to current selection set
-                self.api.select([item.model], additive=True)
+                # select() expects IDs, not model objects
+                self.api.select([item.model.id], additive=True)
             else:
                 # Blank canvas: clear selection
                 self.api.deselect_all()
@@ -133,7 +133,7 @@ class SelectTool(BaseTool):
                 self.api.remove_elbow(wire_item.model, elbow_idx)
                 return
             elif event.button == Qt.LeftButton:
-                self.api.select([wire_item.model])
+                self.api.select([wire_item.model.id])
                 return
         # B. Check Segment Hit (Double Click -> Add)
         if hasattr(event, 'type') and event.type == 'double_click':
@@ -143,7 +143,7 @@ class SelectTool(BaseTool):
                 return
         # C. Default: Select
         if event.button == Qt.LeftButton:
-            self.api.select([wire_item.model])
+            self.api.select([wire_item.model.id])
 
     def _find_elbow_index(self, nodes, pos, threshold):
         """
