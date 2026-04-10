@@ -42,14 +42,16 @@ def file_save(context):
         context: The action context.
     """
     import os
+    api = APIManager.get_instance()
     is_headless = os.environ.get('PYTEST_CURRENT_TEST') or os.environ.get('DISPLAY') is None
     if is_headless:
         path = 'test_save.yaml'
+    elif api.context.current_file:
+        path = str(api.context.current_file)
     else:
         path, _ = QFileDialog.getSaveFileName(None, "Save Harness", "harness.yaml", "YAML (*.yaml)")
         if not path: return
     
-    api = APIManager.get_instance()
     try:
         api.context.save_as(path)
     except Exception as e:

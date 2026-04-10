@@ -31,7 +31,7 @@ class Context:
         # Event Bus
         self.observer = Observer()
         # Undo Stack (single unified implementation)
-        self.undo_stack = UndoStack()
+        self.undo_stack = UndoStack(context=self)
 
     def replay_action_log(self, action_log, registry=None):
         """

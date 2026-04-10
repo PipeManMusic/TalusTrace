@@ -34,12 +34,18 @@ class RoutingEngine:
         return [(round(x / self.grid_size) * self.grid_size, 
                  round(y / self.grid_size) * self.grid_size) for x, y in path]
 
-    def route_all_wires(self):
+    def route_all_wires(self, api=None):
         """
-        Updates every wire in the harness meta based on source/target pin IDs.
+        Updates every wire in the harness based on source/target pin IDs.
+        Optionally accepts an APIManager to dispatch model_changed events.
         """
-        for wire in self.harness.wires.values():
+        wires = self.harness.wires
+        # Support both list and dict-style wire collections
+        wire_iter = wires.values() if hasattr(wires, 'values') else wires
+        for wire in wire_iter:
             src_pin = self.harness.pin_map.get(wire.from_conn)
             tgt_pin = self.harness.pin_map.get(wire.to_conn)
             if src_pin and tgt_pin:
                 wire.path_nodes = self.compute_orthogonal_path(src_pin.head, tgt_pin.head)
+                if api is not None:
+                    api.dispatch("model_changed", {"action": "update", "item": wire})

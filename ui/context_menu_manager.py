@@ -206,7 +206,7 @@ class ContextMenuManager:
                 if selected:
                     model = selected[0]
             if model is not None:
-                infra_log(f"[DIAG][ContextMenuManager._execute] resolved model: {repr(model)} id={id(model)}", level="debug")
+                infra_log(f"[ContextMenuManager._execute] resolved model: type={type(model).__name__} id={getattr(model, 'id', None)}", level="debug")
                 if hasattr(model, "device_id") and hasattr(model, "id"):
                     api.context.pin = model
                     device = next((d for d in api.context.harness.devices if getattr(d, "id", None) == getattr(model, "device_id", None)), None)
@@ -247,5 +247,7 @@ class ContextMenuManager:
                         registry.execute(k, api.context)
                         break
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             from infra.logging import infra_log
             infra_log(f"[ERROR] Exception in _execute: {e}", level="error")

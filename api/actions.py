@@ -173,7 +173,9 @@ def register_real_device_actions():
             # No valid selection; do nothing or log
             from infra.logging import infra_log
             infra_log("[edit.delete] No valid device, wire, or pin selected for deletion.", level="warning")
-    registry.register("edit.delete", delete_action)
+    # NOTE: Do NOT re-register edit.delete here — the canonical handler is in
+    # api/commands/edit.py (registered via @register_action at import time) and
+    # already handles pin, device, AND wire deletion correctly.
     registry.register("edit.rotate_cw", lambda ctx: APIManager.get_instance().rotate_cw())
 
 # Register no-op stubs for all other UI actions defined in the YAML config that are not already registered
@@ -322,11 +324,6 @@ def register_device_command_actions():
                     if hasattr(dev, 'pins') and any(getattr(p, 'id', None) == selected.id for p in getattr(dev, 'pins', [])):
                         parent_device = dev
                         break
-            print(f"[DIAG] [DISPATCHER] parent_device: {parent_device}")
-            print(f"[DIAG] [DISPATCHER] parent_device.pins: {[getattr(p, 'id', None) for p in getattr(parent_device, 'pins', [])] if parent_device else None}")
-            print(f"[DIAG] [DISPATCHER] parent_device.pins object ids: {[id(p) for p in getattr(parent_device, 'pins', [])] if parent_device else None}")
-            print(f"[DIAG] [DISPATCHER] selected pin object id: {id(selected)}")
-            print(f"[DIAG] [DISPATCHER] parent_device object id: {id(parent_device) if parent_device else None}")
             if parent_device is not None:
                 infra_log(f"[DISPATCHER] DeletePinCommand will be constructed for pin UUID={getattr(selected, 'id', None)} on device UUID={getattr(parent_device, 'id', None)} logging_flag={logging_flag}", level="info")
                 cmd = DeletePinCommand(parent_device, pin=selected, context=context, logging_flag=logging_flag, **flags)
@@ -400,13 +397,14 @@ def register_device_command_actions():
         # Use dispatcher dispatch to hit _execute_command registered in dispatcher.registry
         return dispatcher_dispatch_action("_execute_command", cmd)
     # Register actions in ActionRegistry only - DispatcherRegistry is separate concern
-    registry.register("edit.delete", delete_action)
+    # NOTE: Do NOT re-register edit.delete here — the canonical handler is in
+    # api/commands/edit.py (registered via @register_action at import time) and
+    # already handles pin, device, AND wire deletion correctly.
     registry.register("edit.add", add_action)
     registry.register("edit.update", update_action)
     # TODO: Split Brain - Consolidate registries instead of duplicate registration
     try:
         from dispatcher import registry as dispatcher_registry
-        dispatcher_registry.register("edit.delete", delete_action)
         dispatcher_registry.register("edit.add", add_action)
         dispatcher_registry.register("edit.update", update_action)
     except Exception:

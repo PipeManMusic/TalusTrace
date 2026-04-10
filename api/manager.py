@@ -65,7 +65,6 @@ api_manager.save_project("/path/to/file.yaml")
 Context = None
 from infra.settings import SystemSettings
 from core.library_manager import LibraryManager
-from ui.input_system import InputSystem
 
 
 
@@ -80,6 +79,8 @@ class APIManager:
         Ensures device deletion is undoable, emits model_changed, and logs the action.
         This method MUST be used for all device deletion (UI/dispatcher must not mutate model directly).
         """
+        from infra.logging import infra_log
+        infra_log(f"delete_device: id={getattr(device, 'id', None)}", level="info")
         from api.commands.device import DeleteDeviceCommand
         if hasattr(self, 'context') and hasattr(self.context, 'undo_stack'):
             self.context.undo_stack.push(DeleteDeviceCommand(device, context=self.context))
@@ -91,6 +92,8 @@ class APIManager:
         Ensures pin deletion is undoable, emits model_changed, and logs the action.
         This method MUST be used for all pin deletion (UI/dispatcher must not mutate model directly).
         """
+        from infra.logging import infra_log
+        infra_log(f"delete_pin: id={getattr(pin, 'id', None)}", level="info")
         from api.commands.device import DeletePinCommand
         if hasattr(self, 'context') and hasattr(self.context, 'undo_stack'):
             self.context.undo_stack.push(DeletePinCommand(pin, context=self.context))
@@ -162,9 +165,8 @@ class APIManager:
         All UUID generation and device instantiation is handled in the API/infra layer.
         Returns the created device, or None if a duplicate UUID is detected (should not happen).
         """
-        import traceback
-        print(f"[DIAG] APIManager.create_device called with label={label}")
-        traceback.print_stack(limit=8)
+        from infra.logging import infra_log
+        infra_log(f"create_device: label={label}", level="info")
         from core.device import Device
         from api.commands.device import AddDeviceCommand
         import uuid
@@ -188,6 +190,8 @@ class APIManager:
         Ensures bundle creation is undoable, emits model_changed, and logs the action.
         This method MUST be used for all bundle creation (UI/dispatcher must not mutate model directly).
         """
+        from infra.logging import infra_log
+        infra_log(f"add_bundle: id={getattr(bundle, 'id', None)}", level="info")
         from api.commands.bundle import AddBundleCommand
         if hasattr(self, 'context') and hasattr(self.context, 'undo_stack'):
             self.context.undo_stack.push(AddBundleCommand(bundle, self.context.harness))
@@ -200,6 +204,8 @@ class APIManager:
         Ensures bundle deletion is undoable, emits model_changed, and logs the action.
         This method MUST be used for all bundle deletion (UI/dispatcher must not mutate model directly).
         """
+        from infra.logging import infra_log
+        infra_log(f"delete_bundle: id={getattr(bundle, 'id', None)}", level="info")
         from api.commands.bundle import DeleteBundleCommand
         if hasattr(self, 'context') and hasattr(self.context, 'undo_stack'):
             self.context.undo_stack.push(DeleteBundleCommand(bundle, self.context.harness))
@@ -211,6 +217,8 @@ class APIManager:
         Ensures device creation is undoable, emits model_changed, and logs the action.
         This method MUST be used for all device creation (UI/dispatcher must not mutate model directly).
         """
+        from infra.logging import infra_log
+        infra_log(f"add_device: id={getattr(device, 'id', None)}", level="info")
         from api.commands.device import AddDeviceCommand
         if hasattr(self, 'context') and hasattr(self.context, 'undo_stack'):
             self.context.undo_stack.push(AddDeviceCommand(device))
@@ -631,19 +639,8 @@ class APIManager:
                     wire.path_nodes[-1] = [pos.x(), pos.y()]
                     updated = True
             if updated:
-                wire_scene_item = self.get_scene_item(wire.id)
-                if wire_scene_item and hasattr(wire_scene_item, 'update_from_model'):
-                    wire_scene_item.update_from_model(wire)
-                    # Sync grip positions if the wire is selected and has grips
-                    nodes = wire.path_nodes
-                    for grip in getattr(wire_scene_item, 'elbow_grips', []):
-                        if 0 <= grip.index < len(nodes):
-                            grip.setPos(QPointF(nodes[grip.index][0], nodes[grip.index][1]))
-                    for sg in getattr(wire_scene_item, 'segment_grips', []):
-                        if len(nodes) > max(sg.start_idx, sg.end_idx):
-                            mx = (nodes[sg.start_idx][0] + nodes[sg.end_idx][0]) / 2
-                            my = (nodes[sg.start_idx][1] + nodes[sg.end_idx][1]) / 2
-                            sg.setPos(QPointF(mx, my))
+                # Dispatch model_changed so the canvas observer updates the scene item
+                self.dispatch("model_changed", {"action": "update", "item": wire})
 
     def _resolve_pin_scene_pos(self, pin_id, device_id):
         """Resolve a pin's absolute scene position from model coordinates."""
@@ -691,6 +688,8 @@ class APIManager:
         This method MUST be used for all wire creation (UI/dispatcher must not mutate model directly).
         The API must not generate or mutate IDs; this is handled by the infra/model layer.
         """
+        from infra.logging import infra_log
+        infra_log(f"add_wire: id={getattr(wire, 'id', None)} from={getattr(wire, 'from_conn', None)} to={getattr(wire, 'to_conn', None)}", level="info")
         from api.commands.device import AddWireCommand
         self.context.undo_stack.push(AddWireCommand(wire))
 
@@ -700,6 +699,8 @@ class APIManager:
         Ensures wire deletion is undoable, emits model_changed, and logs the action.
         This method MUST be used for all wire deletion (UI/dispatcher must not mutate model directly).
         """
+        from infra.logging import infra_log
+        infra_log(f"delete_wire: id={getattr(wire, 'id', None)}", level="info")
         from api.commands.device import DeleteWireCommand
         if hasattr(self, 'context') and hasattr(self.context, 'undo_stack'):
             self.context.undo_stack.push(DeleteWireCommand(wire, context=self.context))
@@ -838,7 +839,7 @@ class APIManager:
         self.library = LibraryManager()   # Part Database
 
         # --- PHASE 2: SERVICE LAYER ---
-        self.input_system = InputSystem()
+        self.input_system = None  # Created by UI layer (ui/app.py)
         self.tool_manager = None
         self.main_window = None 
 
@@ -866,6 +867,7 @@ class APIManager:
         self.tool_manager.register_tool("move", MoveTool())
         self.tool_manager.register_tool("elbow_move", ElbowMoveTool())
         self.tool_manager.register_tool("segment_move", SegmentMoveTool())
+        self.tool_manager.set_tool("select")  # Default active tool
 
     # --- Scene Object Registry ---
     def register_scene_item(self, model_id, item):

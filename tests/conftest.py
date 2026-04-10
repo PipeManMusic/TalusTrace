@@ -28,6 +28,11 @@ def reset_singletons_and_register_actions(request: pytest.FixtureRequest):
     from api.manager import APIManager
     APIManager.reset()
     
+    # Reset grid to default so user settings don't affect tests
+    api = APIManager.get_instance()
+    if hasattr(api, 'settings'):
+        api.settings.grid_size_mm = 5.0
+
     # Re-register device command actions to ensure fresh registrations
     from api.actions import register_device_command_actions
     register_device_command_actions()
@@ -177,6 +182,10 @@ def clean_api_singleton():
         if hasattr(api.context, 'harness'):
             api.context.harness.devices.clear()
             api.context.harness.wires.clear()
+
+    # 4. Reset grid to default so tests aren't affected by user settings
+    if hasattr(api, 'settings'):
+        api.settings.grid_size_mm = 5.0
 
     return api
 

@@ -23,22 +23,12 @@ class InputSystem(QObject):
         super().__init__()
         self.canvas = None
         self.config_path = config_path
-        self.global_keymap = {}  # {Qt.Key: action_id}
+        self.global_keymap = {}  # {Qt.Key or (Qt.Key, modifier): action_id}
         self._move_tool = move_tool  # Allow dependency injection for tests
         # Register edit.delete action (avoids circular import)
         import api.edit_delete_action
         # 1. Load Defaults (Safety Net)
         self._load_defaults()
-        # 2. Override with Config if available
-        if self.config_path:
-            self._load_keymap()
-
-        # Register edit.delete action (avoids circular import)
-        import api.edit_delete_action
-
-        # 1. Load Defaults (Safety Net)
-        self._load_defaults()
-
         # 2. Override with Config if available
         if self.config_path:
             self._load_keymap()
@@ -54,8 +44,12 @@ class InputSystem(QObject):
 
     def _load_defaults(self):
         """Ensure critical shortcuts work out-of-the-box."""
-        self.global_keymap[Qt.Key_Z] = "edit.undo"
-        self.global_keymap[Qt.Key_Y] = "edit.redo"
+        self.global_keymap[(Qt.Key_Z, Qt.ControlModifier)] = "edit.undo"
+        self.global_keymap[(Qt.Key_Y, Qt.ControlModifier)] = "edit.redo"
+        self.global_keymap[(Qt.Key_N, Qt.ControlModifier)] = "file.new"
+        self.global_keymap[(Qt.Key_O, Qt.ControlModifier)] = "file.open"
+        self.global_keymap[(Qt.Key_S, Qt.ControlModifier)] = "file.save"
+        self.global_keymap[(Qt.Key_Q, Qt.ControlModifier)] = "file.exit"
         self.global_keymap[Qt.Key_Delete] = "edit.delete"
         self.global_keymap[Qt.Key_R] = "edit.rotate_cw"
 
@@ -323,7 +317,6 @@ class InputSystem(QObject):
         modifiers = event.modifiers()
         logging.debug(f"[INPUT_SYSTEM][_HANDLE_KEY] key={key}, modifiers={modifiers}")
 
-        # 1. Check Global Keymap
         # Escape: cancel active tool and return to select tool
         if key == Qt.Key_Escape:
             tool = self.api.tool_manager.active_tool
@@ -332,29 +325,26 @@ class InputSystem(QObject):
             self.api.tool_manager.set_tool('select')
             return True
 
-        # Handle Modifier Logic (Simple implementation for Ctrl+Z)
+        # 1. Check modifier combos from keymap (e.g. Ctrl+S, Ctrl+N)
         if modifiers & Qt.ControlModifier:
-            if key == Qt.Key_Z:
-                logging.debug("[INPUT_SYSTEM] Ctrl+Z detected, executing edit.undo")
-                registry.execute("edit.undo", self.api.context)
-                return True
-            if key == Qt.Key_Y:
-                logging.debug("[INPUT_SYSTEM] Ctrl+Y detected, executing edit.redo")
-                registry.execute("edit.redo", self.api.context)
+            combo = (key, Qt.ControlModifier)
+            if combo in self.global_keymap:
+                action_id = self.global_keymap[combo]
+                logging.debug(f"[INPUT_SYSTEM] Ctrl+key combo mapped to action {action_id}")
+                registry.execute(action_id, self.api.context)
                 return True
 
         # 2. Simple Keymap Lookup (Single keys like 'R' or 'Delete')
         if key in self.global_keymap:
             action_id = self.global_keymap[key]
             logging.debug(f"[INPUT_SYSTEM] Key {key} mapped to action {action_id}")
-            # Avoid re-triggering undo/redo if caught above
+            # Avoid triggering undo/redo without Ctrl
             if action_id in ["edit.undo", "edit.redo"] and not (modifiers & Qt.ControlModifier):
                 logging.debug("[INPUT_SYSTEM] Ignoring z/y without ctrl")
-                pass # Ignore 'z' without ctrl
-            else:
-                logging.debug(f"[INPUT_SYSTEM] Executing action {action_id} via registry")
-                registry.execute(action_id, self.api.context)
-                return True
+                return False
+            logging.debug(f"[INPUT_SYSTEM] Executing action {action_id} via registry")
+            registry.execute(action_id, self.api.context)
+            return True
 
         logging.debug(f"[INPUT_SYSTEM] No action mapped for key {key}")
         return False

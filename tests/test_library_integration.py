@@ -16,7 +16,7 @@ def test_library_drag_to_canvas_insertion(qtbot, clean_api_singleton):
     # 1. Setup Input System
     # The Canvas needs this to handle drops!
     if not api.input_system:
-        api.input_system = InputSystem(api.context)
+        api.input_system = InputSystem()
         
     # 2. Setup Mock Library
     # We inject the part definition so the API can find it

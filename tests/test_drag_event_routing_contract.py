@@ -3,66 +3,62 @@ from PySide6.QtWidgets import QApplication
 from PySide6.QtCore import QPointF, Qt
 from ui.main_window import MainWindow
 from api.manager import APIManager
-from unittest.mock import MagicMock
+from unittest.mock import patch
 
+@pytest.mark.gui
 def test_drag_event_routes_to_move_tool(qtbot):
     """
-    Contract: Drag events on a device should route to the active MoveTool via the InputSystem.
+    Contract: After standard app startup (no explicit toolbar clicks), clicking
+    and dragging a device on the canvas must route through InputSystem to MoveTool
+    and update the device position in the model.
+
+    This test uses the REAL production startup path — no injected tools, no
+    force-selected items, no custom InputSystem. If drag-to-move is broken at
+    startup, this test MUST fail.
     """
-    app = QApplication.instance() or QApplication([])
-    # Reset APIManager singleton and tool_manager to avoid MagicMock pollution
-    from api.tool_manager import ToolManager
-    APIManager._instance = None
-    from tools.move_tool import MoveTool
-    from unittest.mock import MagicMock
-    move_tool = MoveTool()
+    # Standard production startup: APIManager already reset by autouse fixture
     api = APIManager.get_instance()
-    move_tool.api = api
-    move_tool.start_drag = MagicMock(wraps=move_tool.start_drag)
-    move_tool.update_drag = MagicMock(wraps=move_tool.update_drag)
-    move_tool.finish_drag = MagicMock(wraps=move_tool.finish_drag)
-    # Inject the mocked MoveTool into InputSystem
-    from ui.input_system import InputSystem
-    input_system = InputSystem(move_tool=move_tool)
-    api = APIManager.get_instance()
-    api.input_system = input_system
-    api.tool_manager = ToolManager()
-    api.tool_manager.register_tool("move", move_tool)
+
+    # Verify production default: select tool should be active
+    assert api.tool_manager.active_tool is not None, \
+        "No active tool after APIManager init — startup is broken"
+
+    # Create MainWindow (this creates InputSystem and installs it)
     window = MainWindow()
     qtbot.addWidget(window)
     window.show()
+
+    assert api.input_system is not None, \
+        "InputSystem not created during MainWindow init"
+
     # Add a device to the model and scene
-    device = api.context.harness.devices[0] if api.context.harness.devices else None
-    if device is None:
-        from core.models import Device
-        import uuid
-        valid_uuid = str(uuid.uuid4())
-        device = Device(id=valid_uuid, x=100.0, y=100.0, meta={"width_mm": 40.0, "height_mm": 30.0})
-        from core.harness import DeviceList
-        with DeviceList.test_bypass():
-            api.context.harness.devices.append(device)
-        window.canvas.load_harness(api.context.harness)
-    # Find the DeviceItem in the scene
+    from core.models import Device
+    import uuid
+    device = Device(id=str(uuid.uuid4()), x=100.0, y=100.0,
+                    meta={"width_mm": 40.0, "height_mm": 30.0})
+    from core.harness import DeviceList
+    with DeviceList.test_bypass():
+        api.context.harness.devices.append(device)
+    window.canvas.load_harness(api.context.harness)
+
     item = api.get_scene_item(device.id)
     assert item is not None, "DeviceItem not found in scene registry."
-    # Activate MoveTool
-    api.tool_manager.set_tool("move")
-    # Ensure DeviceItem is selected and MoveTool is active before mocking
-    item.setSelected(True)
-    # Instead of strict identity, check type
-    assert isinstance(api.tool_manager.active_tool, MoveTool), "MoveTool is not active before drag."
-    # Use DeviceItem's actual scene position for mouse events
+
+    # Get viewport coordinates for the device center
     scene = item.scene()
     view = scene.views()[0]
     start_scene_pos = item.scenePos() + item.boundingRect().center()
     end_scene_pos = start_scene_pos + QPointF(50, 25)
     start_viewport_pos = view.mapFromScene(start_scene_pos)
     end_viewport_pos = view.mapFromScene(end_scene_pos)
+
+    # Drag — through real Qt events, real InputSystem, real tool routing
     qtbot.mousePress(view.viewport(), Qt.LeftButton, pos=start_viewport_pos)
     qtbot.mouseMove(view.viewport(), pos=end_viewport_pos)
     qtbot.mouseRelease(view.viewport(), Qt.LeftButton, pos=end_viewport_pos)
-    # Check that MoveTool received the drag events
-    assert move_tool.start_drag.called, "MoveTool did not receive start_drag event."
-    assert move_tool.update_drag.called, "MoveTool did not receive update_drag event."
-    assert move_tool.finish_drag.called, "MoveTool did not receive finish_drag event."
+
+    # The device position in the MODEL must have changed
+    assert device.x != 100.0 or device.y != 100.0, \
+        f"Device did not move after drag: ({device.x}, {device.y})"
+
     window.close()

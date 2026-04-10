@@ -93,11 +93,8 @@ class HarnessCanvas(QGraphicsView):
             try:
                 from PySide6.QtGui import QTransform
                 scene_pos = self.mapToScene(event.pos())
-                import sys
-                print(f"[DEBUG][canvas.contextMenuEvent] event.pos()={event.pos()}, scene_pos={scene_pos}", file=sys.stderr)
                 if self.scene:
                     item = self.scene.itemAt(scene_pos, QTransform())
-                    print(f"[DEBUG][canvas.contextMenuEvent] item={item}, type={type(item) if item else None}, has model={hasattr(item, 'model') if item else None}", file=sys.stderr)
             except Exception as e:
                 import traceback
                 traceback.print_exc()
@@ -156,7 +153,20 @@ class HarnessCanvas(QGraphicsView):
             finally:
                 self._is_reloading = False
         elif event_type == "model_changed":
-            self.on_model_changed(data)
+            action = data.get("action") if isinstance(data, dict) else None
+            if action in ("load", "new", "new_project"):
+                try:
+                    self._is_reloading = True
+                    api = APIManager.get_instance()
+                    harness = getattr(api.context, 'harness', None)
+                    if harness is not None:
+                        self.load_harness(harness)
+                finally:
+                    self._is_reloading = False
+            else:
+                self.on_model_changed(data)
+        elif event_type == "settings_changed":
+            self.viewport().update()
 
     def on_model_changed(self, data):
         """Respond to model changes by updating or removing scene items as needed."""
@@ -172,6 +182,15 @@ class HarnessCanvas(QGraphicsView):
             if scene_item is not None:
                 if hasattr(scene_item, "setSelected"):
                     scene_item.setSelected(False)
+                # Also remove grips if this is a WireItem
+                if hasattr(scene_item, 'elbow_grips'):
+                    grips = list(scene_item.elbow_grips) + list(scene_item.segment_grips)
+                    scene_item.elbow_grips.clear()
+                    scene_item.segment_grips.clear()
+                    for g in grips:
+                        s = g.scene()
+                        if s:
+                            s.removeItem(g)
                 self.scene.removeItem(scene_item)
                 api.unregister_scene_item(model_id)
         # Add or update scene items for model additions
@@ -215,38 +234,87 @@ class HarnessCanvas(QGraphicsView):
             model_id = getattr(item, "id", None)
             scene_item = api.get_scene_item(model_id)
             if scene_item is not None:
-                # Update position if the item has x and y coordinates
-                if hasattr(item, 'x') and hasattr(item, 'y'):
-                    scene_item.setPos(item.x, item.y)
-                # Update other properties as needed (angle, label, etc.)
-                if hasattr(item, 'rotation') and hasattr(scene_item, 'rotation'):
-                    scene_item.setRotation(item.rotation)
+                if hasattr(scene_item, 'update_from_model'):
+                    scene_item.update_from_model()
+                else:
+                    # Update position if the item has x and y coordinates
+                    if hasattr(item, 'x') and hasattr(item, 'y'):
+                        scene_item.setPos(item.x, item.y)
+                    # Update other properties as needed (angle, label, etc.)
+                    if hasattr(item, 'rotation') and hasattr(scene_item, 'rotation'):
+                        scene_item.setRotation(item.rotation)
             # Update connected wire endpoints when a device or pin moves
             if action == "move":
                 api._update_connected_wires(item)
         # For other actions, do nothing (extend as needed)
 
     def drawBackground(self, painter, rect):
-        """Draw the background grid and call the base background renderer."""
+        """Draw the background grid with minor and major lines."""
+        import math
         super().drawBackground(painter, rect)
-        # Draw grid
-        color = self._theme.get("grid_color", "#444444")
-        from PySide6.QtGui import QColor
-        grid_pen = QColor(color)
-        painter.setPen(grid_pen)
+        from PySide6.QtGui import QColor, QPen
+        from PySide6.QtCore import QLineF
+
         grid_size = 5.0
-        left = int(rect.left()) - (int(rect.left()) % int(grid_size))
-        top = int(rect.top()) - (int(rect.top()) % int(grid_size))
-        right = int(rect.right())
-        bottom = int(rect.bottom())
-        x = left
-        while x < right:
-            painter.drawLine(x, top, x, bottom)
+        try:
+            from api.manager import APIManager
+            api = APIManager.get_instance()
+            grid_size = max(getattr(api.settings, 'grid_size_mm', 5.0), 0.5)
+        except Exception:
+            pass
+
+        major_every = 10  # every Nth minor line is a major line
+        base_color = QColor(self._theme.get("grid_color", "#444444"))
+
+        # Minor grid pen — faint dots
+        minor_color = QColor(base_color)
+        minor_color.setAlpha(50)
+        minor_pen = QPen(minor_color, 0)
+
+        # Major grid pen — more visible
+        major_color = QColor(base_color)
+        major_color.setAlpha(140)
+        major_pen = QPen(major_color, 0)
+
+        left = rect.left()
+        top = rect.top()
+        right = rect.right()
+        bottom = rect.bottom()
+
+        # Align start to grid
+        start_x = math.floor(left / grid_size) * grid_size
+        start_y = math.floor(top / grid_size) * grid_size
+
+        # Draw vertical lines
+        minor_lines = []
+        major_lines = []
+        ix = 0
+        x = start_x
+        while x <= right:
+            line = QLineF(x, top, x, bottom)
+            if ix % major_every == 0:
+                major_lines.append(line)
+            else:
+                minor_lines.append(line)
             x += grid_size
-        y = top
-        while y < bottom:
-            painter.drawLine(left, y, right, y)
+            ix += 1
+
+        # Draw horizontal lines
+        iy = 0
+        y = start_y
+        while y <= bottom:
+            line = QLineF(left, y, right, y)
+            if iy % major_every == 0:
+                major_lines.append(line)
+            else:
+                minor_lines.append(line)
             y += grid_size
+            iy += 1
+
+        painter.setPen(minor_pen)
+        painter.drawLines(minor_lines)
+        painter.setPen(major_pen)
+        painter.drawLines(major_lines)
 
     def load_harness(self, harness):
         """Populate the scene with items from the harness model (devices and wires)."""

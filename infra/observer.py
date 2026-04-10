@@ -78,10 +78,10 @@ class Observer:
                 if cb is not None:
                     try:
                         cb(data)
-                        new_list.append((is_weak, ref))
                     except Exception as e:
-                        # ...removed debug print...
-                        pass
+                        import traceback
+                        traceback.print_exc()
+                    new_list.append((is_weak, ref))
                 # else: dead weakref, do not keep
             self._subscribers[event_type] = new_list
         # Dispatch to all-event subscriber if present
@@ -91,5 +91,6 @@ class Observer:
             if cb is not None:
                 try:
                     cb(event_type, data)
-                except Exception:
-                    pass
+                except Exception as e:
+                    import traceback
+                    traceback.print_exc()

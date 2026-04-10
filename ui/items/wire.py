@@ -26,6 +26,7 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         """Initialize a WireItem with the given wire model and optional pin lookup."""
         QGraphicsPathItem.__init__(self, parent)
         ObservableGraphicsItemMixin.__init__(self)
+        self.is_ghost = False
         self.theme = ThemeManager()
         self.setZValue(0)
         self._model = wire_model
@@ -56,10 +57,11 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         """Proxy to the wire model's path_nodes."""
         return getattr(self._model, 'path_nodes', [])
 
-    def update_from_model(self, wire_model):
+    def update_from_model(self, wire_model=None):
         """Update the item's path and style from the given wire model."""
-        self._model = wire_model
-        self._rebuild_path()
+        if wire_model is not None:
+            self._model = wire_model
+        self._build_path_and_grips()
         self._apply_style()
 
     def _rebuild_path(self):

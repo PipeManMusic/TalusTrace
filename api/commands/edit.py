@@ -115,7 +115,6 @@ class DeleteItemsCommand(BaseCommand):
 
     def execute(self):
         """Delete the specified devices and wires from the model."""
-        print(f"[DEBUG] DeleteItemsCommand.execute: harness.devices before {[d.id for d in self.api.context.harness.devices]}")
         harness = self.api.context.harness
         # Save for undo
         self.deleted_devices = [d for d in harness.devices if d.id in self.dev_ids]
@@ -129,7 +128,6 @@ class DeleteItemsCommand(BaseCommand):
             self.api.dispatch("wire_removed", wire)
         # Mutate after dispatch: remove devices and their pins
         harness.devices = [d for d in harness.devices if d.id not in self.dev_ids]
-        print(f"[DEBUG] DeleteItemsCommand.execute: harness.devices after {[d.id for d in harness.devices]}")
         # (Pins are contained in device, so removing device removes pins)
         harness.wires = [w for w in harness.wires if getattr(w, 'id', None) not in self.wire_ids]
         SelectionManager().clear_selection()
@@ -137,7 +135,6 @@ class DeleteItemsCommand(BaseCommand):
     def undo(self):
         """Restore the deleted devices and wires to the model."""
         harness = self.api.context.harness
-        print(f"[DEBUG] DeleteItemsCommand.undo: harness.devices before {[d.id for d in harness.devices]}")
         # Dispatch 'restore' for each restored device and wire (API contract) BEFORE mutation
         for device in self.deleted_devices:
             self.api.dispatch("model_changed", {"action": "restore", "item": device, "type": "device"})
@@ -149,7 +146,6 @@ class DeleteItemsCommand(BaseCommand):
         for device in self.deleted_devices:
             if all(d.id != device.id for d in harness.devices):
                 harness.devices.append(device)
-        print(f"[DEBUG] DeleteItemsCommand.undo: harness.devices after {[d.id for d in harness.devices]}")
         for wire in self.deleted_wires:
             if all(w.id != wire.id for w in harness.wires):
                 harness.wires.append(wire)
@@ -195,17 +191,11 @@ def edit_redo(context):
 
 @register_action("edit.delete")
 def edit_delete(context):
-    """Dispatcher contract: delete action (calls APIManager.delete_device or delete_pin)."""
-    print(f"[DEBUG][edit_delete] context: {context}")
-    if hasattr(context, 'pin'):
-        print(f"[DEBUG][edit_delete] context.pin: {context.pin} @ {id(context.pin)}")
-    if hasattr(context, 'device'):
-        print(f"[DEBUG][edit_delete] context.device: {context.device} @ {id(context.device)}")
+    """Dispatcher contract: delete action (calls APIManager.delete_device, delete_pin, or delete_wire)."""
     from infra.logging import infra_log
     api = APIManager.get_instance()
     from api.commands.device import DeletePinCommand
-    print(f"[DIAG][DISPATCHER] edit.delete called with context: {context}")
-    infra_log(f"[DIAG][DISPATCHER] edit.delete called with context: {context}", level="info")
+    infra_log(f"[DISPATCHER] edit.delete called with context: {context}", level="info")
     if hasattr(context, 'pin'):
         pin = context.pin
         # Always resolve device from pin.device_id
@@ -217,49 +207,31 @@ def edit_delete(context):
         if device is not None and hasattr(device, 'pins'):
             canonical_pin = next((p for p in device.pins if getattr(p, 'id', None) == getattr(pin, 'id', None)), None)
         if canonical_pin is not None:
-            print(f"[DIAG][DISPATCHER] using canonical pin instance from device.pins: {canonical_pin} @ {id(canonical_pin)}")
             pin = canonical_pin
-        else:
-            print(f"[DIAG][DISPATCHER] using context.pin instance: {pin} @ {id(pin)}")
         if device is not None:
-            print(f"[DEBUG][edit_delete] resolved device: {device} @ {id(device)}")
-            print(f"[DEBUG][edit_delete] device.pins: {[getattr(p, 'id', None) for p in getattr(device, 'pins', [])]}")
-            print(f"[DEBUG][edit_delete] pin to delete: {getattr(pin, 'id', None)} @ {id(pin)}")
-            print(f"[DIAG][DISPATCHER] pushing DeletePinCommand with device: {device}, pin: {pin}")
-            print(f"[DIAG][DISPATCHER] device.pins before: {[getattr(p, 'id', None) for p in getattr(device, 'pins', [])]}")
             infra_log(f"[DISPATCHER] edit.delete: pushing DeletePinCommand with device id={getattr(device, 'id', None)}, pin id={getattr(pin, 'id', None)}", level="info")
             api.context.undo_stack.push(DeletePinCommand(device, pin, context=api.context))
-            print(f"[DIAG][DISPATCHER] device.pins after push: {[getattr(p, 'id', None) for p in getattr(device, 'pins', [])]}")
         else:
-            print(f"[DIAG][DISPATCHER] fallback: calling api.delete_pin({pin})")
             api.delete_pin(pin)
     elif hasattr(context, 'device'):
-        print(f"[DIAG][DISPATCHER] context.device id={getattr(context.device, 'id', None)}, obj={context.device}, @ {id(context.device)}")
-        infra_log(f"[DISPATCHER] edit.delete: context.device id={getattr(context.device, 'id', None)}, obj={context.device}", level="debug")
+        infra_log(f"[DISPATCHER] edit.delete: context.device id={getattr(context.device, 'id', None)}", level="debug")
         api.delete_device(context.device)
     elif hasattr(context, 'wire'):
         infra_log(f"[DISPATCHER] edit.delete: context.wire id={getattr(context.wire, 'id', None)}", level="debug")
         api.delete_wire(context.wire)
     else:
-        print(f"[DIAG][DISPATCHER] context has neither device nor pin. Context: {context}")
-        infra_log(f"[DISPATCHER] edit.delete: context has neither device nor pin. Context: {context}", level="debug")
+        infra_log(f"[DISPATCHER] edit.delete: no pin/device/wire on context, falling back to selection", level="debug")
         mgr = SelectionManager()
         for item in mgr.selected_models:
             if hasattr(item, 'meta') and hasattr(item, 'pins'):
-                print(f"[DIAG][DISPATCHER] fallback device id={getattr(item, 'id', None)}, obj={item}")
-                infra_log(f"[DISPATCHER] edit.delete: fallback device id={getattr(item, 'id', None)}, obj={item}", level="debug")
+                infra_log(f"[DISPATCHER] edit.delete: fallback device id={getattr(item, 'id', None)}", level="debug")
                 api.delete_device(item)
             elif hasattr(item, 'device_id') and hasattr(item, 'id'):
-                print(f"[DIAG][DISPATCHER] fallback pin id={getattr(item, 'id', None)}, obj={item}")
-                infra_log(f"[DISPATCHER] edit.delete: fallback pin id={getattr(item, 'id', None)}, obj={item}", level="debug")
-                # Try to find the parent device
+                infra_log(f"[DISPATCHER] edit.delete: fallback pin id={getattr(item, 'id', None)}", level="debug")
                 device = next((d for d in api.context.harness.devices if getattr(d, 'id', None) == getattr(item, 'device_id', None)), None)
-                print(f"[DIAG][DISPATCHER] fallback looked up device from harness: {device}")
                 if device is not None:
-                    print(f"[DIAG][DISPATCHER] fallback pushing DeletePinCommand with device: {device}, pin: {item}")
                     api.context.undo_stack.push(DeletePinCommand(device, item, context=api.context))
                 else:
-                    print(f"[DIAG][DISPATCHER] fallback: calling api.delete_pin({item})")
                     api.delete_pin(item)
             elif hasattr(item, 'path_nodes'):
                 infra_log(f"[DISPATCHER] edit.delete: fallback wire id={getattr(item, 'id', None)}", level="debug")
@@ -286,17 +258,11 @@ class PinDeleteCommand(BaseCommand):
         Remove pins from their parent devices and dispatch model_changed events.
         """
         for device, pin in self.pin_tuples:
-            print(f"[DIAG] PinDeleteCommand.execute: device.id={getattr(device, 'id', None)}, pin.id={getattr(pin, 'id', None)}")
-            print(f"[DIAG] Device pins before: {[p.id for p in device.pins]}")
             if pin in device.pins:
                 idx = device.pins.index(pin)
                 device.pins.remove(pin)
-                print(f"[DIAG] Removed pin {pin.id} from device {device.id}")
                 self._removed.append((device, pin, idx))
                 self.api.dispatch("model_changed", {"action": "remove", "item": pin, "type": "pin"})
-            else:
-                print(f"[DIAG] Pin {pin.id} not found in device {device.id} pins: {[p.id for p in device.pins]}")
-            print(f"[DIAG] Device pins after: {[p.id for p in device.pins]}")
         SelectionManager().clear_selection()
 
     def undo(self):

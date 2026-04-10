@@ -18,25 +18,21 @@ from ui.dialogs.device_wizard import DeviceWizard
 class MainWindow(QMainWindow):
     """Main application window for Talus Trace, managing UI layout and state."""
     def register_toolbar_commands(self):
-        """Register toolbar command actions for tools and undo/redo."""
+        """Register toolbar command actions for tools and undo/redo.
+        
+        Note: tool.move, tool.add_generic_device, edit.undo, edit.redo
+        are already registered in api/commands/tools.py and api/commands/edit.py.
+        Only register actions that aren't defined elsewhere.
+        """
         from api.actions import register_action
 
-        # --- Existing Tools ---
-        register_action("tool.move")(lambda ctx=None: self.api.tool_manager.set_tool("move"))
-        register_action("tool.add_generic_device")(lambda ctx=None: self.api.tool_manager.set_tool("placement"))
-
-        # Register device wizard, undo, redo with correct context handling
-        register_action("device.create_wizard")(lambda ctx: ctx.activate_device_wizard() if hasattr(ctx, "activate_device_wizard") else None)
-        register_action("edit.undo")(lambda ctx=None: self.api.context.undo_stack.undo())
-        register_action("edit.redo")(lambda ctx=None: self.api.context.undo_stack.redo())
-        # Stub for coverage
+        # Stub for coverage — not defined in api/commands/
         register_action("tool.measure")(lambda ctx: None)
 
     def activate_device_wizard(self):
         """Open the device wizard dialog and handle completion."""
         dialog = DeviceWizard(self)
         if dialog.exec():
-            print("[MainWindow] Device Wizard completed successfully.")
             if hasattr(self, 'library_panel'):
                 self.library_panel.refresh()
 
@@ -85,10 +81,16 @@ class MainWindow(QMainWindow):
         # Load the current harness into the canvas
         self.canvas.load_harness(self.api.context.harness)
 
-        # 3. Input System (Wired in app.py, now installed here)
-        # Always install InputSystem on the canvas viewport for robust mouse event handling
-        if self.api.input_system:
-            self.api.input_system.install(self.canvas.viewport())
+        # 3. Input System — create one if the UI layer (app.py) hasn't provided one
+        if not self.api.input_system:
+            import os
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            keymap_path = os.path.join(base_dir, "resources", "config", "keymap.yaml")
+            from ui.input_system import InputSystem
+            self.api.input_system = InputSystem(
+                config_path=keymap_path if os.path.exists(keymap_path) else None
+            )
+        self.api.input_system.install(self.canvas.viewport())
 
         # 4. Menus & Toolbars
         import api.commands.file
@@ -110,7 +112,10 @@ class MainWindow(QMainWindow):
         self.register_panel_toggles()
         self.register_toolbar_commands()
 
-        # 6. Restore State (if saved)
+        # 6. Subscribe to model_changed for dirty title indicator
+        self.api.subscribe("model_changed", self._on_model_changed)
+
+        # 7. Restore State (if saved)
         self._restore_state()
 
     def restore_state(self, settings=None):
@@ -184,8 +189,27 @@ class MainWindow(QMainWindow):
         if settings.value("windowState"):
             self.restoreState(settings.value("windowState"))
 
+    def _on_model_changed(self, data):
+        """Update title bar dirty indicator when the model changes."""
+        self.update_title(is_dirty=self.api.context.is_dirty)
+
     def closeEvent(self, event):
-        """Save window state on close and call the base closeEvent."""
+        """Prompt to save unsaved changes, then save window state and close."""
+        import os
+        is_headless = bool(os.environ.get('PYTEST_CURRENT_TEST'))
+        if self.api.context.is_dirty and not is_headless:
+            reply = QMessageBox.question(
+                self, "Unsaved Changes",
+                "You have unsaved changes. Save before closing?",
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+                QMessageBox.Save,
+            )
+            if reply == QMessageBox.Save:
+                from api.actions import registry as action_registry
+                action_registry.execute("file.save", {})
+            elif reply == QMessageBox.Cancel:
+                event.ignore()
+                return
         settings = QSettings("TalusTrace", "App")
         settings.setValue("geometry", self.saveGeometry())
         settings.setValue("windowState", self.saveState())

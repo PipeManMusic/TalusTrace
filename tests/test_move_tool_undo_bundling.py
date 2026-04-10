@@ -6,16 +6,13 @@ from tools.move_tool import MoveTool
 from core.device import Device
 from api.manager import APIManager
 
-def test_move_tool_undo_bundling(qtbot):
+def test_move_tool_undo_bundling(qtbot, clean_api_singleton):
     """
-    Compliance Check: UI Spec 4 (State Synchronization).
-    
-    Risk: Tool updates device.x/y but forgets to push Command on release.
-    Result: Undo Stack is empty or desynchronized.
+    Unit test: MoveTool pushes exactly ONE MoveCommand to the undo stack
+    on finish_drag, and real-time model updates happen during drag.
     """
     # 1. Setup
-    APIManager.reset()
-    api = APIManager.get_instance()
+    api = clean_api_singleton
     
     # Create Device
     import uuid

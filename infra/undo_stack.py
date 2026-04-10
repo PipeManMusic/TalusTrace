@@ -94,13 +94,14 @@ class UndoStack:
         """
         return not self._undo_stack
 
-    def __init__(self):
+    def __init__(self, context=None):
         """Initialize the UndoStack with empty undo/redo stacks and callbacks."""
         self._undo_stack = []
         self._redo_stack = []
         self._current_transaction = None
         self._transaction_depth = 0
         self._callbacks = []
+        self._context = context
 
     def subscribe(self, callback):
         """
@@ -146,6 +147,8 @@ class UndoStack:
         else:
             self._undo_stack.append(command)
             self._redo_stack.clear()
+        if self._context is not None:
+            self._context.dirty = True
 
     def undo(self):
         """Undo the last command on the stack."""
@@ -154,6 +157,8 @@ class UndoStack:
         command = self._undo_stack.pop()
         command.undo()
         self._redo_stack.append(command)
+        if self._context is not None:
+            self._context.dirty = bool(self._undo_stack)
         self._notify('undo')
 
     def redo(self):
@@ -163,6 +168,8 @@ class UndoStack:
         command = self._redo_stack.pop()
         command.redo()
         self._undo_stack.append(command)
+        if self._context is not None:
+            self._context.dirty = True
         self._notify('redo')
 
     def clear(self):

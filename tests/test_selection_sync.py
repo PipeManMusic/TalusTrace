@@ -17,28 +17,23 @@ def test_selection_manager_singleton(qapp):
 def test_device_click_updates_manager(qapp):
     """
     Contract: Selection is driven by InputSystem -> API -> SelectionManager, not by View items.
-    This test verifies that the API method correctly updates SelectionManager.
-    The View (DeviceItem.setSelected) only reflects selection state; it does not drive it.
+    This test verifies that api.select() correctly updates SelectionManager.
     """
     from api.manager import APIManager
-    from infra.context import Context
     from core.harness import DeviceList
     
-    # Reset API and create context
-    APIManager.reset()
-    api = APIManager(context=Context())
+    api = APIManager.get_instance()
     
     dev = Device(id="11111111-1111-1111-1111-111111111111")
-    # Use test bypass to add device directly without command
     with DeviceList.test_bypass():
         api.context.harness.devices.append(dev)
     
-    # CORRECT FLOW: API drives selection (InputSystem would call this)
-    from core.selection import SelectionManager
-    SelectionManager().select(dev)
+    # CORRECT FLOW: API drives selection
+    api.select([dev.id])
     
     # Verify selection manager was updated
-    assert "11111111-1111-1111-1111-111111111111" in SelectionManager().current_selection_ids
+    from core.selection import SelectionManager
+    assert dev.id in SelectionManager().current_selection_ids
     
     # Clean up
     SelectionManager().clear_selection()

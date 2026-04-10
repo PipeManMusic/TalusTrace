@@ -96,8 +96,8 @@ class ProjectBrowser(QWidget):
         for dev in harness.devices:
             infra_log(f"[ProjectBrowser] refresh: device in harness.devices: {getattr(dev, 'id', None)}", level="debug")
             if dev.id in ids_seen:
-                import sys
-                print(f"[ERROR] Duplicate device ID in project browser: {dev.id}", file=sys.stderr)
+                from infra.logging import infra_log
+                infra_log(f"Duplicate device ID in project browser: {dev.id}", level="error")
                 assert False, f"Duplicate device ID in project browser: {dev.id}"
             ids_seen.add(dev.id)
             display_text = f"{dev.id} ({dev.label})" if hasattr(dev, 'label') and dev.label else dev.id

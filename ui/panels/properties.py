@@ -139,13 +139,8 @@ class PropertiesPanel(QWidget):
         """
         # Device fields
         self.id_edit = QLineEdit(str(getattr(device, 'id', '')))
-        self.id_edit.setReadOnly(False)
-        def update_id():
-            """
-            Update the device's id field with the value from the id_edit widget.
-            """
-            self._update_model(device, 'id', self.id_edit.text())
-        self.id_edit.editingFinished.connect(update_id)
+        self.id_edit.setReadOnly(True)
+        self.id_edit.setStyleSheet("color: gray;")
         from ui.i18n import I18N
         self.form.addRow(I18N.get('id_label'), self.id_edit)
 
@@ -159,7 +154,6 @@ class PropertiesPanel(QWidget):
         self.label_edit.editingFinished.connect(update_label)
         self.form.addRow(I18N.get('label_label'), self.label_edit)
 
-        print("[DEBUG] _render_device: meta=", getattr(device, 'meta', {}))
         # Always display all meta fields, even if not present in schema
         meta = getattr(device, 'meta', {}) or {}
         # Always fetch the latest schema from MetadataManager at render time
@@ -170,7 +164,6 @@ class PropertiesPanel(QWidget):
             # Always re-fetch schemas at render time
             schema = meta_mgr.schemas.get(meta.get('_type', 'generic'), meta_mgr.schemas.get('generic', {'fields': {}}))
             schema_fields = schema.get('fields', {})
-            print(f"[DEBUG] _render_device: meta _type={meta.get('_type')}, schema_fields={list(schema_fields.keys())}")
         except Exception:
             pass
         # Render schema-defined fields in schema order

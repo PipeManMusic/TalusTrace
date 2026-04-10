@@ -65,6 +65,9 @@ def context_menu_manager(context_menu_config):
 def test_context_menu_api_contract(canvas_and_api, qtbot):
     canvas, api = canvas_and_api
     # Install InputSystem as event filter for proper event routing
+    if not api.input_system:
+        from ui.input_system import InputSystem
+        api.input_system = InputSystem()
     input_system = api.input_system
     input_system.install(canvas.viewport())
     

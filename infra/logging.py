@@ -54,17 +54,13 @@ def infra_log(message, level="info"):
     """
     enabled = os.environ.get("TALUSTRACE_INFRA_LOG", "0") == "1"
     if not enabled:
-        print(f"[infra_log] Logging disabled by TALUSTRACE_INFRA_LOG")
         return
     log_path = get_infra_log_path()
-    print(f"[infra_log] Writing to log_path: {log_path}")
     log_entry = f"[{level.upper()}] {message}\n"
     try:
         with open(log_path, "a") as f:
             f.write(log_entry)
-        print(f"[infra_log] Successfully wrote to {log_path}")
     except Exception as e:
-        print(f"[infra_log] Exception writing to {log_path}: {e}")
         # Fallback to logger if file write fails
         if level == "warning":
             logger.warning(f"infra_log file write failed: {e}; original: {message}")

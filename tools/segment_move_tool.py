@@ -179,9 +179,11 @@ class SegmentMoveTool(BaseTool):
             
             self.wire.path_nodes[idx] = [new_x, new_y]
 
-        # 4. Notify View (if not pure headless)
-        if hasattr(self.wire, 'ui_item') and self.wire.ui_item:
-            self.wire.ui_item.update_from_model(self.wire)
+        # 4. Sync scene item via API registry (never reference wire.ui_item)
+        wire_item = self.api.get_scene_item(self.wire.id)
+        if wire_item and hasattr(wire_item, '_rebuild_path'):
+            wire_item._rebuild_path()
+            wire_item.update()
 
     def on_mouse_release(self, event):
         """
@@ -227,9 +229,11 @@ class SegmentMoveTool(BaseTool):
         if self.is_dragging and self.wire:
             for idx, original_pos in self.initial_nodes.items():
                 self.wire.path_nodes[idx] = original_pos
-            
-            if hasattr(self.wire, 'ui_item') and self.wire.ui_item:
-                self.wire.ui_item.update_from_model(self.wire)
-                
+
+            wire_item = self.api.get_scene_item(self.wire.id)
+            if wire_item and hasattr(wire_item, '_rebuild_path'):
+                wire_item._rebuild_path()
+                wire_item.update()
+
         self.is_dragging = False
         self.wire = None

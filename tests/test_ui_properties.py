@@ -61,12 +61,12 @@ def test_property_panel_apply_changes(qtbot):
     panel.show()
     
     import uuid
-    dev = Device(id=str(uuid.uuid4()))
+    dev = Device(id=str(uuid.uuid4()), label="Original")
     panel.load_item(dev) 
     
-    assert hasattr(panel, 'id_edit')
+    assert hasattr(panel, 'label_edit')
     
-    panel.id_edit.setText("UPDATED")
-    panel.id_edit.editingFinished.emit()
+    panel.label_edit.setText("UPDATED")
+    panel.label_edit.editingFinished.emit()
     
-    assert dev.id == "UPDATED"
+    assert dev.label == "UPDATED"

@@ -63,8 +63,7 @@ def find_model_mutations_in_ui():
 
 
 
-@pytest.mark.parametrize('filename,line,code', list(find_model_mutations_in_ui()))
-def test_ui_does_not_mutate_model(filename, line, code):
+def test_ui_does_not_mutate_model():
     """Fail if any UI code directly mutates model objects or their attributes."""
     violations = find_model_mutations_in_ui()
     if violations:

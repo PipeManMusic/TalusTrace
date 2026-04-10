@@ -34,6 +34,9 @@ def test_move_tool_mvc_compliance(api_and_tool):
     api.register_scene_item(device.id, mock_item)
     # Set initial drag position for mock item (test compatibility)
     mock_item._drag_initial_pos = (0.0, 0.0)
+    if not api.input_system:
+        from ui.input_system import InputSystem
+        api.input_system = InputSystem()
     input_system = api.input_system
     # Inject MoveTool for test compliance
     input_system._move_tool = tool
