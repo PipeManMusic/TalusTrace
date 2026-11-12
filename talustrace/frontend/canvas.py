@@ -30,7 +30,7 @@ class HarnessScene(QGraphicsScene):
             painter.drawLine(left, y, right, y)
 
 class HarnessView(QGraphicsView):
-    
+
     canvas_clicked = Signal(float, float)
     wire_connected = Signal(object, object) # Signal (From_PinItem, To_PinItem)
 
@@ -40,9 +40,9 @@ class HarnessView(QGraphicsView):
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setMouseTracking(True)
-        
+
         self.mode = "SELECT"
-        
+
         # Tools
         self.ghost_item = None 
         self.temp_wire = None
@@ -69,7 +69,7 @@ class HarnessView(QGraphicsView):
             self.scene().removeItem(self.temp_wire)
             self.temp_wire = None
             self.start_pin = None
-            
+
         self.mode = "SELECT"
         self.setDragMode(QGraphicsView.RubberBandDrag)
         self.setCursor(Qt.ArrowCursor)
@@ -96,13 +96,13 @@ class HarnessView(QGraphicsView):
             snap_x = round(pos.x() / GRID_SIZE) * GRID_SIZE
             snap_y = round(pos.y() / GRID_SIZE) * GRID_SIZE
             self.ghost_item.setPos(snap_x, snap_y)
-            
+
         # Logic 2: Dragging a Wire
         if self.mode == "WIRING" and self.temp_wire and self.start_pin:
             # Update end of line to follow mouse
             p1 = self.start_pin.get_scene_pos()
             self.temp_wire.setLine(QLineF(p1, pos))
-            
+
         super().mouseMoveEvent(event)
 
     def mousePressEvent(self, event):
@@ -155,7 +155,7 @@ class HarnessView(QGraphicsView):
         self.mode = "WIRING"
         self.setDragMode(QGraphicsView.NoDrag)
         self.start_pin = pin_item
-        
+
         # Create Ghost Wire
         self.temp_wire = QGraphicsLineItem()
         self.temp_wire.setPen(QPen(Qt.red, 2, Qt.DashLine))
@@ -164,11 +164,17 @@ class HarnessView(QGraphicsView):
     def finish_wiring(self, end_pin):
         # Notify App to create real wire
         self.wire_connected.emit(self.start_pin, end_pin)
-        
+
         # Cleanup
         self.stop_ghost()
 
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Escape:
             self.stop_ghost()
+        elif event.key() == Qt.Key_Space:
+            for item in self.scene().selectedItems():
+                if hasattr(item, 'rotate_90'):
+                    item.rotate_90()
+            event.accept()
+            return
         super().keyPressEvent(event)
