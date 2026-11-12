@@ -126,6 +126,49 @@ class BundleSegmentMembership:
         )
 
 
+@dataclass
+class BundleBreakout:
+    """
+    A point along a bundle's trunk where a member wire enters or leaves the bundle.
+
+    Attributes:
+        wire_id: The member wire that breaks out at this point.
+        node_index: Index into the owning bundle's ``path_nodes`` (trunk polyline)
+            where the wire departs the trunk.
+        point: The mm coordinate the wire heads toward just outside the trunk,
+            i.e. the wire's own node immediately beyond the shared run. ``None``
+            when the wire terminates at the trunk end.
+        id: Stable UUID for this breakout.
+    """
+    wire_id: str
+    node_index: int
+    point: Optional[List[float]] = None
+    id: Optional[str] = None
+
+    def __post_init__(self):
+        """Assign a UUID if one was not provided."""
+        if self.id is None:
+            self.id = str(uuid.uuid4())
+
+    def to_dict(self):
+        """Serialize the breakout to a dictionary."""
+        return {
+            'wire_id': self.wire_id,
+            'node_index': self.node_index,
+            'point': self.point,
+            'id': self.id,
+        }
+
+    @classmethod
+    def from_dict(cls, data):
+        """Create a BundleBreakout from a dictionary."""
+        return cls(
+            wire_id=data.get('wire_id'),
+            node_index=data.get('node_index', 0),
+            point=data.get('point'),
+            id=data.get('id'),
+        )
+
 
 @dataclass
 class Bundle:
@@ -137,6 +180,10 @@ class Bundle:
     segments: List[BundleSegmentMembership] = field(default_factory=list)
     meta: Dict[str, Any] = field(default_factory=dict)
     id: Optional[str] = None
+    visible: bool = True
+    # --- Routable geometry (mm) ---
+    path_nodes: List[List[float]] = field(default_factory=list)  # Trunk polyline
+    breakouts: List['BundleBreakout'] = field(default_factory=list)
 
     def __post_init__(self):
         """
@@ -188,7 +235,10 @@ class Bundle:
             'bundle_ids': self.bundle_ids,
             'segments': [s.to_dict() for s in self.segments],
             'meta': self.meta,
-            'id': self.id
+            'id': self.id,
+            'visible': self.visible,
+            'path_nodes': self.path_nodes,
+            'breakouts': [b.to_dict() for b in self.breakouts],
         }
 
     @classmethod
@@ -201,28 +251,77 @@ class Bundle:
             Bundle: Instance created from the dictionary.
         """
         segments = [BundleSegmentMembership.from_dict(s) for s in data.get('segments', [])]
+        breakouts = [BundleBreakout.from_dict(b) for b in data.get('breakouts', [])]
         return cls(
             wire_ids=data.get('wire_ids', []),
             bundle_ids=data.get('bundle_ids', []),
             segments=segments,
             meta=data.get('meta', {}),
-            id=data.get('id')
+            id=data.get('id'),
+            visible=data.get('visible', True),
+            path_nodes=data.get('path_nodes', []),
+            breakouts=breakouts,
         )
-        """
-        Validate all segments in this bundle for uniqueness and membership integrity.
-        Checks: All segment UUIDs are unique, all memberships are valid, no duplicate (wire_id, start_node, end_node).
-        """
-        seen_uuids = set()
-        seen_keys = set()
-        for seg in self.segments:
-            seg.validate_membership()
-            assert seg.id not in seen_uuids, f"Duplicate segment UUID: {seg.id}"
-            seen_uuids.add(seg.id)
-            key = (seg.wire_id, seg.start_node, seg.end_node)
-            assert key not in seen_keys, f"Duplicate segment membership: {key}"
-            seen_keys.add(key)
-        # Optionally: check for valid wire_ids in self.wire_ids if available
 
+    def compute_geometry(self, wire_lookup):
+        """
+        Derive the bundle's own trunk polyline and breakout points from members.
+
+        The trunk is the shared run described by any resolvable member segment
+        (all members of an emergent bundle share the same run). A breakout is
+        recorded for every member wire that continues past a trunk endpoint,
+        anchored to the trunk endpoint node and pointing at the wire's next node
+        outside the shared run.
+
+        Args:
+            wire_lookup: Mapping of ``wire_id -> Wire`` used to resolve geometry.
+
+        Returns:
+            bool: ``True`` if the trunk path or breakouts changed.
+        """
+        wire_lookup = wire_lookup or {}
+        prev_path = list(self.path_nodes)
+        prev_breakouts = [(b.wire_id, b.node_index, tuple(b.point) if b.point else None)
+                          for b in self.breakouts]
+
+        trunk = []
+        for seg in self.segments:
+            wire = wire_lookup.get(getattr(seg, 'wire_id', None))
+            if wire is None:
+                continue
+            nodes = getattr(wire, 'path_nodes', []) or []
+            s, e = seg.start_node, seg.end_node
+            if 0 <= s < len(nodes) and 0 <= e < len(nodes):
+                trunk = [[float(nodes[s][0]), float(nodes[s][1])],
+                         [float(nodes[e][0]), float(nodes[e][1])]]
+                break
+
+        breakouts = []
+        if trunk:
+            last_index = len(trunk) - 1
+            for seg in self.segments:
+                wire = wire_lookup.get(getattr(seg, 'wire_id', None))
+                if wire is None:
+                    continue
+                nodes = getattr(wire, 'path_nodes', []) or []
+                s, e = seg.start_node, seg.end_node
+                if s - 1 >= 0:
+                    p = nodes[s - 1]
+                    breakouts.append(BundleBreakout(
+                        wire_id=seg.wire_id, node_index=0,
+                        point=[float(p[0]), float(p[1])]))
+                if e + 1 < len(nodes):
+                    p = nodes[e + 1]
+                    breakouts.append(BundleBreakout(
+                        wire_id=seg.wire_id, node_index=last_index,
+                        point=[float(p[0]), float(p[1])]))
+
+        self.path_nodes = trunk
+        self.breakouts = breakouts
+
+        new_breakouts = [(b.wire_id, b.node_index, tuple(b.point) if b.point else None)
+                         for b in breakouts]
+        return prev_path != trunk or prev_breakouts != new_breakouts
 
     def split_segment(self, segment_index: int, new_start: int, new_end: int):
         """
@@ -230,7 +329,6 @@ class Bundle:
         Only the two new segments adjacent to the split get new UUIDs; all other segments retain their UUIDs, matched by (wire_id, start_node, end_node).
         """
         old_segments = list(self.segments)
-        old_keys = [(s.wire_id, s.start_node, s.end_node) for s in self.segments]
         if 0 <= segment_index < len(self.segments):
             seg = self.segments[segment_index]
             self.segments.pop(segment_index)
@@ -248,7 +346,6 @@ class Bundle:
         The resulting merged segment always gets a new UUID. All other unchanged segments (by key) restore their UUIDs.
         """
         old_segments = list(self.segments)
-        old_keys = [(s.wire_id, s.start_node, s.end_node) for s in self.segments]
         if 0 <= left_index < len(self.segments) - 1:
             left = self.segments[left_index]
             right = self.segments[left_index + 1]

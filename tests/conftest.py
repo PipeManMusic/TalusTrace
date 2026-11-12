@@ -79,6 +79,87 @@ def patch_modal_dialogs(request: pytest.FixtureRequest):
         for p in patches:
             p.stop()
 
+
+@pytest.fixture(autouse=True)
+def _auto_dismiss_blocking_dialogs():
+    """Globally patch blocking dialog entry points so no test ever pops a modal.
+
+    Any call to ``QDialog.exec`` / ``QWizard.exec`` / ``QMessageBox.exec`` is
+    replaced with a no-op that returns Accepted (1) without showing the window.
+    ``QMessageBox.question``/``warning``/``information``/``critical`` return a
+    default "safe" button so application code that branches on the reply keeps
+    working. This runs for every test so a newly added UI path can never block
+    the suite waiting for a human click.
+    """
+    from PySide6 import QtWidgets
+
+    originals = {
+        (QtWidgets.QDialog, "exec"): QtWidgets.QDialog.exec,
+        (QtWidgets.QDialog, "exec_"): getattr(QtWidgets.QDialog, "exec_", None),
+        (QtWidgets.QWizard, "exec"): QtWidgets.QWizard.exec,
+        (QtWidgets.QWizard, "exec_"): getattr(QtWidgets.QWizard, "exec_", None),
+        (QtWidgets.QMessageBox, "exec"): QtWidgets.QMessageBox.exec,
+        (QtWidgets.QMessageBox, "exec_"): getattr(QtWidgets.QMessageBox, "exec_", None),
+        (QtWidgets.QMessageBox, "question"): QtWidgets.QMessageBox.question,
+        (QtWidgets.QMessageBox, "warning"): QtWidgets.QMessageBox.warning,
+        (QtWidgets.QMessageBox, "information"): QtWidgets.QMessageBox.information,
+        (QtWidgets.QMessageBox, "critical"): QtWidgets.QMessageBox.critical,
+        (QtWidgets.QMessageBox, "about"): QtWidgets.QMessageBox.about,
+    }
+
+    def _noop_exec(self, *a, **kw):
+        return 1  # QDialog.Accepted
+    # QMessageBox static helpers: return the default-accept button when known.
+    def _msg_default(*a, **kw):
+        return QtWidgets.QMessageBox.StandardButton.No
+
+    QtWidgets.QDialog.exec = _noop_exec
+    if originals[(QtWidgets.QDialog, "exec_")] is not None:
+        QtWidgets.QDialog.exec_ = _noop_exec
+    QtWidgets.QWizard.exec = _noop_exec
+    if originals[(QtWidgets.QWizard, "exec_")] is not None:
+        QtWidgets.QWizard.exec_ = _noop_exec
+    QtWidgets.QMessageBox.exec = _noop_exec
+    if originals[(QtWidgets.QMessageBox, "exec_")] is not None:
+        QtWidgets.QMessageBox.exec_ = _noop_exec
+    QtWidgets.QMessageBox.question = staticmethod(_msg_default)
+    QtWidgets.QMessageBox.warning = staticmethod(_msg_default)
+    QtWidgets.QMessageBox.information = staticmethod(_msg_default)
+    QtWidgets.QMessageBox.critical = staticmethod(_msg_default)
+    QtWidgets.QMessageBox.about = staticmethod(lambda *a, **kw: None)
+
+    # QMenu.exec cannot be reliably monkeypatched on the class (PySide6 resolves
+    # the C++ slot directly), so a real ``menu.exec()`` would block the offscreen
+    # test run forever waiting for a click. Instead, run a repeating timer that
+    # closes any active popup/modal widget. The timer fires *inside* the event
+    # loop started by ``exec()``, dismissing the menu so ``exec()`` returns.
+    from PySide6 import QtCore
+
+    def _dismiss_active_popups():
+        w = QtWidgets.QApplication.activePopupWidget()
+        if w is not None:
+            w.close()
+            return
+        w = QtWidgets.QApplication.activeModalWidget()
+        if w is not None:
+            w.close()
+
+    dismiss_timer = None
+    if QtWidgets.QApplication.instance() is not None:
+        dismiss_timer = QtCore.QTimer()
+        dismiss_timer.setInterval(10)
+        dismiss_timer.timeout.connect(_dismiss_active_popups)
+        dismiss_timer.start()
+
+    try:
+        yield
+    finally:
+        if dismiss_timer is not None:
+            dismiss_timer.stop()
+        for (cls, attr), orig in originals.items():
+            if orig is not None:
+                setattr(cls, attr, orig)
+
 import pytest
 from ui.main_window import MainWindow
 
@@ -154,7 +235,7 @@ def populated_api():
     device_id = str(uuid.uuid4())
     pin_id = str(uuid.uuid4())
     device = Device(id=device_id, x=0, y=0, meta={"width_mm": 10, "height_mm": 10}, pins=[])
-    pin = Pin(id=pin_id, x=1, y=1, label="Pin", side=0, device_id=device_id)
+    pin = Pin(id=pin_id, x=1, y=1, label="Pin", device_id=device_id)
 
     api.add_device(device)
     harness_device = next((d for d in api.context.harness.devices if d.id == device_id), None)

@@ -42,6 +42,7 @@ class Device:
     service_slack_mm: float = 0.0
     svg_body: Optional[str] = None
     internal_routing: Optional[dict] = None
+    visible: bool = True
 
     def __post_init__(self):
         """
@@ -116,7 +117,8 @@ class Device:
             "is_ghost": self.is_ghost,
             "promotion_source_id": self.promotion_source_id,
             "svg_body": self.svg_body,
-            "internal_routing": self.internal_routing
+            "internal_routing": self.internal_routing,
+            "visible": self.visible
         }
 
     @classmethod
@@ -132,8 +134,8 @@ class Device:
         pins = [Pin.from_dict(p) for p in data.get('pins', [])]
         return cls(
             id=data.get('id'),
-            x=data.get('x', 0.0),
-            y=data.get('y', 0.0),
+            x=round(data.get('x', 0.0), 4),
+            y=round(data.get('y', 0.0), 4),
             origin_x=data.get('origin_x', 0.0),
             origin_y=data.get('origin_y', 0.0),
             rotation=data.get('rotation', 0.0),
@@ -146,7 +148,8 @@ class Device:
             promotion_source_id=data.get('promotion_source_id'),
             service_slack_mm=data.get('service_slack_mm', 0.0),
             svg_body=data.get('svg_body'),
-            internal_routing=data.get('internal_routing', {})
+            internal_routing=data.get('internal_routing', {}),
+            visible=data.get('visible', True)
         )
 
     @classmethod

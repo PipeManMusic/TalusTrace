@@ -109,6 +109,7 @@ class SystemSettings:
         self.grid_size_mm = 5.0
         self.snap_tolerance = 0.5
         self.pixels_per_inch = 96.0
+        self.pin_size_mm = 5.0
         self._load()
 
     def _load(self):
@@ -127,6 +128,7 @@ class SystemSettings:
                 ws = data.get("workspace", {})
                 self.grid_size_mm = float(ws.get("grid_size_mm", 5.0))
                 self.pixels_per_inch = float(ws.get("pixels_per_inch", 96.0))
+                self.pin_size_mm = float(ws.get("pin_size_mm", 5.0))
         except Exception as e:
             # ...removed debug print...
             pass

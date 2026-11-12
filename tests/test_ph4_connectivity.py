@@ -1,6 +1,5 @@
 import pytest
 from core.device import Device, Pin
-from core.enums import Side
 
 def test_ph4_1_2_connector_pin_matrix():
     """
@@ -21,7 +20,6 @@ def test_ph4_1_2_connector_pin_matrix():
             pins.append(Pin(
                 id=pin_uuid,
                 label=pin_label,
-                side=Side.LEFT,
                 x=col * pitch,
                 y=row * pitch
             ))

@@ -85,7 +85,7 @@ def test_contract_pin_add_delete(qtbot):
     device_id = str(uuid.uuid4())
     pin_id = str(uuid.uuid4())
     device = Device(id=device_id, x=0, y=0, meta={"width_mm": 10, "height_mm": 10}, pins=[])
-    pin = Pin(id=pin_id, x=1, y=1, label="Pin", side=0, device_id=device_id)
+    pin = Pin(id=pin_id, x=1, y=1, label="Pin", device_id=device_id)
     api.add_device(device)
     harness_device = next((d for d in api.context.harness.devices if d.id == device_id), None)
     api.context.undo_stack.push(AddPinCommand(harness_device, pin, context=api.context))

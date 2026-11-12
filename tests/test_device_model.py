@@ -2,7 +2,6 @@ import pytest
 
 from core.device import Device
 from core.pin import Pin
-from core.enums import Side
 
 
 def test_device_schema_and_serialization():
@@ -13,7 +12,7 @@ def test_device_schema_and_serialization():
         label="Test Device",
         pins=[
             Pin(id=str(uuid.uuid4()), x=1.0, y=2.0),
-            Pin(id=str(uuid.uuid4()), x=3.0, y=4.0, side=Side.RIGHT),
+            Pin(id=str(uuid.uuid4()), x=3.0, y=4.0),
         ],
         x=10.0,
         y=20.0,

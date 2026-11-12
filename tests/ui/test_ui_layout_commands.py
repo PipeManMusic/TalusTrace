@@ -21,13 +21,25 @@ def get_yaml_commands():
 def test_ui_layout_command_hooked_up(qtbot, cmd_id):
     window = MainWindow()
     qtbot.addWidget(window)
-    # Patch QDialog.exec to auto-accept any dialog
+    # Patch QDialog.exec AND QWizard.exec to auto-accept any dialog without
+    # blocking for user input. QWizard overrides QDialog.exec, so both must
+    # be patched to cover every dialog type launched by menu commands.
     import PySide6.QtWidgets as QtWidgets
-    original_exec = QtWidgets.QDialog.exec
-    def auto_accept(self, *args, **kwargs):
+    original_dialog_exec = QtWidgets.QDialog.exec
+    original_wizard_exec = QtWidgets.QWizard.exec
+
+    def auto_accept_dialog(self, *args, **kwargs):
         QtWidgets.QDialog.accept(self)
         return 1
-    QtWidgets.QDialog.exec = auto_accept
+
+    def auto_accept_wizard(self, *args, **kwargs):
+        # Do NOT call accept() — that would invoke DeviceWizard.accept() which
+        # tries to save to the library. Just return Accepted so the caller
+        # treats the dialog as closed and dismissed.
+        return 1
+
+    QtWidgets.QDialog.exec = auto_accept_dialog
+    QtWidgets.QWizard.exec = auto_accept_wizard
     # Find QAction for this command in the menu
     found = False
     try:
@@ -49,5 +61,6 @@ def test_ui_layout_command_hooked_up(qtbot, cmd_id):
         if not found:
             pytest.skip(f"Command {cmd_id} not found in menu actions; skipping.")
     finally:
-        # Restore QDialog.exec after test
-        QtWidgets.QDialog.exec = original_exec
+        # Restore original exec methods after test
+        QtWidgets.QDialog.exec = original_dialog_exec
+        QtWidgets.QWizard.exec = original_wizard_exec

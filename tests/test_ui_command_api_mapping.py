@@ -27,6 +27,7 @@ COMMAND_TO_API_METHOD = {
     'view.toggle_audit_panel': 'toggle_audit_panel',
     'view.reset_layout': 'reset_layout',
     'device.add_pin': 'add_pin',
+    'device.promote': 'promote_device',
     'edit.rotate_cw': 'rotate_cw',
     'edit.delete': 'delete_device',
 }

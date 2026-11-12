@@ -89,6 +89,19 @@ class PasteBundleCommand(BaseCommand):
         pass
 from infra.undo_stack import BaseCommand
 
+def _dispatch_bundle_event(event_type, bundle):
+    """Dispatch a bundle lifecycle event to observers, tolerating headless/no-context.
+
+    Bundles have no canvas item yet, so we use dedicated ``bundle_added`` /
+    ``bundle_removed`` events (not ``model_changed``) — the project browser
+    listens to these to refresh, while the canvas safely ignores them.
+    """
+    try:
+        from api.manager import APIManager
+        APIManager.get_instance().dispatch(event_type, bundle)
+    except Exception:
+        pass
+
 class AddBundleCommand(BaseCommand):
     """
     Command to add a bundle to the harness, supporting undo/redo.
@@ -110,6 +123,7 @@ class AddBundleCommand(BaseCommand):
         """
         if self.bundle not in self.harness.bundles:
             self.harness.bundles.append(self.bundle)
+        _dispatch_bundle_event("bundle_added", self.bundle)
 
     def undo(self):
         """
@@ -117,6 +131,7 @@ class AddBundleCommand(BaseCommand):
         """
         if self.bundle in self.harness.bundles:
             self.harness.bundles.remove(self.bundle)
+        _dispatch_bundle_event("bundle_removed", self.bundle)
 
 class DeleteBundleCommand(BaseCommand):
     """
@@ -139,6 +154,7 @@ class DeleteBundleCommand(BaseCommand):
         """
         if self.bundle in self.harness.bundles:
             self.harness.bundles.remove(self.bundle)
+        _dispatch_bundle_event("bundle_removed", self.bundle)
 
     def undo(self):
         """
@@ -146,3 +162,4 @@ class DeleteBundleCommand(BaseCommand):
         """
         if self.bundle not in self.harness.bundles:
             self.harness.bundles.append(self.bundle)
+        _dispatch_bundle_event("bundle_added", self.bundle)

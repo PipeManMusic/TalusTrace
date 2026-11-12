@@ -17,12 +17,19 @@ class ElbowGripItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
         'model_data': {'index': 0, 'pos': (0, 0)},
         'expected_child_count': 0
     }
-    def __init__(self, wire_item, index, pos, radius=2.5, parent=None):
+    def __init__(self, wire_item, index, pos, radius=None, parent=None):
         """Initialize ElbowGripItem with wire reference, index, position, and radius."""
+        if radius is None:
+            from api.manager import APIManager
+            try:
+                radius = APIManager.get_instance().settings.pin_size_mm / 2.0
+            except Exception:
+                radius = 2.5
         QGraphicsEllipseItem.__init__(self, -radius, -radius, radius*2, radius*2, parent)
         self._observers = []
         self.setPos(QPointF(pos[0], pos[1]))
-        self.setBrush(QBrush(QColor(255, 200, 0)))
+        from ui.coordinates import THEME_FALLBACK
+        self.setBrush(QBrush(QColor(THEME_FALLBACK["elbow_grip"])))
         self.setPen(QPen(Qt.black, 0.5))
         self.setFlag(QGraphicsEllipseItem.ItemIsMovable, False)
         self.setFlag(QGraphicsEllipseItem.ItemIsSelectable, False)
@@ -36,7 +43,13 @@ class ElbowGripItem(ObservableGraphicsItemMixin, QGraphicsEllipseItem):
         self._drag_start_pos = None
 
     def mousePressEvent(self, event):
-        """Record the starting position for undo on drag start."""
+        """Record the starting position for undo on drag start, or delete on right-click."""
+        if event.button() == Qt.RightButton:
+            from api.manager import APIManager
+            api = APIManager.get_instance()
+            api.remove_elbow(self.wire_item.model, self.index)
+            event.accept()
+            return
         if event.button() == Qt.LeftButton:
             nodes = self.wire_item.path_nodes
             if 0 <= self.index < len(nodes):

@@ -4,6 +4,8 @@ AuditController for handling audit interactions in Talus Trace.
 Provides logic for click-to-zoom and violation selection without UI dependencies.
 """
 from api.manager import APIManager
+from infra.audit import AuditEngine, Violation
+from typing import List
 
 class AuditController:
     """
@@ -16,7 +18,15 @@ class AuditController:
         Args:
             api (APIManager, optional): The API manager to use. Defaults to singleton instance.
         """
-        self.api = api or APIManager.get_instance() #
+        self.api = api or APIManager.get_instance()
+        self.engine = AuditEngine()
+
+    def run_audit(self) -> List[Violation]:
+        """Run the audit engine against the current harness and return violations."""
+        harness = getattr(self.api.context, 'harness', None)
+        if not harness:
+            return []
+        return self.engine.run(harness)
 
     def select_violation(self, violation: dict):
         """
@@ -26,8 +36,7 @@ class AuditController:
         if not target_id:
             return
 
-        # Dispatches the FOCUS_ENTITY transaction
-        APIManager.dispatch(
+        self.api.dispatch(
             "FOCUS_ENTITY",
             {"id": target_id, "zoom_level": 1.5}
         )

@@ -9,3 +9,4 @@ global:
   "Delete": "edit.delete"
   "R": "edit.rotate_cw"       # Single key shortcut for rotation
   "Ctrl+R": "edit.rotate_cw"  # Alternative standard shortcut
+  "Escape": "edit.escape"     # Cancel tool and clear selection

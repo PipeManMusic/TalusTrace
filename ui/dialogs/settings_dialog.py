@@ -38,6 +38,14 @@ class SettingsDialog(QDialog):
         self.spin_dpi.setToolTip("Adjust this if 100mm on screen != 100mm on ruler")
         self.form.addRow(I18N.get('screen_ppi_label'), self.spin_dpi)
         
+        # 3. Pin Size Input
+        self.spin_pin_size = QDoubleSpinBox()
+        self.spin_pin_size.setRange(1.0, 20.0)
+        self.spin_pin_size.setSingleStep(0.5)
+        self.spin_pin_size.setSuffix(" mm")
+        self.spin_pin_size.setValue(self.api.settings.pin_size_mm)
+        self.form.addRow(I18N.get('pin_size_label', 'Pin Size'), self.spin_pin_size)
+        
         self.layout.addLayout(self.form)
         
         # 3. Dialog Buttons
@@ -50,12 +58,14 @@ class SettingsDialog(QDialog):
         """Save the edited settings to the YAML file and notify the system."""
         new_grid = self.spin_grid.value()
         new_dpi = self.spin_dpi.value()
+        new_pin_size = self.spin_pin_size.value()
         
         # Prepare Data
         data = {
             "workspace": {
                 "grid_size_mm": new_grid,
-                "pixels_per_inch": new_dpi
+                "pixels_per_inch": new_dpi,
+                "pin_size_mm": new_pin_size
             }
         }
         

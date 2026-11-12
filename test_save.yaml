@@ -1,7 +1,7 @@
 revision: 2
 meta:
   name: New Harness
-  trunk_length_mm: 1000
+  visibility_groups: []
 devices: []
 wires: []
 bundles: []

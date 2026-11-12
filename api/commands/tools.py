@@ -60,3 +60,26 @@ def device_create_wizard(context):
     parent = app.activeWindow() if app else None
     wizard = DeviceWizard(parent)
     wizard.exec()
+
+
+@register_action("device.promote")
+def device_promote(context):
+    """
+    Launch the device wizard pre-populated from the right-clicked generic device.
+
+    The context menu manager sets ``api.context.device`` to the right-clicked
+    model before dispatch; that device is passed as ``source_device`` so its
+    pins and metadata pre-fill the wizard (spec: "Device Promotion").
+    """
+    from ui.dialogs.device_wizard import DeviceWizard
+
+    api = APIManager.get_instance()
+    source = None
+    if context is not None and hasattr(context, "device"):
+        source = getattr(context, "device", None)
+    if source is None:
+        source = getattr(getattr(api, "context", None), "device", None)
+    app = QApplication.instance()
+    parent = app.activeWindow() if app else None
+    wizard = DeviceWizard(parent, source_device=source)
+    wizard.exec()

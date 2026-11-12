@@ -173,6 +173,7 @@ class WireTool(Tool):
     def _create_wire(self, dev1, pin1, dev2, pin2):
         """
         Create a new wire between two devices and pins, and push AddWireCommand.
+        Auto-populates signal_name from the source pin's signal if available.
         Args:
             dev1: First device.
             pin1: First pin.
@@ -183,6 +184,8 @@ class WireTool(Tool):
         p2 = self._get_pin_scene_pos(pin2, dev2)
         path_nodes = [[p1.x(), p1.y()], [p2.x(), p2.y()]]
         wire_id = str(uuid.uuid4())
+        # Auto-populate signal from source pin
+        signal = getattr(pin1, 'signal', None) or ''
         new_wire = Wire(
             id=wire_id,
             from_conn=dev1.id,
@@ -190,7 +193,8 @@ class WireTool(Tool):
             to_conn=dev2.id,
             to_pin=pin2.id,
             type="STANDARD",
-            path_nodes=path_nodes
+            path_nodes=path_nodes,
+            signal_name=signal or None,
         )
         # Add wire via API contract (undoable AddWireCommand)
         self.api.add_wire(new_wire)

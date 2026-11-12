@@ -100,32 +100,69 @@ class BOMGenerator:
         harness = self.harness
         if not harness: return False
         
+        # Build device/pin label lookups
+        dev_map = {}
+        pin_map = {}
+        pin_signal_map = {}
+        for dev in harness.devices:
+            dev_map[dev.id] = getattr(dev, 'label', None) or dev.id
+            for pin in getattr(dev, 'pins', []):
+                pin_map[pin.id] = getattr(pin, 'label', None) or pin.id
+                pin_signal_map[pin.id] = getattr(pin, 'signal', '') or ''
+
         try:
             with open(file_path, 'w', newline='') as f:
                 writer = csv.writer(f)
-                writer.writerow(["Wire ID", "From", "Pin", "To", "Pin", "Est. Length (mm)", "Color"])
-                
+                writer.writerow([
+                    "Signal", "From Device", "From Pin",
+                    "To Device", "To Pin",
+                    "Gauge", "Color Code", "Color",
+                    "Est. Length (mm)", "Cut Length (mm)",
+                    "Wire ID",
+                ])
+
                 for wire in harness.wires:
-                    # Resolve logic to get approx length if path not set
+                    # Resolve signal: wire.signal_name, then fall back to source pin signal
+                    signal = getattr(wire, 'signal_name', '') or ''
+                    if not signal:
+                        signal = pin_signal_map.get(wire.from_pin, '')
+
+                    # Resolve device/pin labels
+                    from_dev = dev_map.get(wire.from_conn, wire.from_conn)
+                    from_pin = pin_map.get(wire.from_pin, wire.from_pin)
+                    to_dev = dev_map.get(wire.to_conn, wire.to_conn)
+                    to_pin = pin_map.get(wire.to_pin, wire.to_pin)
+
+                    # Length calculations
                     length = 0
+                    cut_length = 0
                     if wire.path_nodes:
-                        length = int(self.calculate_cut_length(wire))
+                        cut_length = int(self.calculate_cut_length(wire))
+                        # Raw length without slack/twist
+                        from math import sqrt
+                        nodes = wire.path_nodes
+                        for i in range(len(nodes) - 1):
+                            dx = nodes[i+1][0] - nodes[i][0]
+                            dy = nodes[i+1][1] - nodes[i][1]
+                            length += int(sqrt(dx*dx + dy*dy))
                     else:
                         dev_from = next((d for d in harness.devices if d.id == wire.from_conn), None)
                         dev_to = next((d for d in harness.devices if d.id == wire.to_conn), None)
                         if dev_from and dev_to:
                             dx = abs(dev_from.x - dev_to.x)
                             dy = abs(dev_from.y - dev_to.y)
-                            length = int((dx + dy) * 1.15) # Fallback Manhattan estimate
-                    
+                            length = int((dx + dy) * 1.15)
+                            cut_length = length + 50
+
                     writer.writerow([
-                        wire.id, 
-                        wire.from_conn, 
-                        wire.from_pin, 
-                        wire.to_conn, 
-                        wire.to_pin, 
-                        length,
-                        wire.color
+                        signal,
+                        from_dev, from_pin,
+                        to_dev, to_pin,
+                        getattr(wire, 'gauge', '') or '',
+                        (getattr(wire, 'color_code', '') or '').upper(),
+                        wire.color,
+                        length, cut_length,
+                        wire.id,
                     ])
             # ...removed debug print...
             return True

@@ -46,7 +46,7 @@ def test_pin_add_creates_pinitem_not_deviceitem(main_window, api_manager):
     # Dispatch model_changed for device so DeviceItem is created
     main_window.api.dispatch("model_changed", {"action": "add", "item": device})
     # Add a pin and dispatch model_changed
-    pin = Pin(id=pin_id, x=5, y=5, label="TestPin", side=0, device_id=device_id)
+    pin = Pin(id=pin_id, x=5, y=5, label="TestPin", device_id=device_id)
     device.pins.append(pin)
     main_window.api.dispatch("model_changed", {"action": "add", "item": pin})
     # Find PinItem and DeviceItem in the scene

@@ -41,7 +41,7 @@ def test_pin_displayed_after_creation(main_window, api_manager):
     # Simulate UI selection of the device
     main_window.api.dispatch("selection_changed", {"selection": [device]})
     # Add a pin to the device
-    pin = Pin(id=pin_id, x=5, y=5, label="TestPin", side=0)
+    pin = Pin(id=pin_id, x=5, y=5, label="TestPin")
     device.pins.append(pin)
     # Simulate model change event
     main_window.api.dispatch("model_changed", {"item": device})

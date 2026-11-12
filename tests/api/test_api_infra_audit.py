@@ -18,4 +18,5 @@ def test_api_audit():
     rule = Rule(id="ALWAYS", check="True", message="Always triggers")
     audit = AuditEngine(rules=[rule])
     report = audit.run(api.context.harness)
-    assert any(entry["wire"] if "wire" in entry else True for entry in report) or report == []
+    # Report is a list of Violation objects (may be empty if no wires in harness)
+    assert isinstance(report, list)

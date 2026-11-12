@@ -1,32 +1,2700 @@
 parts:
-# --- Example of a Complex Device with Internal Routing ---
-  SPLICE-4W-SEALED:
-    manufacturer: TE Connectivity
-    part_number: D-406-0002
-    description: "Duraseal Splice, 4-Way, Blue, 16-14 AWG"
-    category: "Splices"
-    
-    # Physical footprint for the canvas (optional but good for full definition)
-    width_mm: 15.0
-    height_mm: 8.0
-    
-    # Pin definitions
+  MLC-467:
+    manufacturer: Ford
+    part_number: YW7F-12A650-BD
+    category: ECUs
+    description: Ford EEC-V ECU from a Crown Victoria with Canbus
+    name: ECU
+    width_mm: 161.0
+    height_mm: 199.0
     pins:
-      - id: "1"
-        x: -7.5
-        y: 0.0
-      - id: "2"
-        x: -2.5
-        y: 0.0
-      - id: "3"
-        x: 2.5
-        y: 0.0
-      - id: "4"
-        x: 7.5
-        y: 0.0
-        
-    # The Logic: All pins connect to each other internally
-    internal_routes:
-      - type: "common"
-        pins: ["1", "2", "3", "4"]
-        max_current_amps: 15.0
+    - id: '1'
+      label: '1'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '2'
+      label: '2'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '3'
+      label: '3'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '4'
+      label: '4'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '5'
+      label: '5'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '6'
+      label: '6'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '7'
+      label: '7'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '8'
+      label: '8'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '9'
+      label: '9'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '10'
+      label: '10'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '11'
+      label: '11'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '12'
+      label: '12'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '13'
+      label: '13'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '14'
+      label: '14'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '15'
+      label: '15'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '16'
+      label: '16'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '17'
+      label: '17'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '18'
+      label: '18'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '19'
+      label: '19'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '20'
+      label: '20'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '21'
+      label: '21'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '22'
+      label: '22'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '23'
+      label: '23'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '24'
+      label: '24'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '25'
+      label: '25'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '26'
+      label: '26'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '27'
+      label: '27'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '28'
+      label: '28'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '29'
+      label: '29'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '30'
+      label: '30'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '31'
+      label: '31'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '32'
+      label: '32'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '33'
+      label: '33'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '34'
+      label: '34'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '35'
+      label: '35'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '36'
+      label: '36'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '37'
+      label: '37'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '38'
+      label: '38'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '39'
+      label: '39'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '40'
+      label: '40'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '41'
+      label: '41'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '42'
+      label: '42'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '43'
+      label: '43'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '44'
+      label: '44'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '45'
+      label: '45'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '46'
+      label: '46'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '47'
+      label: '47'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '48'
+      label: '48'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '49'
+      label: '49'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '50'
+      label: '50'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '51'
+      label: '51'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '52'
+      label: '52'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '53'
+      label: '53'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '54'
+      label: '54'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '55'
+      label: '55'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '56'
+      label: '56'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '57'
+      label: '57'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '58'
+      label: '58'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '59'
+      label: '59'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '60'
+      label: '60'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '61'
+      label: '61'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '62'
+      label: '62'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '63'
+      label: '63'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '64'
+      label: '64'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '65'
+      label: '65'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '66'
+      label: '66'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '67'
+      label: '67'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '68'
+      label: '68'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '69'
+      label: '69'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '70'
+      label: '70'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '71'
+      label: '71'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '72'
+      label: '72'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '73'
+      label: '73'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '74'
+      label: '74'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '75'
+      label: '75'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '76'
+      label: '76'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '77'
+      label: '77'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '78'
+      label: '78'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '79'
+      label: '79'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '80'
+      label: '80'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '81'
+      label: '81'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '82'
+      label: '82'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '83'
+      label: '83'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '84'
+      label: '84'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '85'
+      label: '85'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '86'
+      label: '86'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '87'
+      label: '87'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '88'
+      label: '88'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '89'
+      label: '89'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '90'
+      label: '90'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '91'
+      label: '91'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '92'
+      label: '92'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '93'
+      label: '93'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '94'
+      label: '94'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '95'
+      label: '95'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '96'
+      label: '96'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '97'
+      label: '97'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '98'
+      label: '98'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '99'
+      label: '99'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '100'
+      label: '100'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '101'
+      label: '101'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '102'
+      label: '102'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '103'
+      label: '103'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '104'
+      label: '104'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    svg_body: "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n\
+      \   viewBox=\"-20 -20 161 199.25\"\n   width=\"161\"\n   height=\"199.25\"\n\
+      \   style=\"font-family:sans-serif\"\n   version=\"1.1\"\n   id=\"svg60\"\n\
+      \   xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:svg=\"http://www.w3.org/2000/svg\"\
+      >\n  <defs\n     id=\"defs60\" />\n  <!-- Blueprint Title -->\n  <!-- Dimension\
+      \ Guides (Blueprint Blue) -->\n  <!-- Main EEC-V Module Assembly -->\n  <g\n\
+      \     id=\"eec-v\"\n     transform=\"translate(-39.5,-31.25)\">\n    <!-- Cast\
+      \ Aluminum Base Body -->\n    <rect\n       x=\"25\"\n       y=\"40\"\n    \
+      \   width=\"150\"\n       height=\"165\"\n       rx=\"4\"\n       ry=\"4\"\n\
+      \       fill=\"#c4c9d0\"\n       stroke=\"#8a929e\"\n       stroke-width=\"\
+      1.5\"\n       id=\"rect7\" />\n    <!-- Side Slide Rails (Engine bay / Cowl\
+      \ bracket mounting) -->\n    <rect\n       x=\"22\"\n       y=\"60\"\n     \
+      \  width=\"3\"\n       height=\"120\"\n       rx=\"1.5\"\n       ry=\"1.5\"\n\
+      \       fill=\"#a4a9b2\"\n       stroke=\"#8a929e\"\n       stroke-width=\"\
+      1\"\n       id=\"rect8\" />\n    <rect\n       x=\"175\"\n       y=\"60\"\n\
+      \       width=\"3\"\n       height=\"120\"\n       rx=\"1.5\"\n       ry=\"\
+      1.5\"\n       fill=\"#a4a9b2\"\n       stroke=\"#8a929e\"\n       stroke-width=\"\
+      1\"\n       id=\"rect9\" />\n    <!-- Mounting / Alignment Tabs on Rails -->\n\
+      \    <rect\n       x=\"20\"\n       y=\"80\"\n       width=\"5\"\n       height=\"\
+      10\"\n       rx=\"1\"\n       ry=\"1\"\n       fill=\"#a4a9b2\"\n       stroke=\"\
+      #8a929e\"\n       stroke-width=\"1\"\n       id=\"rect10\" />\n    <rect\n \
+      \      x=\"20\"\n       y=\"140\"\n       width=\"5\"\n       height=\"10\"\n\
+      \       rx=\"1\"\n       ry=\"1\"\n       fill=\"#a4a9b2\"\n       stroke=\"\
+      #8a929e\"\n       stroke-width=\"1\"\n       id=\"rect11\" />\n    <rect\n \
+      \      x=\"175\"\n       y=\"80\"\n       width=\"5\"\n       height=\"10\"\n\
+      \       rx=\"1\"\n       ry=\"1\"\n       fill=\"#a4a9b2\"\n       stroke=\"\
+      #8a929e\"\n       stroke-width=\"1\"\n       id=\"rect12\" />\n    <rect\n \
+      \      x=\"175\"\n       y=\"140\"\n       width=\"5\"\n       height=\"10\"\
+      \n       rx=\"1\"\n       ry=\"1\"\n       fill=\"#a4a9b2\"\n       stroke=\"\
+      #8a929e\"\n       stroke-width=\"1\"\n       id=\"rect13\" />\n    <!-- Heat\
+      \ Dissipation & Structural Ribs -->\n    <line\n       x1=\"25\"\n       y1=\"\
+      65\"\n       x2=\"175\"\n       y2=\"65\"\n       stroke=\"#aab0b8\"\n     \
+      \  stroke-width=\"2.5\"\n       id=\"line13\" />\n    <line\n       x1=\"25\"\
+      \n       y1=\"185\"\n       x2=\"175\"\n       y2=\"185\"\n       stroke=\"\
+      #aab0b8\"\n       stroke-width=\"2.5\"\n       id=\"line14\" />\n    <line\n\
+      \       x1=\"50\"\n       y1=\"40\"\n       x2=\"50\"\n       y2=\"205\"\n \
+      \      stroke=\"#aab0b8\"\n       stroke-width=\"2.5\"\n       id=\"line15\"\
+      \ />\n    <line\n       x1=\"150\"\n       y1=\"40\"\n       x2=\"150\"\n  \
+      \     y2=\"205\"\n       stroke=\"#aab0b8\"\n       stroke-width=\"2.5\"\n \
+      \      id=\"line16\" />\n    <rect\n       x=\"35\"\n       y=\"50\"\n     \
+      \  width=\"130\"\n       height=\"145\"\n       rx=\"3\"\n       ry=\"3\"\n\
+      \       fill=\"none\"\n       stroke=\"#aab0b8\"\n       stroke-width=\"2\"\n\
+      \       id=\"rect16\" />\n    <rect\n       x=\"43\"\n       y=\"58\"\n    \
+      \   width=\"114\"\n       height=\"129\"\n       rx=\"2\"\n       ry=\"2\"\n\
+      \       fill=\"none\"\n       stroke=\"#aab0b8\"\n       stroke-width=\"1.5\"\
+      \n       id=\"rect17\" />\n    <!-- Case Assembly Indents / Rivets -->\n   \
+      \ <circle\n       cx=\"35\"\n       cy=\"50\"\n       r=\"3\"\n       fill=\"\
+      #959ba5\"\n       stroke=\"#7a828e\"\n       stroke-width=\"0.5\"\n       id=\"\
+      circle17\" />\n    <circle\n       cx=\"165\"\n       cy=\"50\"\n       r=\"\
+      3\"\n       fill=\"#959ba5\"\n       stroke=\"#7a828e\"\n       stroke-width=\"\
+      0.5\"\n       id=\"circle18\" />\n    <circle\n       cx=\"35\"\n       cy=\"\
+      195\"\n       r=\"3\"\n       fill=\"#959ba5\"\n       stroke=\"#7a828e\"\n\
+      \       stroke-width=\"0.5\"\n       id=\"circle19\" />\n    <circle\n     \
+      \  cx=\"165\"\n       cy=\"195\"\n       r=\"3\"\n       fill=\"#959ba5\"\n\
+      \       stroke=\"#7a828e\"\n       stroke-width=\"0.5\"\n       id=\"circle20\"\
+      \ />\n    <!-- Central Ford Calibration Sticker -->\n    <rect\n       x=\"\
+      55\"\n       y=\"70\"\n       width=\"90\"\n       height=\"50\"\n       rx=\"\
+      2\"\n       ry=\"2\"\n       fill=\"#ffffff\"\n       stroke=\"#999999\"\n \
+      \      stroke-width=\"0.5\"\n       id=\"rect20\" />\n    <rect\n       x=\"\
+      58\"\n       y=\"73\"\n       width=\"84\"\n       height=\"44\"\n       fill=\"\
+      #fafafa\"\n       stroke=\"#e0e0e0\"\n       stroke-width=\"0.5\"\n       id=\"\
+      rect21\" />\n    <text\n       x=\"100\"\n       y=\"82\"\n       font-size=\"\
+      7px\"\n       fill=\"#000000\"\n       font-weight=\"bold\"\n       text-anchor=\"\
+      middle\"\n       id=\"text21\">Ford</text>\n    <text\n       x=\"100\"\n  \
+      \     y=\"90\"\n       font-size=\"4px\"\n       fill=\"#000000\"\n       text-anchor=\"\
+      middle\"\n       id=\"text22\">ELECTRONIC ENGINE CONTROL V</text>\n    <text\n\
+      \       x=\"100\"\n       y=\"99\"\n       font-family=\"monospace\"\n     \
+      \  font-size=\"9px\"\n       fill=\"#000000\"\n       font-weight=\"bold\"\n\
+      \       text-anchor=\"middle\"\n       id=\"text23\">MLC-467</text>\n    <text\n\
+      \       x=\"100\"\n       y=\"106\"\n       font-size=\"4px\"\n       fill=\"\
+      #333333\"\n       text-anchor=\"middle\"\n       id=\"text24\">P/N: YW7F-12A650-BD</text>\n\
+      \    <!-- Simulated Sticker Barcode -->\n    <g\n       fill=\"#000000\"\n \
+      \      id=\"g49\">\n      <rect\n         x=\"62\"\n         y=\"110\"\n   \
+      \      width=\"1\"\n         height=\"5\"\n         id=\"rect24\" />\n     \
+      \ <rect\n         x=\"64\"\n         y=\"110\"\n         width=\"2\"\n     \
+      \    height=\"5\"\n         id=\"rect25\" />\n      <rect\n         x=\"67\"\
+      \n         y=\"110\"\n         width=\"1\"\n         height=\"5\"\n        \
+      \ id=\"rect26\" />\n      <rect\n         x=\"69\"\n         y=\"110\"\n   \
+      \      width=\"3\"\n         height=\"5\"\n         id=\"rect27\" />\n     \
+      \ <rect\n         x=\"73\"\n         y=\"110\"\n         width=\"1\"\n     \
+      \    height=\"5\"\n         id=\"rect28\" />\n      <rect\n         x=\"76\"\
+      \n         y=\"110\"\n         width=\"2\"\n         height=\"5\"\n        \
+      \ id=\"rect29\" />\n      <rect\n         x=\"79\"\n         y=\"110\"\n   \
+      \      width=\"1\"\n         height=\"5\"\n         id=\"rect30\" />\n     \
+      \ <rect\n         x=\"81\"\n         y=\"110\"\n         width=\"2\"\n     \
+      \    height=\"5\"\n         id=\"rect31\" />\n      <rect\n         x=\"85\"\
+      \n         y=\"110\"\n         width=\"1\"\n         height=\"5\"\n        \
+      \ id=\"rect32\" />\n      <rect\n         x=\"87\"\n         y=\"110\"\n   \
+      \      width=\"3\"\n         height=\"5\"\n         id=\"rect33\" />\n     \
+      \ <rect\n         x=\"91\"\n         y=\"110\"\n         width=\"1\"\n     \
+      \    height=\"5\"\n         id=\"rect34\" />\n      <rect\n         x=\"93\"\
+      \n         y=\"110\"\n         width=\"2\"\n         height=\"5\"\n        \
+      \ id=\"rect35\" />\n      <rect\n         x=\"97\"\n         y=\"110\"\n   \
+      \      width=\"1\"\n         height=\"5\"\n         id=\"rect36\" />\n     \
+      \ <rect\n         x=\"99\"\n         y=\"110\"\n         width=\"4\"\n     \
+      \    height=\"5\"\n         id=\"rect37\" />\n      <rect\n         x=\"104\"\
+      \n         y=\"110\"\n         width=\"1\"\n         height=\"5\"\n        \
+      \ id=\"rect38\" />\n      <rect\n         x=\"107\"\n         y=\"110\"\n  \
+      \       width=\"2\"\n         height=\"5\"\n         id=\"rect39\" />\n    \
+      \  <rect\n         x=\"110\"\n         y=\"110\"\n         width=\"1\"\n   \
+      \      height=\"5\"\n         id=\"rect40\" />\n      <rect\n         x=\"112\"\
+      \n         y=\"110\"\n         width=\"3\"\n         height=\"5\"\n        \
+      \ id=\"rect41\" />\n      <rect\n         x=\"116\"\n         y=\"110\"\n  \
+      \       width=\"2\"\n         height=\"5\"\n         id=\"rect42\" />\n    \
+      \  <rect\n         x=\"119\"\n         y=\"110\"\n         width=\"1\"\n   \
+      \      height=\"5\"\n         id=\"rect43\" />\n      <rect\n         x=\"122\"\
+      \n         y=\"110\"\n         width=\"2\"\n         height=\"5\"\n        \
+      \ id=\"rect44\" />\n      <rect\n         x=\"125\"\n         y=\"110\"\n  \
+      \       width=\"1\"\n         height=\"5\"\n         id=\"rect45\" />\n    \
+      \  <rect\n         x=\"127\"\n         y=\"110\"\n         width=\"3\"\n   \
+      \      height=\"5\"\n         id=\"rect46\" />\n      <rect\n         x=\"131\"\
+      \n         y=\"110\"\n         width=\"1\"\n         height=\"5\"\n        \
+      \ id=\"rect47\" />\n      <rect\n         x=\"134\"\n         y=\"110\"\n  \
+      \       width=\"2\"\n         height=\"5\"\n         id=\"rect48\" />\n    \
+      \  <rect\n         x=\"137\"\n         y=\"110\"\n         width=\"1\"\n   \
+      \      height=\"5\"\n         id=\"rect49\" />\n    </g>\n    <!-- J3 Tuning\
+      \ / Diagnostic Port Cover -->\n    <rect\n       x=\"75\"\n       y=\"198\"\n\
+      \       width=\"50\"\n       height=\"12\"\n       rx=\"2\"\n       ry=\"2\"\
+      \n       fill=\"#2a2c30\"\n       stroke=\"#1a1b1d\"\n       stroke-width=\"\
+      1\"\n       id=\"rect50\" />\n    <text\n       x=\"100\"\n       y=\"205\"\n\
+      \       text-anchor=\"middle\"\n       font-size=\"4px\"\n       fill=\"#777777\"\
+      \n       font-weight=\"bold\"\n       id=\"text50\">J3 PORT</text>\n    <rect\n\
+      \       x=\"78\"\n       y=\"200\"\n       width=\"44\"\n       height=\"8\"\
+      \n       rx=\"1\"\n       ry=\"1\"\n       fill=\"none\"\n       stroke=\"#1a1b1d\"\
+      \n       stroke-width=\"0.5\"\n       id=\"rect51\" />\n    <!-- 104-Pin Connector\
+      \ Block Shell -->\n    <path\n       d=\"M 32,40 V 16 c 0,-2 2,-4 4,-4 h 128\
+      \ c 2,0 4,2 4,4 v 24 z\"\n       fill=\"#b0b5bc\"\n       stroke=\"#8a929e\"\
+      \n       stroke-width=\"1.5\"\n       id=\"path51\" />\n    <!-- Connector Internal\
+      \ Socket Area -->\n    <rect\n       x=\"35\"\n       y=\"15\"\n       width=\"\
+      130\"\n       height=\"20\"\n       rx=\"1.5\"\n       ry=\"1.5\"\n       fill=\"\
+      #3a3c3f\"\n       id=\"rect52\" />\n    <!-- Central Harness Bolt Threaded Insert\
+      \ (Separates left and right pin banks) -->\n    <circle\n       cx=\"100\"\n\
+      \       cy=\"25\"\n       r=\"4.5\"\n       fill=\"#d0d5db\"\n       stroke=\"\
+      #111111\"\n       stroke-width=\"0.5\"\n       id=\"circle52\" />\n    <circle\n\
+      \       cx=\"100\"\n       cy=\"25\"\n       r=\"2.5\"\n       fill=\"#222222\"\
+      \n       id=\"circle53\" />\n    <!-- \n      104 Connector Pins:\n      Accurately\
+      \ structured as 4 continuous rows of 26 pins.\n      Split down the middle by\
+      \ the central bolt socket (13 pins Left | Bolt | 13 pins Right).\n      Uses\
+      \ stroke-dasharray (0.1 dash + 4.1 gap = 4.2 cycle) with round linecaps to render\
+      \ exact pin counts.\n    -->\n    <!-- Left Bank: 52 pins (4 rows x 13 pins)\
+      \ -->\n    <g\n       stroke=\"#d5aa44\"\n       stroke-width=\"1.2\"\n    \
+      \   stroke-dasharray=\"0.1, 4.1\"\n       stroke-linecap=\"round\"\n       id=\"\
+      g56\">\n      <line\n         x1=\"38\"\n         y1=\"18\"\n         x2=\"\
+      90\"\n         y2=\"18\"\n         id=\"line53\" />\n      <line\n         x1=\"\
+      38\"\n         y1=\"21\"\n         x2=\"90\"\n         y2=\"21\"\n         id=\"\
+      line54\" />\n      <line\n         x1=\"38\"\n         y1=\"29\"\n         x2=\"\
+      90\"\n         y2=\"29\"\n         id=\"line55\" />\n      <line\n         x1=\"\
+      38\"\n         y1=\"32\"\n         x2=\"90\"\n         y2=\"32\"\n         id=\"\
+      line56\" />\n    </g>\n    <!-- Right Bank: 52 pins (4 rows x 13 pins) -->\n\
+      \    <g\n       stroke=\"#d5aa44\"\n       stroke-width=\"1.2\"\n       stroke-dasharray=\"\
+      0.1, 4.1\"\n       stroke-linecap=\"round\"\n       id=\"g60\">\n      <line\n\
+      \         x1=\"110\"\n         y1=\"18\"\n         x2=\"162\"\n         y2=\"\
+      18\"\n         id=\"line57\" />\n      <line\n         x1=\"110\"\n        \
+      \ y1=\"21\"\n         x2=\"162\"\n         y2=\"21\"\n         id=\"line58\"\
+      \ />\n      <line\n         x1=\"110\"\n         y1=\"29\"\n         x2=\"162\"\
+      \n         y2=\"29\"\n         id=\"line59\" />\n      <line\n         x1=\"\
+      110\"\n         y1=\"32\"\n         x2=\"162\"\n         y2=\"32\"\n       \
+      \  id=\"line60\" />\n    </g>\n  </g>\n</svg>\n"
+  Godzilla-COP:
+    manufacturer: Ford
+    part_number: LC3Z-12029-A
+    category: Coils
+    description: Coil on wire from a Ford 7.3L Godzilla Motor
+    name: Coil
+    width_mm: 102.0
+    height_mm: 131.0
+    pins:
+    - id: '1'
+      label: '1'
+      signal: 12v
+      x: 43.25
+      y: 3.5
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '2'
+      label: '2'
+      signal: GRD
+      x: 58.75
+      y: 3.5
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    svg_body: "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<!--\
+      \ Created with Inkscape (http://www.inkscape.org/) -->\n\n<svg\n   width=\"\
+      44.333324mm\"\n   height=\"66.856453mm\"\n   viewBox=\"0 0 44.333324 66.856453\"\
+      \n   version=\"1.1\"\n   id=\"svg1\"\n   xmlns:xlink=\"http://www.w3.org/1999/xlink\"\
+      \n   xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:svg=\"http://www.w3.org/2000/svg\"\
+      >\n  <defs\n     id=\"defs1\">\n    <linearGradient\n       id=\"bodyGrad\"\n\
+      \       x1=\"15.293818\"\n       y1=\"11.894274\"\n       x2=\"39.112759\"\n\
+      \       y2=\"11.894274\"\n       gradientTransform=\"matrix(0.25733778,0,0,0.27203289,93.6625,48.683333)\"\
+      \n       gradientUnits=\"userSpaceOnUse\">\n      <stop\n         offset=\"\
+      0%\"\n         stop-color=\"#2a2a2a\"\n         id=\"stop1\" />\n      <stop\n\
+      \         offset=\"50%\"\n         stop-color=\"#3d3d3d\"\n         id=\"stop2\"\
+      \ />\n      <stop\n         offset=\"100%\"\n         stop-color=\"#2a2a2a\"\
+      \n         id=\"stop3\" />\n    </linearGradient>\n    <linearGradient\n   \
+      \    id=\"bootGrad\"\n       x1=\"38.018826\"\n       y1=\"21.86754\"\n    \
+      \   x2=\"55.599998\"\n       y2=\"21.86754\"\n       gradientTransform=\"matrix(0.14955184,0,0,0.46809413,93.6625,48.683333)\"\
+      \n       gradientUnits=\"userSpaceOnUse\">\n      <stop\n         offset=\"\
+      0%\"\n         stop-color=\"#111111\"\n         id=\"stop4\" />\n      <stop\n\
+      \         offset=\"50%\"\n         stop-color=\"#222222\"\n         id=\"stop5\"\
+      \ />\n      <stop\n         offset=\"100%\"\n         stop-color=\"#111111\"\
+      \n         id=\"stop6\" />\n    </linearGradient>\n    <linearGradient\n   \
+      \    id=\"bracketGrad\"\n       x1=\"0\"\n       y1=\"0\"\n       x2=\"0\"\n\
+      \       y2=\"1\">\n      <stop\n         offset=\"0%\"\n         stop-color=\"\
+      #888888\"\n         id=\"stop7\" />\n      <stop\n         offset=\"100%\"\n\
+      \         stop-color=\"#555555\"\n         id=\"stop8\" />\n    </linearGradient>\n\
+      \    <linearGradient\n       xlink:href=\"#bracketGrad\"\n       id=\"linearGradient1\"\
+      \n       x1=\"29.349295\"\n       y1=\"31.680882\"\n       x2=\"29.349295\"\n\
+      \       y2=\"43.436447\"\n       gradientTransform=\"matrix(0.31298888,0,0,0.22366399,93.6625,48.683333)\"\
+      \n       gradientUnits=\"userSpaceOnUse\" />\n    <linearGradient\n       xlink:href=\"\
+      #bracketGrad\"\n       id=\"linearGradient2\"\n       x1=\"3.6279371\"\n   \
+      \    y1=\"31.680882\"\n       x2=\"3.6279371\"\n       y2=\"43.436447\"\n  \
+      \     gradientTransform=\"matrix(0.31298888,0,0,0.22366398,93.6625,48.683333)\"\
+      \n       gradientUnits=\"userSpaceOnUse\" />\n  </defs>\n  <g\n     id=\"layer1\"\
+      \n     transform=\"translate(-97.954172,-54.297812)\">\n    <!-- Spark Plug\
+      \ Boot / Stem -->\n    <path\n       d=\"m 116.15208,88.370833 q 0,23.812497\
+      \ 0.79375,29.104167 h 6.35 q 0.79375,-5.29167 0.79375,-29.104167 z\"\n     \
+      \  fill=\"url(#bootGrad)\"\n       stroke=\"#000000\"\n       stroke-width=\"\
+      2\"\n       id=\"path8\"\n       style=\"fill:url(#bootGrad)\" />\n    <!--\
+      \ Boot Heat Ribs -->\n    <line\n       x1=\"115.8875\"\n       y1=\"93.662498\"\
+      \n       x2=\"124.35416\"\n       y2=\"93.662498\"\n       stroke=\"#000000\"\
+      \n       stroke-width=\"3\"\n       id=\"line8\" />\n    <line\n       x1=\"\
+      115.8875\"\n       y1=\"98.954163\"\n       x2=\"124.35416\"\n       y2=\"98.954163\"\
+      \n       stroke=\"#000000\"\n       stroke-width=\"3\"\n       id=\"line9\"\
+      \ />\n    <line\n       x1=\"116.15208\"\n       y1=\"104.24583\"\n       x2=\"\
+      124.08958\"\n       y2=\"104.24583\"\n       stroke=\"#000000\"\n       stroke-width=\"\
+      3\"\n       id=\"line10\" />\n    <line\n       x1=\"116.41666\"\n       y1=\"\
+      109.5375\"\n       x2=\"123.825\"\n       y2=\"109.5375\"\n       stroke=\"\
+      #000000\"\n       stroke-width=\"3\"\n       id=\"line11\" />\n    <!-- Metal\
+      \ Mounting Bracket -->\n    <!-- Left Ear -->\n    <path\n       d=\"m 110.86042,76.464583\
+      \ h -7.9375 a 3.96875,3.96875 0 0 0 0,7.9375 h 7.9375 z\"\n       fill=\"url(#bracketGrad)\"\
+      \n       stroke=\"#333333\"\n       stroke-width=\"2\"\n       id=\"path11\"\
+      \n       style=\"fill:url(#linearGradient2)\" />\n    <circle\n       cx=\"\
+      104.775\"\n       cy=\"80.433334\"\n       r=\"1.5875\"\n       fill=\"#ffffff\"\
+      \n       stroke=\"#333333\"\n       stroke-width=\"1.5\"\n       id=\"circle11\"\
+      \ />\n    <!-- Right Ear -->\n    <path\n       d=\"m 129.38125,76.464583 h\
+      \ 7.9375 a 3.96875,3.96875 0 0 1 0,7.9375 h -7.9375 z\"\n       fill=\"url(#bracketGrad)\"\
+      \n       stroke=\"#333333\"\n       stroke-width=\"2\"\n       id=\"path12\"\
+      \n       style=\"fill:url(#linearGradient1)\" />\n    <circle\n       cx=\"\
+      135.46666\"\n       cy=\"80.433334\"\n       r=\"1.5875\"\n       fill=\"#ffffff\"\
+      \n       stroke=\"#333333\"\n       stroke-width=\"1.5\"\n       id=\"circle12\"\
+      \ />\n    <!-- Coil Body Base -->\n    <rect\n       x=\"110.86041\"\n     \
+      \  y=\"81.756248\"\n       width=\"18.520834\"\n       height=\"6.6145835\"\n\
+      \       rx=\"0.79374999\"\n       fill=\"#222222\"\n       stroke=\"#000000\"\
+      \n       stroke-width=\"2\"\n       id=\"rect12\" />\n    <!-- Main Ignition\
+      \ Coil Body -->\n    <rect\n       x=\"109.5375\"\n       y=\"61.912498\"\n\
+      \       width=\"21.166666\"\n       height=\"22.489584\"\n       rx=\"2.1166666\"\
+      \n       fill=\"url(#bodyGrad)\"\n       stroke=\"#111111\"\n       stroke-width=\"\
+      2\"\n       id=\"rect13\"\n       style=\"fill:url(#bodyGrad)\" />\n    <!--\
+      \ Body Styling Lines -->\n    <rect\n       x=\"110.86041\"\n       y=\"64.558334\"\
+      \n       width=\"18.520834\"\n       height=\"2.6458333\"\n       rx=\"0.52916664\"\
+      \n       fill=\"#1f1f1f\"\n       id=\"rect14\"\n       style=\"stroke-width:0.264583\"\
+      \ />\n    <rect\n       x=\"110.86041\"\n       y=\"68.527084\"\n       width=\"\
+      18.520834\"\n       height=\"2.6458333\"\n       rx=\"0.52916664\"\n       fill=\"\
+      #1f1f1f\"\n       id=\"rect15\"\n       style=\"stroke-width:0.264583\" />\n\
+      \    <rect\n       x=\"110.86041\"\n       y=\"72.495834\"\n       width=\"\
+      18.520834\"\n       height=\"2.6458333\"\n       rx=\"0.52916664\"\n       fill=\"\
+      #1f1f1f\"\n       id=\"rect16\"\n       style=\"stroke-width:0.264583\" />\n\
+      \    <!-- Electrical Connector Socket -->\n    <path\n       d=\"m 112.18333,61.9125\
+      \ v -5.291667 c 0,-1.322916 1.32292,-1.322916 1.32292,-1.322916 h 13.22917 c\
+      \ 0,0 1.32291,0 1.32291,1.322916 V 61.9125 Z\"\n       fill=\"#1a1a1a\"\n  \
+      \     stroke=\"#000000\"\n       stroke-width=\"2\"\n       id=\"path16\" />\n\
+      \    <!-- Connector Pins -->\n    <rect\n       x=\"115.35833\"\n       y=\"\
+      56.091667\"\n       width=\"1.5875\"\n       height=\"3.175\"\n       fill=\"\
+      #ffc107\"\n       stroke=\"#b388ff\"\n       stroke-width=\"0.5\"\n       id=\"\
+      rect17\" />\n    <rect\n       x=\"123.29583\"\n       y=\"56.091667\"\n   \
+      \    width=\"1.5875\"\n       height=\"3.175\"\n       fill=\"#ffc107\"\n  \
+      \     stroke=\"#b388ff\"\n       stroke-width=\"0.5\"\n       id=\"rect18\"\
+      \ />\n    <!-- Pinout Labels for Wiring Diagram -->\n    <!-- Wiring Diagram\
+      \ Connection Points (Hover/Snap targets for software) -->\n    <circle\n   \
+      \    cx=\"116.15208\"\n       cy=\"56.091667\"\n       r=\"0.79374999\"\n  \
+      \     fill=\"#ff3333\"\n       opacity=\"0.8\"\n       id=\"circle19\"\n   \
+      \    style=\"stroke-width:0.264583\" />\n    <circle\n       cx=\"124.08958\"\
+      \n       cy=\"56.091667\"\n       r=\"0.79374999\"\n       fill=\"#33cc33\"\n\
+      \       opacity=\"0.8\"\n       id=\"circle20\"\n       style=\"stroke-width:0.264583\"\
+      \ />\n    <!-- Brand / Identification Label -->\n    <rect\n       x=\"113.50625\"\
+      \n       y=\"76.464584\"\n       width=\"13.229167\"\n       height=\"4.2333331\"\
+      \n       rx=\"0.52916664\"\n       fill=\"#111111\"\n       id=\"rect20\"\n\
+      \       style=\"stroke-width:0.264583\" />\n  </g>\n</svg>\n"
+  FRM:
+    manufacturer: Bussmann
+    part_number: 15401-2 0-1-0A
+    category: Fuse
+    description: ''
+    name: Fuse and Relay Module
+    width_mm: 124.0
+    height_mm: 230.0
+    pins:
+    - id: '1'
+      label: '1'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '2'
+      label: '2'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '3'
+      label: '3'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '4'
+      label: '4'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '5'
+      label: '5'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '6'
+      label: '6'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '7'
+      label: '7'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '8'
+      label: '8'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '9'
+      label: '9'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '10'
+      label: '10'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '11'
+      label: '11'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '12'
+      label: '12'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '13'
+      label: '13'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '14'
+      label: '14'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '15'
+      label: '15'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '16'
+      label: '16'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '17'
+      label: '17'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '18'
+      label: '18'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '19'
+      label: '19'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '20'
+      label: '20'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '21'
+      label: '21'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '22'
+      label: '22'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '23'
+      label: '23'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '24'
+      label: '24'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '25'
+      label: '25'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '26'
+      label: '26'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '27'
+      label: '27'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '28'
+      label: '28'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '29'
+      label: '29'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '30'
+      label: '30'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '31'
+      label: '31'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '32'
+      label: '32'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '33'
+      label: '33'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '34'
+      label: '34'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '35'
+      label: '35'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '36'
+      label: '36'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '37'
+      label: '37'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '38'
+      label: '38'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '39'
+      label: '39'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '40'
+      label: '40'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '41'
+      label: '41'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '42'
+      label: '42'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '43'
+      label: '43'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '44'
+      label: '44'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '45'
+      label: '45'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '46'
+      label: '46'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '47'
+      label: '47'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '48'
+      label: '48'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '49'
+      label: '49'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '50'
+      label: '50'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '51'
+      label: '51'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '52'
+      label: '52'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '53'
+      label: '53'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '54'
+      label: '54'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '55'
+      label: '55'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '56'
+      label: '56'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '57'
+      label: '57'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '58'
+      label: '58'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '59'
+      label: '59'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '60'
+      label: '60'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '61'
+      label: '61'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '62'
+      label: '62'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '63'
+      label: '63'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '64'
+      label: '64'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '65'
+      label: '65'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '66'
+      label: '66'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '67'
+      label: '67'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '68'
+      label: '68'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '69'
+      label: '69'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '70'
+      label: '70'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '71'
+      label: '71'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '72'
+      label: '72'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '73'
+      label: '73'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '74'
+      label: '74'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '75'
+      label: '75'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '76'
+      label: '76'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '77'
+      label: '77'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '78'
+      label: '78'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '79'
+      label: '79'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '80'
+      label: '80'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '81'
+      label: '81'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '82'
+      label: '82'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '83'
+      label: '83'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '84'
+      label: '84'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '85'
+      label: '85'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '86'
+      label: '86'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '87'
+      label: '87'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '88'
+      label: '88'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '89'
+      label: '89'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '90'
+      label: '90'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    svg_body: "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n\
+      \   viewBox=\"0 0 124 230\"\n   font-family=\"sans-serif\"\n   version=\"1.1\"\
+      \n   id=\"svg66\"\n   sodipodi:docname=\"FuseRelayModule.svg\"\n   inkscape:version=\"\
+      1.4.4 (dcaf3e7d9e, 2026-05-05)\"\n   width=\"124mm\"\n   height=\"230mm\"\n\
+      \   xmlns:inkscape=\"http://www.inkscape.org/namespaces/inkscape\"\n   xmlns:sodipodi=\"\
+      http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd\"\n   xmlns=\"http://www.w3.org/2000/svg\"\
+      \n   xmlns:svg=\"http://www.w3.org/2000/svg\">\n  <sodipodi:namedview\n    \
+      \ id=\"namedview66\"\n     pagecolor=\"#ffffff\"\n     bordercolor=\"#000000\"\
+      \n     borderopacity=\"0.25\"\n     inkscape:showpageshadow=\"2\"\n     inkscape:pageopacity=\"\
+      0.0\"\n     inkscape:pagecheckerboard=\"0\"\n     inkscape:deskcolor=\"#d1d1d1\"\
+      \n     showgrid=\"false\"\n     inkscape:zoom=\"0.56568543\"\n     inkscape:cx=\"\
+      60.98796\"\n     inkscape:cy=\"543.58834\"\n     inkscape:window-width=\"1863\"\
+      \n     inkscape:window-height=\"1011\"\n     inkscape:window-x=\"0\"\n     inkscape:window-y=\"\
+      0\"\n     inkscape:window-maximized=\"1\"\n     inkscape:current-layer=\"svg66\"\
+      \n     inkscape:document-units=\"mm\" />\n  <!-- Background -->\n  <!-- Module\
+      \ Outline -->\n  <rect\n     x=\"1.4143363\"\n     y=\"-122.31847\"\n     width=\"\
+      230\"\n     height=\"124\"\n     rx=\"4.813026\"\n     fill=\"#222222\"\n  \
+      \   stroke=\"#111111\"\n     stroke-width=\"1.80052\"\n     id=\"rect3\"\n \
+      \    transform=\"rotate(90)\" />\n  <!-- M8 Power Studs (Right Edge) -->\n \
+      \ <!-- Dual Bus Dividing Line -->\n  <!-- Definitions for repeated cavities\
+      \ -->\n  <defs\n     id=\"defs20\">\n    <!-- Individual Cavities -->\n    <circle\n\
+      \       id=\"cav-bus\"\n       cx=\"0\"\n       cy=\"0\"\n       r=\"10\"\n\
+      \       fill=\"#ff4d4d\"\n       stroke=\"#111111\"\n       stroke-width=\"\
+      1\" />\n    <circle\n       id=\"cav-load\"\n       cx=\"0\"\n       cy=\"0\"\
+      \n       r=\"10\"\n       fill=\"#4ea8de\"\n       stroke=\"#111111\"\n    \
+      \   stroke-width=\"1\" />\n    <circle\n       id=\"cav-coil\"\n       cx=\"\
+      0\"\n       cy=\"0\"\n       r=\"10\"\n       fill=\"#ffd166\"\n       stroke=\"\
+      #111111\"\n       stroke-width=\"1\" />\n    <circle\n       id=\"cav-relay-out\"\
+      \n       cx=\"0\"\n       cy=\"0\"\n       r=\"10\"\n       fill=\"#f4a261\"\
+      \n       stroke=\"#111111\"\n       stroke-width=\"1\" />\n    <circle\n   \
+      \    id=\"cav-relay-com\"\n       cx=\"0\"\n       cy=\"0\"\n       r=\"10\"\
+      \n       fill=\"#06d6a0\"\n       stroke=\"#111111\"\n       stroke-width=\"\
+      1\" />\n    <circle\n       id=\"cav-empty\"\n       cx=\"0\"\n       cy=\"\
+      0\"\n       r=\"10\"\n       fill=\"#333333\"\n       stroke=\"#111111\"\n \
+      \      stroke-width=\"1\" />\n    <!-- 2-Column Block representing 1 Relay and\
+      \ 4 Fuses -->\n    <g\n       id=\"cavity-block\">\n      <!-- Row G (Top Fuses\
+      \ F21-F40 Bussed Input) -->\n      <use\n         href=\"#cav-bus\"\n      \
+      \   x=\"35\"\n         y=\"0\"\n         id=\"use7\" />\n      <use\n      \
+      \   href=\"#cav-bus\"\n         x=\"0\"\n         y=\"0\"\n         id=\"use8\"\
+      \ />\n      <!-- Row F (Top Fuses F21-F40 Load Output) -->\n      <use\n   \
+      \      href=\"#cav-load\"\n         x=\"35\"\n         y=\"35\"\n         id=\"\
+      use9\" />\n      <use\n         href=\"#cav-load\"\n         x=\"0\"\n     \
+      \    y=\"35\"\n         id=\"use10\" />\n      <!-- Row E (Relay 86 & 87) -->\n\
+      \      <use\n         href=\"#cav-coil\"\n         x=\"35\"\n         y=\"70\"\
+      \n         id=\"use11\" />\n      <!-- 86 -->\n      <use\n         href=\"\
+      #cav-relay-out\"\n         x=\"0\"\n         y=\"70\"\n         id=\"use12\"\
+      \ />\n      <!-- 87 -->\n      <!-- Row D (Relay 87a) -->\n      <use\n    \
+      \     href=\"#cav-empty\"\n         x=\"35\"\n         y=\"105\"\n         id=\"\
+      use13\" />\n      <!-- Empty -->\n      <use\n         href=\"#cav-relay-out\"\
+      \n         x=\"0\"\n         y=\"105\"\n         id=\"use14\" />\n      <!--\
+      \ 87a -->\n      <!-- Row C (Relay 85 & 30) -->\n      <use\n         href=\"\
+      #cav-coil\"\n         x=\"35\"\n         y=\"140\"\n         id=\"use15\" />\n\
+      \      <!-- 85 -->\n      <use\n         href=\"#cav-relay-com\"\n         x=\"\
+      0\"\n         y=\"140\"\n         id=\"use16\" />\n      <!-- 30 -->\n     \
+      \ <!-- Row B (Bottom Fuses F1-F20 Bussed Input) -->\n      <use\n         href=\"\
+      #cav-bus\"\n         x=\"35\"\n         y=\"175\"\n         id=\"use17\" />\n\
+      \      <use\n         href=\"#cav-bus\"\n         x=\"0\"\n         y=\"175\"\
+      \n         id=\"use18\" />\n      <!-- Row A (Bottom Fuses F1-F20 Load Output)\
+      \ -->\n      <use\n         href=\"#cav-load\"\n         x=\"35\"\n        \
+      \ y=\"210\"\n         id=\"use19\" />\n      <use\n         href=\"#cav-load\"\
+      \n         x=\"0\"\n         y=\"210\"\n         id=\"use20\" />\n    </g>\n\
+      \  </defs>\n  <!-- Row Labels (A-G, bottom to top) -->\n  <!-- Right Side Letter\
+      \ Labels to match physical chassis -->\n  <!-- Generate 10 Blocks (20 Columns\
+      \ total). Columns run right-to-left. -->\n  <!-- Block 1 (Cols 1 & 2) -> R1,\
+      \ F1/F2, F21/F22 -->\n  <use\n     href=\"#cavity-block\"\n     x=\"770\"\n\
+      \     y=\"89\"\n     id=\"use33\"\n     transform=\"matrix(0,0.24378468,-0.24378468,0,107.61269,3.6639218)\"\
+      \ />\n  <!-- Block 2 (Cols 3 & 4) -> R2, F3/F4, F23/F24 -->\n  <use\n     href=\"\
+      #cavity-block\"\n     x=\"700\"\n     y=\"89\"\n     id=\"use34\"\n     transform=\"\
+      matrix(0,0.24378468,-0.24378468,0,107.61269,3.6639218)\" />\n  <!-- Block 3\
+      \ (Cols 5 & 6) -> R3, F5/F6, F25/F26 -->\n  <use\n     href=\"#cavity-block\"\
+      \n     x=\"630\"\n     y=\"89\"\n     id=\"use35\"\n     transform=\"matrix(0,0.24378468,-0.24378468,0,107.61269,3.6639218)\"\
+      \ />\n  <!-- Block 4 (Cols 7 & 8) -> R4, F7/F8, F27/F28 -->\n  <use\n     href=\"\
+      #cavity-block\"\n     x=\"560\"\n     y=\"89\"\n     id=\"use36\"\n     transform=\"\
+      matrix(0,0.24378468,-0.24378468,0,107.61269,3.6639218)\" />\n  <!-- Block 5\
+      \ (Cols 9 & 10) -> R5, F9/F10, F29/F30 -->\n  <use\n     href=\"#cavity-block\"\
+      \n     x=\"490\"\n     y=\"89\"\n     id=\"use37\"\n     transform=\"matrix(0,0.24378468,-0.24378468,0,107.61269,3.6639218)\"\
+      \ />\n  <!-- Block 6 (Cols 11 & 12) -> R6, F11/F12, F31/F32 -->\n  <use\n  \
+      \   href=\"#cavity-block\"\n     x=\"400\"\n     y=\"89\"\n     id=\"use38\"\
+      \n     transform=\"matrix(0,0.24378468,-0.24378468,0,107.61269,3.6639218)\"\
+      \ />\n  <!-- Block 7 (Cols 13 & 14) -> R7, F13/F14, F33/F34 -->\n  <use\n  \
+      \   href=\"#cavity-block\"\n     x=\"330\"\n     y=\"89\"\n     id=\"use39\"\
+      \n     transform=\"matrix(0,0.24378468,-0.24378468,0,107.61269,3.6639218)\"\
+      \ />\n  <!-- Block 8 (Cols 15 & 16) -> R8, F15/F16, F35/F36 -->\n  <use\n  \
+      \   href=\"#cavity-block\"\n     x=\"260\"\n     y=\"89\"\n     id=\"use40\"\
+      \n     transform=\"matrix(0,0.24378468,-0.24378468,0,107.61269,3.6639218)\"\
+      \ />\n  <!-- Block 9 (Cols 17 & 18) -> R9, F17/F18, F37/F38 -->\n  <use\n  \
+      \   href=\"#cavity-block\"\n     x=\"190\"\n     y=\"89\"\n     id=\"use41\"\
+      \n     transform=\"matrix(0,0.24378468,-0.24378468,0,107.61269,3.6639218)\"\
+      \ />\n  <!-- Block 10 (Cols 19 & 20) -> R10, F19/F20, F39/F40 -->\n  <use\n\
+      \     href=\"#cavity-block\"\n     x=\"120\"\n     y=\"89\"\n     id=\"use42\"\
+      \n     transform=\"matrix(0,0.24378468,-0.24378468,0,107.61269,3.6639218)\"\
+      \ />\n  <!-- Column Number Labels (1 to 20, right to left) -->\n  <!-- Color\
+      \ Legend -->\n</svg>\n"
+  AGM-START:
+    manufacturer: Optima
+    part_number: 8012-021
+    category: Battery
+    description: ''
+    name: BATTERY
+    width_mm: 979.0
+    height_mm: 650.0
+    pins:
+    - id: '1'
+      label: '1'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: '2'
+      label: '2'
+      signal: ''
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    svg_body: "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n\
+      \   width=\"259mm\"\n   height=\"172mm\"\n   viewBox=\"0 0 259 172\"\n   version=\"\
+      1.1\"\n   id=\"svg12\"\n   xmlns:xlink=\"http://www.w3.org/1999/xlink\"\n  \
+      \ xmlns=\"http://www.w3.org/2000/svg\"\n   xmlns:svg=\"http://www.w3.org/2000/svg\"\
+      >\n  <defs\n     id=\"defs4\">\n    <!-- Gradients for realistic top-down lighting\
+      \ -->\n    <linearGradient\n       id=\"battBodyGrad\"\n       x1=\"0.40745941\"\
+      \n       y1=\"0.61355805\"\n       x2=\"0.40745941\"\n       y2=\"211.67754\"\
+      \n       gradientTransform=\"matrix(1.2271161,0,0,0.81491881,-0.5,-0.5)\"\n\
+      \       gradientUnits=\"userSpaceOnUse\">\n      <stop\n         offset=\"0%\"\
+      \n         stop-color=\"#3a3c3f\"\n         id=\"stop1\" />\n      <stop\n \
+      \        offset=\"100%\"\n         stop-color=\"#1e1e24\"\n         id=\"stop2\"\
+      \ />\n    </linearGradient>\n    <linearGradient\n       id=\"postGrad\"\n \
+      \      x1=\"0\"\n       y1=\"0\"\n       x2=\"1\"\n       y2=\"1\">\n      <stop\n\
+      \         offset=\"0%\"\n         stop-color=\"#e0e0e0\"\n         id=\"stop3\"\
+      \ />\n      <stop\n         offset=\"100%\"\n         stop-color=\"#7a7a7a\"\
+      \n         id=\"stop4\" />\n    </linearGradient>\n    <linearGradient\n   \
+      \    xlink:href=\"#postGrad\"\n       id=\"linearGradient12\"\n       x1=\"\
+      -10.5\"\n       y1=\"-10.5\"\n       x2=\"10.5\"\n       y2=\"10.5\"\n     \
+      \  gradientUnits=\"userSpaceOnUse\" />\n    <linearGradient\n       xlink:href=\"\
+      #postGrad\"\n       id=\"linearGradient13\"\n       x1=\"-10.5\"\n       y1=\"\
+      -10.5\"\n       x2=\"10.5\"\n       y2=\"10.5\"\n       gradientUnits=\"userSpaceOnUse\"\
+      \ />\n  </defs>\n  <!-- Main Outer Case -->\n  <rect\n     x=\"1.5\"\n     y=\"\
+      1.5\"\n     width=\"256\"\n     height=\"169\"\n     rx=\"8\"\n     fill=\"\
+      url(#battBodyGrad)\"\n     stroke=\"#111111\"\n     stroke-width=\"3\"\n   \
+      \  id=\"rect4\"\n     style=\"fill:url(#battBodyGrad)\" />\n  <!-- Structural\
+      \ Top Cover Details -->\n  <rect\n     x=\"9.5\"\n     y=\"9.5\"\n     width=\"\
+      240\"\n     height=\"153\"\n     rx=\"4\"\n     fill=\"none\"\n     stroke=\"\
+      #555555\"\n     stroke-width=\"1.5\"\n     id=\"rect5\" />\n  <rect\n     x=\"\
+      14.5\"\n     y=\"14.5\"\n     width=\"230\"\n     height=\"143\"\n     rx=\"\
+      3\"\n     fill=\"none\"\n     stroke=\"#333333\"\n     stroke-width=\"1\"\n\
+      \     id=\"rect6\" />\n  <!-- Raised Center Label Plate -->\n  <rect\n     x=\"\
+      57.138351\"\n     y=\"33.557877\"\n     width=\"144.7233\"\n     height=\"76.884247\"\
+      \n     rx=\"4.522603\"\n     fill=\"#2a2c30\"\n     stroke=\"#111111\"\n   \
+      \  stroke-width=\"1.80904\"\n     id=\"rect7\" />\n  <!-- Battery Spec Typography\
+      \ -->\n  <text\n     x=\"129.5\"\n     y=\"60.693493\"\n     font-family=\"\
+      sans-serif\"\n     font-size=\"16.2814px\"\n     font-weight=\"bold\"\n    \
+      \ fill=\"#dddddd\"\n     text-anchor=\"middle\"\n     id=\"text7\"\n     style=\"\
+      stroke-width:0.904521\">AGM STARTING</text>\n  <text\n     x=\"129.5\"\n   \
+      \  y=\"78.783905\"\n     font-family=\"sans-serif\"\n     font-size=\"10.8542px\"\
+      \n     fill=\"#aaaaaa\"\n     text-anchor=\"middle\"\n     id=\"text8\"\n  \
+      \   style=\"stroke-width:0.904521\">GROUP 34 \u2022 12V</text>\n  <text\n  \
+      \   x=\"129.5\"\n     y=\"96.874313\"\n     font-family=\"monospace\"\n    \
+      \ font-size=\"9.94973px\"\n     font-weight=\"bold\"\n     fill=\"#777777\"\n\
+      \     text-anchor=\"middle\"\n     id=\"text9\"\n     style=\"stroke-width:0.904521\"\
+      >800 CCA</text>\n  <!-- POSITIVE TERMINAL (Left Side) -->\n  <g\n     transform=\"\
+      translate(44.5,134.5)\"\n     id=\"g10\">\n    <!-- Insulator Ring / Color Identifier\
+      \ -->\n    <circle\n       cx=\"0\"\n       cy=\"0\"\n       r=\"16\"\n    \
+      \   fill=\"#c0392b\"\n       stroke=\"#111111\"\n       stroke-width=\"2\"\n\
+      \       id=\"circle9\" />\n    <!-- Lead Post -->\n    <circle\n       cx=\"\
+      0\"\n       cy=\"0\"\n       r=\"10\"\n       fill=\"url(#postGrad)\"\n    \
+      \   stroke=\"#444444\"\n       stroke-width=\"1\"\n       id=\"circle10\"\n\
+      \       style=\"fill:url(#linearGradient12)\" />\n    <!-- Floating '+' Symbol\
+      \ -->\n    <text\n       x=\"0\"\n       y=\"-22\"\n       font-family=\"sans-serif\"\
+      \n       font-size=\"24px\"\n       font-weight=\"bold\"\n       fill=\"#e74c3c\"\
+      \n       text-anchor=\"middle\"\n       id=\"text10\">+</text>\n    <!-- Snap\
+      \ Target for Routing (Hidden hit box) -->\n    <circle\n       cx=\"0\"\n  \
+      \     cy=\"0\"\n       r=\"2\"\n       fill=\"#ff3333\"\n       opacity=\"0.8\"\
+      \n       id=\"pin-positive\" />\n  </g>\n  <!-- NEGATIVE TERMINAL (Right Side)\
+      \ -->\n  <g\n     transform=\"translate(214.5,134.5)\"\n     id=\"g12\">\n \
+      \   <!-- Insulator Ring / Color Identifier -->\n    <circle\n       cx=\"0\"\
+      \n       cy=\"0\"\n       r=\"16\"\n       fill=\"#2980b9\"\n       stroke=\"\
+      #111111\"\n       stroke-width=\"2\"\n       id=\"circle11\" />\n    <!-- Lead\
+      \ Post -->\n    <circle\n       cx=\"0\"\n       cy=\"0\"\n       r=\"10\"\n\
+      \       fill=\"url(#postGrad)\"\n       stroke=\"#444444\"\n       stroke-width=\"\
+      1\"\n       id=\"circle12\"\n       style=\"fill:url(#linearGradient13)\" />\n\
+      \    <!-- Floating '-' Symbol -->\n    <text\n       x=\"0\"\n       y=\"-24\"\
+      \n       font-family=\"sans-serif\"\n       font-size=\"30px\"\n       font-weight=\"\
+      bold\"\n       fill=\"#3498db\"\n       text-anchor=\"middle\"\n       id=\"\
+      text12\">-</text>\n    <!-- Snap Target for Routing (Hidden hit box) -->\n \
+      \   <circle\n       cx=\"0\"\n       cy=\"0\"\n       r=\"2\"\n       fill=\"\
+      #33cc33\"\n       opacity=\"0.8\"\n       id=\"pin-negative\" />\n  </g>\n</svg>\n"
+  TE-T-SPLICE-62357-1:
+    manufacturer: TE
+    part_number: 62357-1
+    category: Splice
+    description: ''
+    name: TE-T-SPLICE-62357-1
+    width_mm: 10.58
+    height_mm: 3.57
+    pins:
+    - id: 2c79021d-4dec-4c68-a26a-ff34e2d97e96
+      label: '1'
+      signal: Trunk In
+      x: 0.0
+      y: 0.0
+      head:
+      - 0.0
+      - 0.0
+      tail:
+      - 0.0
+      - 0.0
+    - id: dff70ced-e6c2-4085-9910-b28a479b6453
+      label: '2'
+      signal: Splice
+      x: 7.5
+      y: 2.5
+      head:
+      - 7.5
+      - 2.5
+      tail:
+      - 7.5
+      - 2.5
+    - id: aff6c251-74a5-4b12-8e09-f01f436520e2
+      label: '3'
+      signal: Trunk Out
+      x: 10.0
+      y: 0.0
+      head:
+      - 10.0
+      - 0.0
+      tail:
+      - 10.0
+      - 0.0
+    svg_body: "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>\n<svg\n\
+      \   width=\"10.583333mm\"\n   height=\"3.5718751mm\"\n   viewBox=\"0 0 39.999999\
+      \ 13.5\"\n   version=\"1.1\"\n   id=\"svg4\"\n   xmlns=\"http://www.w3.org/2000/svg\"\
+      \n   xmlns:svg=\"http://www.w3.org/2000/svg\">\n  <defs\n     id=\"defs4\" />\n\
+      \  <!-- Adhesive Heat Shrink Body -->\n  <rect\n     x=\"2\"\n     y=\"0.5\"\
+      \n     width=\"36\"\n     height=\"11\"\n     rx=\"2\"\n     fill=\"#2a2c30\"\
+      \n     stroke=\"#555555\"\n     stroke-width=\"1\"\n     id=\"rect1\" />\n \
+      \ <!-- Internal Trunk Wire Path (Visual) -->\n  <line\n     x1=\"0\"\n     y1=\"\
+      3.5\"\n     x2=\"40\"\n     y2=\"3.5\"\n     stroke=\"#7a828e\"\n     stroke-width=\"\
+      1.5\"\n     stroke-dasharray=\"2, 1\"\n     id=\"line1\" />\n  <!-- Internal\
+      \ Branch Wire Path (Folded Parallel) -->\n  <path\n     d=\"m 20,3.5 h 12 v\
+      \ 10\"\n     fill=\"none\"\n     stroke=\"#7a828e\"\n     stroke-width=\"1.5\"\
+      \n     stroke-dasharray=\"2, 1\"\n     id=\"path1\" />\n  <!-- The U-Barrel\
+      \ Brass Crimp -->\n  <rect\n     x=\"16\"\n     y=\"2\"\n     width=\"6\"\n\
+      \     height=\"3\"\n     rx=\"0.5\"\n     fill=\"#d5aa44\"\n     stroke=\"#8c702b\"\
+      \n     stroke-width=\"0.5\"\n     id=\"rect2\" />\n  <!-- Connection Points\
+      \ (Snap Targets) -->\n  <!-- Trunk IN (Red) -->\n  <circle\n     cx=\"2\"\n\
+      \     cy=\"3.5\"\n     r=\"1.5\"\n     fill=\"#ff3333\"\n     opacity=\"0.8\"\
+      \n     id=\"circle2\" />\n  <!-- Trunk OUT (Green) -->\n  <circle\n     cx=\"\
+      38\"\n     cy=\"3.5\"\n     r=\"1.5\"\n     fill=\"#33cc33\"\n     opacity=\"\
+      0.8\"\n     id=\"circle3\" />\n  <!-- Branch OUT (Blue) -->\n  <circle\n   \
+      \  cx=\"32\"\n     cy=\"11.5\"\n     r=\"1.5\"\n     fill=\"#3498db\"\n    \
+      \ opacity=\"0.8\"\n     id=\"circle4\" />\n</svg>\n"
+    promotion_source_id: 3cd8c70a-1229-4010-8550-4f05f0eea7cf

@@ -198,7 +198,50 @@ class YAMLPersistence:
             if schema_version != YAMLPersistence.SCHEMA_VERSION:
                 # Try to migrate stepwise to current version
                 data = YAMLPersistence.migrate(data, schema_version, YAMLPersistence.SCHEMA_VERSION)
-        return Harness.from_dict(data)
+        harness = Harness.from_dict(data)
+        _snap_rotated_devices(harness)
+        return harness
+
+
+def _snap_rotated_devices(harness):
+    """Post-load fixup: snap rotated devices so their first pin lands on grid."""
+    import math
+    try:
+        from api.manager import APIManager
+        grid = APIManager.get_instance().settings.grid_size_mm
+    except Exception:
+        grid = 2.54
+    if grid <= 0:
+        return
+    for device in getattr(harness, 'devices', []):
+        rotation = getattr(device, 'rotation', 0.0)
+        pins = getattr(device, 'pins', [])
+        if rotation == 0.0 or not pins:
+            continue
+        pin = pins[0]
+        meta = getattr(device, 'meta', {}) or {}
+        width = meta.get('width_mm', 40.0)
+        height = meta.get('height_mm', 30.0)
+        margin_x = (width % grid) / 2.0
+        margin_y = (height % grid) / 2.0
+        ox = -margin_x + width / 2.0
+        oy = -margin_y + height / 2.0
+        rad = math.radians(rotation)
+        cos_r, sin_r = math.cos(rad), math.sin(rad)
+        dx = pin.x - ox
+        dy = pin.y - oy
+        rpx = round(cos_r * dx + sin_r * dy + ox, 4)
+        rpy = round(-sin_r * dx + cos_r * dy + oy, 4)
+        pin_scene_x = device.x + rpx
+        pin_scene_y = device.y + rpy
+        snapped_x = round(pin_scene_x / grid) * grid
+        snapped_y = round(pin_scene_y / grid) * grid
+        adj_x = snapped_x - pin_scene_x
+        adj_y = snapped_y - pin_scene_y
+        if abs(adj_x) > 1e-6 or abs(adj_y) > 1e-6:
+            device.x = round(device.x + adj_x, 4)
+            device.y = round(device.y + adj_y, 4)
+
 
 # Example migration registration (for future use):
 # def migrate_2025_12_to_2026_01(data):

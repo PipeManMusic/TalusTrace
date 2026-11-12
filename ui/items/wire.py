@@ -14,7 +14,6 @@ from PySide6.QtCore import Qt, QPointF
 from ui.theme import ThemeManager
 from ui.items.base import SelectableItemMixin
 from ui.items.observable_graphics_item_mixin import ObservableGraphicsItemMixin
-from core.logic import calculate_bundle_diameter
 
 class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathItem):
     """Scene item for rendering and interacting with a wire in the UI."""
@@ -28,7 +27,7 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         ObservableGraphicsItemMixin.__init__(self)
         self.is_ghost = False
         self.theme = ThemeManager()
-        self.setZValue(0)
+        self.setZValue(15)
         self._model = wire_model
         self.pin_lookup = pin_lookup
         # New flag for compliance
@@ -61,8 +60,10 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         """Update the item's path and style from the given wire model."""
         if wire_model is not None:
             self._model = wire_model
-        self._build_path_and_grips()
+        self._rebuild_path()
+        self._sync_grip_positions()
         self._apply_style()
+        self.setVisible(getattr(self._model, 'visible', True))
 
     def _rebuild_path(self):
         """Rebuild the QPainterPath from the model's path_nodes."""
@@ -75,7 +76,7 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         self.setPath(qpath)
 
     def _build_path_and_grips(self):
-        """Rebuild path and create/position elbow and segment grips."""
+        """Rebuild path and create/position elbow and segment grips only when selected."""
         # Guard against recursion (e.g. from api.select triggering itemChange)
         if getattr(self, '_building_grips', False):
             return
@@ -93,6 +94,9 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
                     scene.removeItem(grip)
             # Rebuild path from model
             self._rebuild_path()
+            # Only create grips when the wire is selected
+            if not self.isSelected():
+                return
             nodes = self.path_nodes
             if not nodes or len(nodes) < 2:
                 return
@@ -127,11 +131,14 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         if self.is_violation:
             color = self.theme.get_color("bundle_violation")
         else:
-            color_hex = getattr(self.model, 'color', None)
-            color = QColor(color_hex) if color_hex else self.theme.get_color("bundle_standard")
-        # 2. Determine Width
-        gauge_mm = getattr(self.model, 'gauge', 1.0)
-        stroke_width = calculate_bundle_diameter([gauge_mm]) if gauge_mm else 1.0
+            color_hex = getattr(self.model, 'color', None) or ''
+            qc = QColor(color_hex) if color_hex else QColor()
+            color = qc if qc.isValid() else self.theme.get_color("bundle_standard")
+        # 2. Determine Width from wire diameter (use actual mm, not bundle formula)
+        try:
+            stroke_width = float(getattr(self.model, 'diameter_mm', 1.0) or 1.0)
+        except (TypeError, ValueError):
+            stroke_width = 1.0
         if stroke_width < 0.5:
             stroke_width = 0.5
         pen = QPen(color, stroke_width, Qt.SolidLine, Qt.RoundCap, Qt.RoundJoin)
@@ -148,8 +155,9 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
         """Custom paint method to draw the wire and selection handles."""
         super().paint(painter, option, widget)
         if self.isSelected() and self.path_nodes:
-            # Draw blue dot at each elbow (bend) point (not endpoints), but only if not covered by a grip
-            painter.setBrush(QBrush(QColor(0, 200, 255)))
+            # Draw dot at each elbow (bend) point (not endpoints), but only if not covered by a grip
+            from ui.coordinates import THEME_FALLBACK
+            painter.setBrush(QBrush(QColor(THEME_FALLBACK["selection_glow"])))
             painter.setPen(Qt.NoPen)
             radius = 0.5
             elbow_indices = set(grip.index for grip in self.elbow_grips)
@@ -162,12 +170,12 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
     def itemChange(self, change, value):
         """Show/hide grips when selection changes."""
         if change == QGraphicsItem.ItemSelectedChange:
+            # Defer to after Qt applies the new selection state
+            from PySide6.QtCore import QTimer
             if value:
-                # Becoming selected — build grips
-                self._build_path_and_grips()
+                QTimer.singleShot(0, self._build_path_and_grips)
             else:
-                # Becoming deselected — remove grips
-                self._remove_grips()
+                QTimer.singleShot(0, self._remove_grips)
         return super().itemChange(change, value)
 
     def _remove_grips(self):
@@ -178,6 +186,20 @@ class WireItem(ObservableGraphicsItemMixin, SelectableItemMixin, QGraphicsPathIt
                 scene.removeItem(grip)
         self.elbow_grips = []
         self.segment_grips = []
+
+    def _sync_grip_positions(self):
+        """Move existing grips to match current path_nodes without recreating them."""
+        nodes = self.path_nodes
+        if not nodes:
+            return
+        for grip in self.elbow_grips:
+            if 0 <= grip.index < len(nodes):
+                grip.setPos(QPointF(nodes[grip.index][0], nodes[grip.index][1]))
+        for sg in self.segment_grips:
+            if len(nodes) > max(sg.start_idx, sg.end_idx):
+                mx = (nodes[sg.start_idx][0] + nodes[sg.end_idx][0]) / 2
+                my = (nodes[sg.start_idx][1] + nodes[sg.end_idx][1]) / 2
+                sg.setPos(QPointF(mx, my))
 
 class GhostWireItem(ObservableGraphicsItemMixin, QGraphicsPathItem):
     """Scene item for rendering a temporary (ghost) wire during interactive operations."""

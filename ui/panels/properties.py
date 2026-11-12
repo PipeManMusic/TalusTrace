@@ -2,7 +2,11 @@
 """
 Properties panel for displaying and editing device, wire, and pin properties in the Talus Trace UI.
 """
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QFormLayout, QLabel, QLineEdit, QScrollArea, QComboBox, QSizePolicy
+from PySide6.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QFormLayout, QLabel, QLineEdit,
+    QScrollArea, QComboBox, QSizePolicy, QPushButton, QColorDialog,
+)
+from PySide6.QtGui import QColor
 from core.device import Device, Pin
 from core.wire import Wire
 from api.manager import APIManager
@@ -26,7 +30,7 @@ class PropertiesPanel(QWidget):
         
         from ui.i18n import I18N
         self.header = QLabel(I18N.get('properties_panel_header'))
-        self.header.setStyleSheet("font-weight: bold; padding: 10px; background: #2c313a; color: white;")
+        self.header.setStyleSheet("font-weight: bold; padding: 10px; background: #2d2d2d; color: #e0e0e0;")
         self.layout.addWidget(self.header)
         
         self.scroll = QScrollArea()
@@ -92,6 +96,12 @@ class PropertiesPanel(QWidget):
                 if getattr(dev, 'id', None) == item_id:
                     live = dev
                     break
+                for pin in getattr(dev, 'pins', []):
+                    if getattr(pin, 'id', None) == item_id:
+                        live = pin
+                        break
+                if live is not None:
+                    break
             if live is None:
                 for w in getattr(harness, 'wires', []):
                     if getattr(w, 'id', None) == item_id:
@@ -119,7 +129,7 @@ class PropertiesPanel(QWidget):
         elif isinstance(model, Wire):
             self._render_wire(model)
         elif isinstance(model, Pin):
-            self._render_pin(model)
+            self._render_pin(model, standalone=True)
         else:
             # Fallback for generic objects with ID
             if hasattr(model, 'id'):
@@ -221,6 +231,23 @@ class PropertiesPanel(QWidget):
                 self.form.addRow(QLabel(f"--- Pin: {getattr(pin, 'label', getattr(pin, 'id', ''))} ---"))
                 self._render_pin(pin)
 
+    def _resolve_conn_label(self, device_uuid, pin_uuid):
+        """Resolve device and pin UUIDs to a 'Device > Pin' label."""
+        harness = getattr(self.api.context, 'harness', None)
+        if not harness:
+            return f"{device_uuid}:{pin_uuid}"
+        dev_label = device_uuid
+        pin_label = pin_uuid
+        for dev in getattr(harness, 'devices', []):
+            if getattr(dev, 'id', None) == device_uuid:
+                dev_label = getattr(dev, 'label', None) or device_uuid
+                for pin in getattr(dev, 'pins', []):
+                    if getattr(pin, 'id', None) == pin_uuid:
+                        pin_label = getattr(pin, 'label', None) or pin_uuid
+                        break
+                break
+        return f"{dev_label} > {pin_label}"
+
     def _render_wire(self, wire):
         """
         Render the property fields for a wire.
@@ -228,28 +255,125 @@ class PropertiesPanel(QWidget):
             wire (Wire): The wire to display/edit.
         """
         self._add_field("ID", getattr(wire, 'id', ''), read_only=True)
-        self._add_field("From", f"{getattr(wire, 'from_conn', '?')}:{getattr(wire, 'from_pin', '?')}", read_only=True)
-        self._add_field("To", f"{getattr(wire, 'to_conn', '?')}:{getattr(wire, 'to_pin', '?')}", read_only=True)
-        self._add_field("Color", getattr(wire, 'color', ''), lambda v: self._update_model(wire, "color", v))
-        self._add_field("Gauge", str(getattr(wire, 'gauge', '')), lambda v: self._update_model(wire, "gauge", v))
+        from_label = self._resolve_conn_label(getattr(wire, 'from_conn', '?'), getattr(wire, 'from_pin', '?'))
+        to_label = self._resolve_conn_label(getattr(wire, 'to_conn', '?'), getattr(wire, 'to_pin', '?'))
+        self._add_field("From", from_label, read_only=True)
+        self._add_field("To", to_label, read_only=True)
 
-    def _render_pin(self, pin):
+        # Wire spec selector — populated from wire library
+        status = getattr(wire, 'status', 'UNDEFINED')
+        self._add_field("Status", status, read_only=True)
+
+        wire_lib = self.api.library.get_wires() if hasattr(self.api, 'library') else {}
+        combo = QComboBox()
+        combo.addItem("— Unspecified —", "")
+        for spec_id, spec in wire_lib.items():
+            combo.addItem(spec.get('label', spec_id), spec_id)
+
+        # Pre-select current spec
+        current_std = getattr(wire, 'standard_id', None) or ""
+        idx = combo.findData(current_std)
+        if idx >= 0:
+            combo.setCurrentIndex(idx)
+
+        def on_spec_selected(index):
+            """Apply the selected wire spec from the library to this wire."""
+            spec_id = combo.itemData(index)
+            if not spec_id:
+                return
+            spec = wire_lib.get(spec_id, {})
+            spec_color_code = spec.get('color_code', '')
+            spec_color_hex = spec.get('color_hex', '')
+            wire.promote_to_specified(
+                standard_id=spec_id,
+                gauge=spec.get('gauge', ''),
+                color_code=spec_color_code,
+                diameter_mm=spec.get('od_mm', 1.0),
+            )
+            # Apply DIN standard color to the wire's render color via API
+            if spec_color_hex:
+                self._update_model(wire, "color", spec_color_hex)
+            self.api.dispatch("model_changed", {"action": "update", "item": wire})
+            self.refresh()
+
+        combo.activated.connect(on_spec_selected)
+        self.form.addRow(QLabel("Wire Spec"), combo)
+
+        # Show resolved spec details (read-only)
+        self._add_field("Gauge", str(getattr(wire, 'gauge', '') or ''), read_only=True)
+        self._add_field("Diameter (mm)", str(getattr(wire, 'diameter_mm', 1.0)), read_only=True)
+        color_code = getattr(wire, 'color_code', '') or ''
+        if color_code:
+            self._add_field("DIN Color", color_code.upper(), read_only=True)
+
+        # Color override — user can change after spec sets the default.
+        # Clearing the hex field reverts to the DIN spec color.
+        def apply_color(v):
+            """Apply color override, or revert to DIN spec color if cleared."""
+            if not v.strip():
+                std = getattr(wire, 'standard_id', None)
+                if std and std in wire_lib:
+                    v = wire_lib[std].get('color_hex', '')
+            self._update_model(wire, "color", v)
+        self._add_color_field("Color", getattr(wire, 'color', ''), apply_color)
+
+        # Signal — auto-populated from source pin if empty, editable for label printing
+        current_signal = getattr(wire, 'signal_name', '') or ''
+        if not current_signal:
+            current_signal = self._resolve_pin_signal(wire)
+        def on_signal_changed(v):
+            """Update the wire signal name for heat shrink label use."""
+            self._update_model(wire, "signal_name", v)
+        self._add_field("Signal", current_signal, on_signal_changed)
+
+        # Length — computed from path_nodes, read-only
+        length_mm = getattr(wire, 'calculated_length_mm', 0.0)
+        self._add_field("Length (mm)", f"{length_mm:.1f}", read_only=True)
+
+    def _resolve_pin_signal(self, wire):
+        """Resolve the signal name from the source pin if the wire has no signal set."""
+        harness = getattr(self.api.context, 'harness', None)
+        if not harness:
+            return ''
+        from_pin_id = getattr(wire, 'from_pin', '')
+        if not from_pin_id:
+            return ''
+        for dev in getattr(harness, 'devices', []):
+            for pin in getattr(dev, 'pins', []):
+                if getattr(pin, 'id', None) == from_pin_id:
+                    return getattr(pin, 'signal', '') or ''
+        return ''
+
+    def _render_pin(self, pin, standalone=False):
         """
         Render the property fields for a pin.
         Args:
             pin (Pin): The pin to display/edit.
+            standalone (bool): If True, show parent device context header.
         """
+        if standalone:
+            # Show parent device context
+            device_id = getattr(pin, 'device_id', None)
+            parent_label = device_id or 'Unknown'
+            if device_id:
+                harness = self.api.context.harness
+                for dev in getattr(harness, 'devices', []):
+                    if getattr(dev, 'id', None) == device_id:
+                        parent_label = getattr(dev, 'label', None) or device_id
+                        break
+            self.form.addRow(QLabel(f"Device: {parent_label}"))
         self._add_field("Pin ID", getattr(pin, 'id', ''), read_only=True)
+        self._add_field("Label", getattr(pin, 'label', ''), lambda v: self._update_model(pin, "label", v))
         self._add_field("Signal", getattr(pin, 'signal', ''), lambda v: self._update_model(pin, "signal", v))
         self.form.addRow(QLabel("--- Geometry ---"))
         self._add_field(
-            "Rel X", str(getattr(pin, 'x', 0)),
-            lambda v: self._update_model(pin, "x", float(v)),
+            "Rel X", f"{getattr(pin, 'x', 0):.4f}",
+            lambda v: self._update_model(pin, "x", round(float(v), 4)),
             validator=self._is_float
         )
         self._add_field(
-            "Rel Y", str(getattr(pin, 'y', 0)),
-            lambda v: self._update_model(pin, "y", float(v)),
+            "Rel Y", f"{getattr(pin, 'y', 0):.4f}",
+            lambda v: self._update_model(pin, "y", round(float(v), 4)),
             validator=self._is_float
         )
 
@@ -299,6 +423,75 @@ class PropertiesPanel(QWidget):
             edit.editingFinished.connect(validate_and_commit)
             edit.textChanged.connect(lambda _: edit.setStyleSheet("") if (not validator or validator(edit.text())) else edit.setStyleSheet("border: 2px solid red;"))
         self.form.addRow(lbl, edit)
+
+    def _add_color_field(self, label, value, callback):
+        """
+        Add a color picker field: a swatch button (opens QColorDialog) plus an
+        editable hex field. Clearing the hex field commits an empty string so
+        callers can revert to a default (e.g. DIN spec color).
+        """
+        container = QWidget()
+        hbox = QHBoxLayout(container)
+        hbox.setContentsMargins(0, 0, 0, 0)
+        hbox.setSpacing(4)
+
+        swatch = QPushButton()
+        swatch.setFixedWidth(36)
+        swatch.setAutoFillBackground(True)
+
+        edit = QLineEdit(str(value) if value is not None else "")
+        edit.setPlaceholderText("#RRGGBB")
+
+        def _update_swatch(hex_str):
+            """Recolor the preview swatch to reflect ``hex_str``."""
+            qc = QColor(hex_str) if hex_str else QColor()
+            if not qc.isValid():
+                swatch.setStyleSheet("background: transparent; border: 1px dashed #888;")
+                swatch.setText("?")
+            else:
+                text_color = "black" if qc.lightness() > 128 else "white"
+                swatch.setStyleSheet(
+                    f"background-color: {qc.name()}; color: {text_color}; "
+                    f"border: 1px solid #555;"
+                )
+                swatch.setText("")
+
+        def _commit(hex_str):
+            """Persist the edited color and refresh the swatch."""
+            _update_swatch(hex_str)
+            callback(hex_str)
+
+        def _on_pick():
+            """Open a QColorDialog seeded with the current field value."""
+            initial = QColor(edit.text()) if edit.text() else QColor("#808080")
+            if not initial.isValid():
+                initial = QColor("#808080")
+            picked = QColorDialog.getColor(initial, self, "Pick Wire Color")
+            if picked.isValid():
+                name = picked.name()
+                edit.setText(name)
+                _commit(name)
+
+        def _on_editing_finished():
+            """Validate the typed hex string and commit if parseable."""
+            text = edit.text().strip()
+            if not text:
+                _commit("")
+                return
+            qc = QColor(text)
+            if qc.isValid():
+                edit.setStyleSheet("")
+                _commit(qc.name())
+            else:
+                edit.setStyleSheet("border: 2px solid red;")
+
+        swatch.clicked.connect(_on_pick)
+        edit.editingFinished.connect(_on_editing_finished)
+        _update_swatch(value or "")
+
+        hbox.addWidget(swatch)
+        hbox.addWidget(edit, 1)
+        self.form.addRow(QLabel(label), container)
 
     def _update_model(self, item, field, value):
         """

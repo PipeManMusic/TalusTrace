@@ -45,6 +45,26 @@ class MoveTool(BaseTool):
         self.current_item = item
         self._last_drag_pos = self._drag_initial_pos
         self._last_snapped_pos = None
+        # Cache parent rotation for pin items (scene delta -> local delta)
+        self._parent_rotation_rad = 0.0
+        self._snap_anchor_offset = (0.0, 0.0)
+        self._parent_scene_offset = (0.0, 0.0)
+        parent = getattr(item, 'parentItem', lambda: None)()
+        if parent is not None:
+            import math
+            self._parent_rotation_rad = math.radians(parent.rotation())
+            # Cache parent's scene position so pin snap uses global grid
+            parent_pos = parent.pos()
+            self._parent_scene_offset = (float(parent_pos.x()), float(parent_pos.y()))
+        else:
+            # For devices: snap so that the first pin lands on grid
+            # Use the rotated pin offset so snap works for rotated devices
+            model = getattr(item, 'model', None)
+            pins = getattr(model, 'pins', None)
+            if pins:
+                from api.commands.device import _rotated_pin_offset
+                offset = _rotated_pin_offset(model, pins[0])
+                self._snap_anchor_offset = offset
 
     def update_drag(self, pos):
         """
@@ -56,15 +76,33 @@ class MoveTool(BaseTool):
         logging.debug(f"[MoveTool.update_drag] is_dragging={self.is_dragging}, current_item={self.current_item}, pos={pos}")
         if not self.is_dragging or not self.current_item or not hasattr(self.current_item, 'model'):
             return
+        # Dead-zone: ignore tiny movements (avoids snap-induced displacement
+        # during double-click or accidental micro-drags).
+        if abs(pos.x() - self.start_pos.x()) < 0.5 and abs(pos.y() - self.start_pos.y()) < 0.5:
+            return
         device = self.current_item.model
         dx = pos.x() - self.start_pos.x()
         dy = pos.y() - self.start_pos.y()
+        # If the item is a child of a rotated parent, transform scene delta
+        # into the parent's local coordinate system.
+        rot = getattr(self, '_parent_rotation_rad', 0.0)
+        if rot:
+            import math
+            cos_r, sin_r = math.cos(rot), math.sin(rot)
+            ldx = dx * cos_r + dy * sin_r
+            ldy = -dx * sin_r + dy * cos_r
+            dx, dy = ldx, ldy
         new_x = self._drag_initial_pos[0] + dx
         new_y = self._drag_initial_pos[1] + dy
-        # Snap to grid for visible snapping during drag
+        # Snap to grid — use scene coordinates so pins always land on global grid
         if hasattr(self.api, 'settings') and hasattr(self.api.settings, 'snap'):
-            new_x = self.api.settings.snap(new_x)
-            new_y = self.api.settings.snap(new_y)
+            ax, ay = getattr(self, '_snap_anchor_offset', (0.0, 0.0))
+            px, py = getattr(self, '_parent_scene_offset', (0.0, 0.0))
+            new_x = self.api.settings.snap(new_x + ax + px) - ax - px
+            new_y = self.api.settings.snap(new_y + ay + py) - ay - py
+        # Round to remove floating-point noise from rotation transforms
+        new_x = round(new_x, 4)
+        new_y = round(new_y, 4)
         # Skip update if snapped position hasn't changed
         last = getattr(self, '_last_snapped_pos', None)
         if last is not None and last[0] == new_x and last[1] == new_y:
@@ -86,15 +124,51 @@ class MoveTool(BaseTool):
         logging.debug(f"[MoveTool.finish_drag] is_dragging={self.is_dragging}, current_item={self.current_item}, pos={pos}")
         if not self.is_dragging or not self.current_item or not hasattr(self.current_item, 'model'):
             return
+        # If the mouse didn't move (click-in-place or double-click), skip the
+        # commit entirely.  Without this guard the snap-to-grid math can
+        # displace a pin on a rotated device even though the user never
+        # intended to drag.
+        scene_dx = abs(pos.x() - self.start_pos.x())
+        scene_dy = abs(pos.y() - self.start_pos.y())
+        if scene_dx < 0.5 and scene_dy < 0.5:
+            # Restore original position in case update_drag already moved it
+            device = self.current_item.model
+            orig_x, orig_y = self._drag_initial_pos
+            if hasattr(self.api, 'move_device') and device is not None:
+                cur_x = float(getattr(device, 'x', 0))
+                cur_y = float(getattr(device, 'y', 0))
+                if cur_x != orig_x or cur_y != orig_y:
+                    self.api.move_device(self.current_item, orig_x, orig_y, commit=False)
+            self.is_dragging = False
+            self.current_item = None
+            self.target_override = None
+            self.ghost_item = None
+            if hasattr(self, '_drag_initial_pos'):
+                del self._drag_initial_pos
+            self._last_snapped_pos = None
+            return
         device = self.current_item.model
         dx = pos.x() - self.start_pos.x()
         dy = pos.y() - self.start_pos.y()
+        # Transform scene delta into parent-local coords for child items
+        rot = getattr(self, '_parent_rotation_rad', 0.0)
+        if rot:
+            import math
+            cos_r, sin_r = math.cos(rot), math.sin(rot)
+            ldx = dx * cos_r + dy * sin_r
+            ldy = -dx * sin_r + dy * cos_r
+            dx, dy = ldx, ldy
         final_x = self._drag_initial_pos[0] + dx
         final_y = self._drag_initial_pos[1] + dy
-        # Snap to grid
+        # Snap to grid — use scene coordinates so pins always land on global grid
         if hasattr(self.api, 'settings') and hasattr(self.api.settings, 'snap'):
-            final_x = self.api.settings.snap(final_x)
-            final_y = self.api.settings.snap(final_y)
+            ax, ay = getattr(self, '_snap_anchor_offset', (0.0, 0.0))
+            px, py = getattr(self, '_parent_scene_offset', (0.0, 0.0))
+            final_x = self.api.settings.snap(final_x + ax + px) - ax - px
+            final_y = self.api.settings.snap(final_y + ay + py) - ay - py
+        # Round to remove floating-point noise from rotation transforms
+        final_x = round(final_x, 4)
+        final_y = round(final_y, 4)
         logging.debug(f"[MoveTool.finish_drag] device.id={getattr(device, 'id', None)}, dx={dx}, dy={dy}, final_x={final_x}, final_y={final_y}")
         # Commit move to undo stack via API
         # Pass current_item so move_device can access _drag_initial_pos for undo

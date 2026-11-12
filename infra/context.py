@@ -25,7 +25,7 @@ class Context:
         Args:
             harness (Harness, optional): The harness to use. Defaults to a new Harness.
         """
-        self.harness = harness or Harness(meta={"name": "New Harness", "trunk_length_mm": 1000})
+        self.harness = harness or Harness(meta={"name": "New Harness"})
         self.current_file = None
         self.dirty = False
         # Event Bus
@@ -115,7 +115,7 @@ class Context:
 
     def new_project(self):
         """Reset the context to a new project with a fresh harness."""
-        self.harness = Harness(meta={"name": "New Harness", "trunk_length_mm": 1000})
+        self.harness = Harness(meta={"name": "New Harness"})
         self.current_file = None
         self.dirty = False
 
@@ -144,6 +144,8 @@ class Context:
         YAMLPersistence.save(self.harness, str(path))
         self.current_file = path
         self.dirty = False
+        self.undo_stack.mark_clean()
+        self.observer.dispatch("state_changed", {"action": "save"})
 
 # Backward compatibility for legacy imports
 ProjectContext = Context

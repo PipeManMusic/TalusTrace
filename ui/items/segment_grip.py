@@ -18,15 +18,26 @@ class SegmentGripItem(ObservableGraphicsItemMixin, QGraphicsRectItem):
         'model_data': {'start_idx': 0, 'end_idx': 1, 'start_pos': (0, 0), 'end_pos': (1, 1)},
         'expected_child_count': 0
     }
-    def __init__(self, wire_item, start_idx, end_idx, start_pos, end_pos, width=6.0, height=3.0, parent=None):
+    def __init__(self, wire_item, start_idx, end_idx, start_pos, end_pos, width=None, height=None, parent=None):
         """Initialize a SegmentGripItem between two elbows of a wire segment."""
+        if width is None or height is None:
+            from api.manager import APIManager
+            try:
+                pin_size = APIManager.get_instance().settings.pin_size_mm
+            except Exception:
+                pin_size = 5.0
+            if width is None:
+                width = pin_size * 1.2
+            if height is None:
+                height = pin_size * 0.6
         # Center grip between elbows
         mid_x = (start_pos[0] + end_pos[0]) / 2
         mid_y = (start_pos[1] + end_pos[1]) / 2
         QGraphicsRectItem.__init__(self, -width/2, -height/2, width, height, parent)
         self._observers = []
         self.setPos(QPointF(mid_x, mid_y))
-        self.setBrush(QBrush(QColor(0, 200, 255)))
+        from ui.coordinates import THEME_FALLBACK
+        self.setBrush(QBrush(QColor(THEME_FALLBACK["segment_grip"])))
         self.setPen(QPen(Qt.black, 0.5))
         self.setFlag(QGraphicsRectItem.ItemIsMovable, False)
         self.setFlag(QGraphicsRectItem.ItemIsSelectable, False)

@@ -7,6 +7,37 @@ from infra.undo_stack import BaseCommand
 from api.manager import APIManager
 from core.selection import SelectionManager
 
+
+def _rotated_pin_offset(device, pin):
+    """Compute a pin's scene offset from the device position, accounting for rotation.
+
+    Uses the same transform-origin logic as DeviceItem._apply_grid_rect.
+    Returns (offset_x, offset_y) rounded to 4 dp.
+    """
+    import math
+    meta = getattr(device, 'meta', {}) or {}
+    width = meta.get('width_mm', 40.0)
+    height = meta.get('height_mm', 30.0)
+    try:
+        grid = APIManager.get_instance().settings.grid_size_mm
+    except Exception:
+        grid = 2.54
+    margin_x = (width % grid) / 2.0
+    margin_y = (height % grid) / 2.0
+    ox = -margin_x + width / 2.0
+    oy = -margin_y + height / 2.0
+    rotation = getattr(device, 'rotation', 0.0)
+    if rotation == 0.0:
+        return (pin.x, pin.y)
+    rad = math.radians(rotation)
+    cos_r, sin_r = math.cos(rad), math.sin(rad)
+    dx = pin.x - ox
+    dy = pin.y - oy
+    # Qt clockwise rotation convention
+    rpx = cos_r * dx + sin_r * dy + ox
+    rpy = -sin_r * dx + cos_r * dy + oy
+    return (round(rpx, 4), round(rpy, 4))
+
 class RotateDeviceCommand(BaseCommand):
     """Command to rotate a device by a given angle, supporting undo/redo."""
     def __init__(self, device, angle, context=None, logging_flag=False):
@@ -17,21 +48,45 @@ class RotateDeviceCommand(BaseCommand):
         self.context = context
         self.api = APIManager.get_instance()
         self._prev_rotation = getattr(device, 'rotation', 0.0)
+        self._prev_pos = (device.x, device.y)
         self.logging_flag = logging_flag
 
     def execute(self):
-        """Rotate the device by the specified angle and dispatch event."""
+        """Rotate the device by the specified angle and snap position so pins stay on grid."""
         prev = getattr(self.device, 'rotation', 0.0)
         new_rotation = (prev + self.angle) % 360
         self.device.rotation = new_rotation
+        self._snap_device_to_grid()
         if self.context and hasattr(self.context, "observer"):
             self.context.observer.dispatch("model_changed", {"action": "rotate", "item": self.device})
         else:
             self.api.dispatch("model_changed", {"action": "rotate", "item": self.device})
 
+    def _snap_device_to_grid(self):
+        """Adjust device position after rotation so the first pin lands on a grid intersection."""
+        pins = getattr(self.device, 'pins', [])
+        if not pins:
+            return
+        try:
+            grid = self.api.settings.grid_size_mm
+        except Exception:
+            grid = 2.54
+        if grid <= 0:
+            return
+        offset = _rotated_pin_offset(self.device, pins[0])
+        # Pin scene pos = device pos + offset; snap pin scene pos to grid
+        pin_scene_x = self.device.x + offset[0]
+        pin_scene_y = self.device.y + offset[1]
+        snapped_x = round(pin_scene_x / grid) * grid
+        snapped_y = round(pin_scene_y / grid) * grid
+        self.device.x = round(self.device.x + (snapped_x - pin_scene_x), 4)
+        self.device.y = round(self.device.y + (snapped_y - pin_scene_y), 4)
+
     def undo(self):
-        """Restore the device's previous rotation and dispatch event."""
+        """Restore the device's previous rotation and position, and dispatch event."""
         self.device.rotation = self._prev_rotation
+        self.device.x = self._prev_pos[0]
+        self.device.y = self._prev_pos[1]
         if self.context and hasattr(self.context, "observer"):
             self.context.observer.dispatch("model_changed", {"action": "rotate", "item": self.device})
         else:

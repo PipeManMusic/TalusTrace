@@ -37,19 +37,15 @@ class LibraryManager:
         Returns:
             dict: Parsed YAML data from the file.
         """
-        # 1. Try provided path
-        target_path = os.path.join(self.resource_dir, filename)
-        
-        # 2. Fallback: Try relative to this script (Project Root/resources/library)
-        if not os.path.exists(target_path):
-            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            target_path = os.path.join(base_dir, "resources", "library", filename)
+        # Resolve via the same logic used for writes so reads and writes always
+        # target the same on-disk file (previously they could diverge).
+        target_path = self._resolve_path(filename)
 
         if not os.path.exists(target_path):
             # Fail silently or log warning - return empty dict for safety
             return {}
 
-        # 3. Parse YAML
+        # Parse YAML
         try:
             with open(target_path, 'r') as f:
                 data = yaml.safe_load(f) or {}
@@ -74,3 +70,103 @@ class LibraryManager:
             dict: Wires library data.
         """
         return self.wires
+
+    def _resolve_path(self, filename: str) -> str:
+        """Return the canonical on-disk path for a library file, matching _load_file()."""
+        target_path = os.path.join(self.resource_dir, filename)
+        if not os.path.exists(target_path):
+            base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            fallback = os.path.join(base_dir, "resources", "library", filename)
+            if os.path.exists(fallback) or not os.path.isdir(self.resource_dir):
+                target_path = fallback
+        return target_path
+
+    def list_parts(self):
+        """Return the list of part IDs currently loaded."""
+        return list(self.parts.keys())
+
+    def get_part(self, part_id: str):
+        """Return the data dict for a single part, or None."""
+        return self.parts.get(part_id)
+
+    def save_part(self, part_id: str, data: Dict[str, Any]) -> str:
+        """
+        Persist a single part entry to parts.yaml, merging with existing parts.
+
+        Args:
+            part_id: Identifier used as the YAML key (e.g. "SPLICE-4W-SEALED").
+            data: The part definition (manufacturer, pins, etc.). Must be YAML-serializable.
+
+        Returns:
+            The path the file was written to.
+
+        Raises:
+            ValueError: if ``part_id`` is empty or ``data`` is not a dict.
+        """
+        if not part_id or not isinstance(part_id, str):
+            raise ValueError("part_id must be a non-empty string")
+        if not isinstance(data, dict):
+            raise ValueError("data must be a dict")
+
+        target_path = self._resolve_path("parts.yaml")
+        existing = {}
+        if os.path.exists(target_path):
+            try:
+                with open(target_path, "r") as f:
+                    loaded = yaml.safe_load(f) or {}
+                existing = loaded.get("parts", loaded) or {}
+            except Exception:
+                existing = {}
+        if not isinstance(existing, dict):
+            existing = {}
+
+        existing[part_id] = data
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        with open(target_path, "w") as f:
+            yaml.safe_dump({"parts": existing}, f, sort_keys=False)
+
+        # Refresh in-memory cache
+        self.parts = existing
+        return target_path
+
+    def delete_part(self, part_id: str) -> bool:
+        """
+        Remove a single part entry from parts.yaml and the in-memory cache.
+
+        Args:
+            part_id: Identifier of the part to remove.
+
+        Returns:
+            True if the part existed and was removed, False if it was not found.
+
+        Raises:
+            ValueError: if ``part_id`` is empty or not a string.
+        """
+        if not part_id or not isinstance(part_id, str):
+            raise ValueError("part_id must be a non-empty string")
+
+        target_path = self._resolve_path("parts.yaml")
+        existing = {}
+        if os.path.exists(target_path):
+            try:
+                with open(target_path, "r") as f:
+                    loaded = yaml.safe_load(f) or {}
+                existing = loaded.get("parts", loaded) or {}
+            except Exception:
+                existing = {}
+        if not isinstance(existing, dict):
+            existing = {}
+
+        if part_id not in existing:
+            # Keep the in-memory cache consistent with disk before returning.
+            self.parts = existing
+            return False
+
+        del existing[part_id]
+        os.makedirs(os.path.dirname(target_path), exist_ok=True)
+        with open(target_path, "w") as f:
+            yaml.safe_dump({"parts": existing}, f, sort_keys=False)
+
+        # Refresh in-memory cache
+        self.parts = existing
+        return True

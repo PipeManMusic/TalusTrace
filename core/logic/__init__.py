@@ -8,8 +8,9 @@ from .bundling import (
     calculate_bundle_diameter,
     create_bundle_group,
     create_twisted_bundle,
-    BundleSegment,
-    BundleEngine
+    find_wire_overlaps,
+    build_bundle_from_overlap,
+    OverlapGroup,
 )
 from .compliance import (
     check_bundle_constraints,

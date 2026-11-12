@@ -10,7 +10,6 @@ from ui.items.pin import PinItem
 from ui.items.segment_grip import SegmentGripItem
 from ui.items.elbow_grip import ElbowGripItem
 from core.pin import Pin
-from core.enums import Side
 
 @pytest.fixture
 def canvas(qtbot):
@@ -46,7 +45,7 @@ def test_wireitem_contact(canvas):
     assert not item.contains(far)
 
 def test_pinitem_contact(canvas):
-    pin = Pin(id="44444444-4444-4444-4444-444444444444", x=5, y=5, label="44444444-4444-4444-4444-444444444444", side=Side.TOP)
+    pin = Pin(id="44444444-4444-4444-4444-444444444444", x=5, y=5, label="44444444-4444-4444-4444-444444444444")
     device = Device(id="33333333-3333-3333-3333-333333333333", x=0, y=0, meta={"width_mm": 40, "height_mm": 30}, pins=[pin])
     item = DeviceItem(device)
     canvas.scene.addItem(item)

@@ -113,6 +113,7 @@ def build_actions_map():
     canonical_map = {
         "tool.add_generic_device": "f1831bfa-9f66-461c-8a1d-6c5440dc314b",
         "device.add_pin": "7a1e2b3c-4d5e-678f-9012-abcdefabcdef",
+        "device.promote": "2b9d0f11-5a6f-4ac0-9f81-7b3c0d4e5f6a",
         "edit.delete": "e5f01b07-dd65-4fbc-9d0f-59b83cdc0a0b",
         "edit.rotate_cw": "4a88e033-860e-4b9b-9140-338b49c40e61",
     }

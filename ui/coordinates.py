@@ -10,15 +10,34 @@ from PySide6.QtGui import QColor
 
 # COMPLIANCE: Centralized Theme Definition
 THEME_FALLBACK = {
-    "device_body": "#808080",
-    "device_outline": "#000000",
-    "pin_fill": "#FFFFFF",
-    "bundle_standard": "#333333",
-    "bundle_violation": "#FF0000",
-    "wire_a": "#0000FF",
-    "wire_b": "#FFA500",
-    "canvas_bg": "#2E2E2E",
-    "grid_color": "#444444"
+    "canvas_bg": "#121212",
+    "grid_color": "#2d2d2d",
+    "grid_minor": "#1e1e1e",
+    "grid_major": "#333333",
+    "device_body": "#1e1e1e",
+    "device_outline": "#b0b0b0",
+    "pin_fill": "#e0e0e0",
+    "pin_outline": "#b0b0b0",
+    "pin_label": "#b0b0b0",
+    "bundle_standard": "#D94E1F",
+    "bundle_violation": "#dc3545",
+    "wire_a": "#D94E1F",
+    "wire_b": "#FF6B3B",
+    "selection_glow": "#00C8FF",
+    "selection_highlight": "#00B4FF",
+    "elbow_grip": "#FFC800",
+    "segment_grip": "#00C8FF",
+    "ui_bg_dark": "#121212",
+    "ui_bg_light": "#1e1e1e",
+    "ui_surface": "#2d2d2d",
+    "ui_border": "#333333",
+    "ui_text": "#e0e0e0",
+    "ui_text_dim": "#b0b0b0",
+    "ui_text_bright": "#ffffff",
+    "ui_accent": "#D94E1F",
+    "ui_hover": "#FF6B3B",
+    "ui_disabled": "#666666",
+    "ui_shadow": "#000000"
 }
 
 """

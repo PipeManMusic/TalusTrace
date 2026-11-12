@@ -7,3 +7,4 @@ Contains scene item classes for wires, pins, and devices.
 from .wire import WireItem, GhostWireItem
 from .pin import PinItem
 from .device import DeviceItem
+from .bundle import BundleItem

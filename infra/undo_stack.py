@@ -102,6 +102,7 @@ class UndoStack:
         self._transaction_depth = 0
         self._callbacks = []
         self._context = context
+        self._clean_index = 0  # index into _undo_stack at last save
 
     def subscribe(self, callback):
         """
@@ -139,6 +140,8 @@ class UndoStack:
         Args:
             command (BaseCommand): The command to execute.
         """
+        if self._context is not None:
+            self._context.dirty = True
         command._allow_execute = True
         command.execute()
         command.mark_executed()
@@ -147,18 +150,16 @@ class UndoStack:
         else:
             self._undo_stack.append(command)
             self._redo_stack.clear()
-        if self._context is not None:
-            self._context.dirty = True
 
     def undo(self):
         """Undo the last command on the stack."""
         if not self._undo_stack:
             return
         command = self._undo_stack.pop()
-        command.undo()
         self._redo_stack.append(command)
         if self._context is not None:
-            self._context.dirty = bool(self._undo_stack)
+            self._context.dirty = len(self._undo_stack) != self._clean_index
+        command.undo()
         self._notify('undo')
 
     def redo(self):
@@ -166,16 +167,21 @@ class UndoStack:
         if not self._redo_stack:
             return
         command = self._redo_stack.pop()
-        command.redo()
         self._undo_stack.append(command)
         if self._context is not None:
-            self._context.dirty = True
+            self._context.dirty = len(self._undo_stack) != self._clean_index
+        command.redo()
         self._notify('redo')
 
     def clear(self):
         """Clear undo and redo history."""
         self._undo_stack.clear()
         self._redo_stack.clear()
+        self._clean_index = 0
+
+    def mark_clean(self):
+        """Record the current stack position as the clean (saved) state."""
+        self._clean_index = len(self._undo_stack)
 
     def can_undo(self):
         """Check if there are commands available to undo."""

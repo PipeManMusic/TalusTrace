@@ -47,11 +47,10 @@ def test_wireitem_contact(canvas):
 @pytest.mark.gui
 def test_pinitem_contact(canvas):
     from core.pin import Pin
-    from core.enums import Side
     import uuid
     pin_id = str(uuid.uuid4())
     dev_id = str(uuid.uuid4())
-    pin = Pin(id=pin_id, x=5, y=5, label="P1", side=Side.TOP)
+    pin = Pin(id=pin_id, x=5, y=5, label="P1")
     device = Device(id=dev_id, x=0, y=0, meta={"width_mm": 40, "height_mm": 30}, pins=[pin])
     item = DeviceItem(device)
     canvas.scene.addItem(item)

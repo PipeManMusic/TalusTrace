@@ -125,6 +125,7 @@ class Wire:
     pair_id: Optional[str] = None
     status: str = "UNDEFINED"  # Draft-First default
     signal_name: Optional[str] = None  # Logical signal carried
+    visible: bool = True
 
     @classmethod
     def from_dict(cls, data):
@@ -162,6 +163,7 @@ class Wire:
             signal_name=data.get('signal_name'),
             segment_memberships=segment_memberships,
             path_nodes=data.get('path_nodes', []),
+            visible=data.get('visible', True),
         )
 
     def __post_init__(self):
@@ -193,7 +195,7 @@ class Wire:
             'gauge': self.gauge,
             'type': self.type,
             'diameter_mm': self.diameter_mm,
-            'length_mm': self.length_mm,
+            'length_mm': self.calculated_length_mm,
             'standard_id': self.standard_id,
             'z_index': self.z_index,
             'twisted': self.twisted,
@@ -201,7 +203,8 @@ class Wire:
             'status': self.status,
             'signal_name': self.signal_name,
             'segment_memberships': [s.to_dict() for s in self.segment_memberships],
-            'path_nodes': self.path_nodes
+            'path_nodes': self.path_nodes,
+            'visible': self.visible
         }
         on_wire_serialize.fire(self, d)
         return d
@@ -389,6 +392,24 @@ class Wire:
     # --- Metadata ---
     labels: List[WireLabel] = field(default_factory=list)
     meta: Dict[str, Any] = field(default_factory=dict)
+
+    # --- Computed Length ---
+    @property
+    def calculated_length_mm(self) -> float:
+        """
+        Compute the polyline length of the wire from path_nodes, in mm.
+        Returns 0.0 if fewer than 2 nodes.
+        """
+        nodes = self.path_nodes
+        if not nodes or len(nodes) < 2:
+            return 0.0
+        import math
+        total = 0.0
+        for i in range(len(nodes) - 1):
+            dx = nodes[i + 1][0] - nodes[i][0]
+            dy = nodes[i + 1][1] - nodes[i][1]
+            total += math.sqrt(dx * dx + dy * dy)
+        return total
 
     # --- Spec Compliance & Promotion ---
     def promote_to_specified(self, standard_id: str, gauge: str, color_code: str, diameter_mm: float):

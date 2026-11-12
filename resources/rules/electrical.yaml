@@ -1,7 +1,71 @@
 rules:
-- id: ELEC_001
-  name: Voltage Drop Critical
-  target: wire
-  severity: error
-  check: ((length_mm / 1000) * library.resistance_ohm_m * load_amps) > 1.0
-  message: Voltage drop exceeds 1.0V critical limit
+
+  # ── Wire specification checks ──────────────────
+
+  - id: WIRE_001
+    name: Unspecified Wire Gauge
+    target: wire
+    severity: WARNING
+    description: >
+      Every wire should have a gauge/spec assigned before sign-off.
+    field_check:
+      field: status
+      operator: eq
+      value: "UNDEFINED"
+    message: "Wire has no specification assigned — select a wire spec in the Properties panel."
+
+  - id: WIRE_002
+    name: Missing Standard ID
+    target: wire
+    severity: WARNING
+    description: >
+      Wire is marked SPECIFIED but has no standard_id linking it to the wire library.
+    field_check:
+      field: standard_id
+      operator: empty
+      when:
+        field: status
+        operator: eq
+        value: "SPECIFIED"
+    message: "Wire is SPECIFIED but has no library standard assigned."
+
+  # ── Connectivity checks ─────────────────────────
+
+  # ── Length checks ───────────────────────────────
+
+  - id: LEN_001
+    name: Maximum Wire Length Exceeded
+    target: wire
+    severity: WARNING
+    description: >
+      Wire routed length exceeds 5 000 mm — verify voltage drop
+      and consider upsizing gauge or adding a relay.
+    field_check:
+      field: calculated_length_mm
+      operator: gt
+      value: 5000
+    message: "Wire length exceeds 5 000 mm — check voltage drop and consider upsizing gauge."
+
+  # ── Connectivity checks ─────────────────────────
+
+  - id: CONN_001
+    name: Unconnected Wire End (From)
+    target: wire
+    severity: ERROR
+    description: >
+      Wire must be connected at its source end.
+    field_check:
+      field: from_conn
+      operator: empty
+    message: "Wire has no source connection — attach the 'From' end to a device pin."
+
+  - id: CONN_002
+    name: Unconnected Wire End (To)
+    target: wire
+    severity: ERROR
+    description: >
+      Wire must be connected at its destination end.
+    field_check:
+      field: to_conn
+      operator: empty
+    message: "Wire has no destination connection — attach the 'To' end to a device pin."

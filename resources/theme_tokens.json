@@ -1,13 +1,18 @@
 {
   "colors": {
-    "device_body": "#FDFDFD",
-    "device_outline": "#000000",
-    "pin_fill": "#000000",
-    "pin_label": "#808080",
-    "bundle_standard": "#444444",
-    "bundle_violation": "#FF0000",
-    "grid_minor": "#E0E0E0",
-    "grid_major": "#B0B0B0"
+    "canvas_bg": "#121212",
+    "grid_color": "#2d2d2d",
+    "device_body": "#1e1e1e",
+    "device_outline": "#b0b0b0",
+    "pin_fill": "#e0e0e0",
+    "pin_outline": "#b0b0b0",
+    "pin_label": "#b0b0b0",
+    "bundle_standard": "#D94E1F",
+    "bundle_violation": "#dc3545",
+    "wire_a": "#D94E1F",
+    "wire_b": "#FF6B3B",
+    "grid_minor": "#1e1e1e",
+    "grid_major": "#333333"
   },
   "dimensions": {
     "physical_scale": 20.0

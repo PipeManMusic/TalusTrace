@@ -24,7 +24,7 @@ class WorkbenchController:
         # ...removed debug print...
 
     def test_bundle(self):
-        """Force a bundle calculation and print the results."""
-        from core.logic import BundleEngine
-        # Logic to grab all wires from scene and run engine
-        pass
+        """Force a bundle calculation and return inferred overlap groups."""
+        from core.logic import find_wire_overlaps
+        wires = getattr(self.api.context.harness, 'wires', [])
+        return find_wire_overlaps(wires)

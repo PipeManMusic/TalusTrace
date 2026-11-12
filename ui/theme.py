@@ -59,13 +59,34 @@ class ThemeManager:
         self.colors = {}
         self.user_path = user_path
         self._defaults = {
-            "canvas_bg": "#23272e",
-            "grid_color": "#3a3f4b",
-            "device_body": "#4e5d6c",
-            "device_outline": "#bfc9d1",
+            "canvas_bg": "#121212",
+            "grid_color": "#2d2d2d",
+            "grid_minor": "#1e1e1e",
+            "grid_major": "#333333",
+            "device_body": "#1e1e1e",
+            "device_outline": "#b0b0b0",
             "pin_fill": "#e0e0e0",
-            "bundle_standard": "#8ecae6",
-            "bundle_violation": "#ffb703"
+            "pin_outline": "#b0b0b0",
+            "pin_label": "#b0b0b0",
+            "bundle_standard": "#D94E1F",
+            "bundle_violation": "#dc3545",
+            "wire_a": "#D94E1F",
+            "wire_b": "#FF6B3B",
+            "selection_glow": "#00C8FF",
+            "selection_highlight": "#00B4FF",
+            "elbow_grip": "#FFC800",
+            "segment_grip": "#00C8FF",
+            "ui_bg_dark": "#121212",
+            "ui_bg_light": "#1e1e1e",
+            "ui_surface": "#2d2d2d",
+            "ui_border": "#333333",
+            "ui_text": "#e0e0e0",
+            "ui_text_dim": "#b0b0b0",
+            "ui_text_bright": "#ffffff",
+            "ui_accent": "#D94E1F",
+            "ui_hover": "#FF6B3B",
+            "ui_disabled": "#666666",
+            "ui_shadow": "#000000"
         }
         self._load(self.user_path or "resources/theme_tokens.json")
 

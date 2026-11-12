@@ -28,19 +28,102 @@ class HarnessCanvas(QGraphicsView):
         if hasattr(api, 'handle_drag_enter'):
             accepted = api.handle_drag_enter(event)
             if accepted:
+                self._ensure_drag_ghost(event)
+                self._update_drag_ghost(event)
                 event.acceptProposedAction()
             else:
                 event.ignore()
         else:
             super().dragEnterEvent(event)
 
+    def dragMoveEvent(self, event):
+        """Keep the drag accepted while hovering so Qt delivers the drop.
+
+        Qt only fires ``dropEvent`` if the widget continues to accept the
+        proposed action during ``dragMoveEvent``.  Without this the library
+        drag never completes and only double-click placement works.  While the
+        drag is accepted we also move the ghost preview to follow the cursor.
+        """
+        api = APIManager.get_instance()
+        if hasattr(api, 'handle_drag_enter'):
+            if api.handle_drag_enter(event):
+                self._ensure_drag_ghost(event)
+                self._update_drag_ghost(event)
+                event.acceptProposedAction()
+            else:
+                event.ignore()
+        else:
+            super().dragMoveEvent(event)
+
+    def dragLeaveEvent(self, event):
+        """Remove the ghost preview when the drag leaves the canvas."""
+        self._clear_drag_ghost()
+        super().dragLeaveEvent(event)
+
     def dropEvent(self, event):
         """Forward drop events to APIManager for contract compliance."""
+        self._clear_drag_ghost()
         api = APIManager.get_instance()
         if hasattr(api, 'handle_drop'):
             api.handle_drop(event)
         else:
             super().dropEvent(event)
+
+    # ── Drag ghost preview ───────────────────────────────────────────
+    def _drag_event_scene_pos(self, event):
+        """Map a drag event's viewport position to scene coordinates."""
+        if hasattr(event, 'position'):
+            pt = event.position().toPoint()
+        elif hasattr(event, 'pos'):
+            pt = event.pos()
+        else:
+            from PySide6.QtCore import QPoint
+            pt = QPoint(0, 0)
+        return self.mapToScene(pt)
+
+    def _ensure_drag_ghost(self, event):
+        """Create the translucent ghost DeviceItem for the dragged part once."""
+        if getattr(self, '_drag_ghost', None) is not None:
+            return
+        api = APIManager.get_instance()
+        if not hasattr(api, 'make_drag_ghost_device'):
+            return
+        mime = event.mimeData() if hasattr(event, 'mimeData') else None
+        text = mime.text() if mime and mime.hasText() else ""
+        model = api.make_drag_ghost_device(text)
+        if model is None:
+            return
+        from ui.items.device import DeviceItem
+        ghost = DeviceItem(model, is_ghost=True)
+        ghost.setZValue(2000)
+        self.scene.addItem(ghost)
+        self._drag_ghost = ghost
+
+    def _update_drag_ghost(self, event):
+        """Move the ghost to follow the cursor, snapped to the grid."""
+        ghost = getattr(self, '_drag_ghost', None)
+        if ghost is None:
+            return
+        scene_pos = self._drag_event_scene_pos(event)
+        x, y = scene_pos.x(), scene_pos.y()
+        api = APIManager.get_instance()
+        if hasattr(api, 'settings') and hasattr(api.settings, 'snap'):
+            x = api.settings.snap(x)
+            y = api.settings.snap(y)
+        try:
+            ghost.setPos(x, y)
+        except RuntimeError:
+            self._drag_ghost = None
+
+    def _clear_drag_ghost(self):
+        """Remove the ghost preview from the scene, if present."""
+        ghost = getattr(self, '_drag_ghost', None)
+        if ghost is not None:
+            try:
+                self.scene.removeItem(ghost)
+            except RuntimeError:
+                pass
+            self._drag_ghost = None
 
     def keyPressEvent(self, event):
         """Route Delete key to dispatcher for device/pin removal in headless tests."""
@@ -112,12 +195,24 @@ class HarnessCanvas(QGraphicsView):
         self.setScene(self.scene)
         self.scene.setSceneRect(-5000, -5000, 10000, 10000)
 
+        # Enable drag-and-drop delivery.  Without setAcceptDrops(True) Qt never
+        # routes dropEvent to this widget, so library drags silently fail and
+        # only double-click placement works.  QAbstractScrollArea delivers drag
+        # events to the *viewport* widget, and it only copies the view's
+        # acceptDrops flag to the viewport at construction time (when it was
+        # still False).  We must therefore set it on the viewport explicitly.
+        self.setAcceptDrops(True)
+        self.viewport().setAcceptDrops(True)
+
+        # Ghost preview shown while a library part is dragged over the canvas.
+        self._drag_ghost = None
+
         # Theme
         try:
             from ui.coordinates import THEME_FALLBACK
             self._theme = THEME_FALLBACK
         except Exception:
-            self._theme = {"canvas_bg": "#2E2E2E", "grid_color": "#444444"}
+            self._theme = {"canvas_bg": "#121212", "grid_color": "#2d2d2d"}
 
         # Navigation
         self.setRenderHint(QPainter.Antialiasing)
@@ -128,7 +223,9 @@ class HarnessCanvas(QGraphicsView):
 
         # Visuals
         from PySide6.QtGui import QColor
-        self.setBackgroundBrush(QColor(self._theme.get("canvas_bg", "#2E2E2E")))
+        self.setBackgroundBrush(QColor(self._theme.get("canvas_bg", "#121212")))
+        self.setViewportUpdateMode(QGraphicsView.BoundingRectViewportUpdate)
+        self.setCacheMode(QGraphicsView.CacheBackground)
 
         # Subscribe to model_changed for device deletion
         api = APIManager.get_instance()
@@ -136,9 +233,38 @@ class HarnessCanvas(QGraphicsView):
         if hasattr(api, 'subscribe_to_all'):
             api.subscribe_to_all(self._on_any_event)
 
+    # ── Canonical action categories ──────────────────────────────────
+    # Commands dispatch model_changed with many action strings.  The canvas
+    # only needs four responses: reload the whole scene, add an item, remove
+    # an item, or update an item in-place.  New tools/commands should use one
+    # of the canonical names ("add", "remove", "update") when possible.  If
+    # they invent a new action string, it will be auto-classified here—no
+    # canvas edit required.
+    _RELOAD_ACTIONS  = frozenset({"load", "new", "new_project", "restore_backup", "restore_autosave"})
+    _ADD_ACTIONS     = frozenset({"add", "restore"})
+    _REMOVE_ACTIONS  = frozenset({"remove", "delete"})
+    # Everything with an item/items payload that isn't add/remove is an update.
+    # Explicit membership is optional—unknown actions fall through to update.
+
+    @classmethod
+    def _classify_action(cls, action):
+        """Map any model_changed action string to a canonical category.
+
+        Returns one of: 'reload', 'add', 'remove', 'update', or None.
+        Unknown actions that carry an item payload are treated as 'update'
+        so future tools work without canvas changes.
+        """
+        if action in cls._RELOAD_ACTIONS:
+            return "reload"
+        if action in cls._ADD_ACTIONS:
+            return "add"
+        if action in cls._REMOVE_ACTIONS:
+            return "remove"
+        # Any other action with a payload is an update (safe default)
+        return "update"
+
     def _on_any_event(self, event_type, data):
         """Handle any API event that could affect the canvas rendering."""
-        # Only reload for undo/redo, not for every event
         if not hasattr(self, '_is_reloading'):
             self._is_reloading = False
         if self._is_reloading:
@@ -154,7 +280,8 @@ class HarnessCanvas(QGraphicsView):
                 self._is_reloading = False
         elif event_type == "model_changed":
             action = data.get("action") if isinstance(data, dict) else None
-            if action in ("load", "new", "new_project"):
+            category = self._classify_action(action)
+            if category == "reload":
                 try:
                     self._is_reloading = True
                     api = APIManager.get_instance()
@@ -164,89 +291,162 @@ class HarnessCanvas(QGraphicsView):
                 finally:
                     self._is_reloading = False
             else:
-                self.on_model_changed(data)
+                self.on_model_changed(data, category)
+        elif event_type == "bundle_added":
+            self._handle_bundle_added(data)
+        elif event_type == "bundle_removed":
+            self._handle_bundle_removed(data)
+        elif event_type == "bundle_updated":
+            self._handle_bundle_updated(data)
+        elif event_type == "selection_changed":
+            self._sync_scene_selection(data)
         elif event_type == "settings_changed":
+            from ui.items.pin import PinItem
+            for item in self.scene.items():
+                if isinstance(item, PinItem):
+                    item._apply_size()
             self.viewport().update()
 
-    def on_model_changed(self, data):
+    def _sync_scene_selection(self, data):
+        """Sync QGraphicsItem selection state to match the API SelectionManager."""
+        selected_models = data.get("selection", []) if isinstance(data, dict) else []
+        selected_ids = {getattr(m, 'id', None) for m in selected_models}
+        selected_ids.discard(None)
+        api = APIManager.get_instance()
+        for item in self.scene.items():
+            model = getattr(item, 'model', None)
+            mid = getattr(model, 'id', None) if model else None
+            if mid is None:
+                continue
+            should_be_selected = mid in selected_ids
+            if item.isSelected() != should_be_selected:
+                item.setSelected(should_be_selected)
+
+    def on_model_changed(self, data, category=None):
         """Respond to model changes by updating or removing scene items as needed."""
-        # Only update the scene visually, never mutate model or selection.
         from api.manager import APIManager
         api = APIManager.get_instance()
         action = data.get("action") if isinstance(data, dict) else None
         item = data.get("item") if isinstance(data, dict) else None
-        # Remove scene item when model is deleted
-        if action == "remove" and item is not None:
-            model_id = getattr(item, "id", None)
-            scene_item = api.get_scene_item(model_id)
-            if scene_item is not None:
-                if hasattr(scene_item, "setSelected"):
-                    scene_item.setSelected(False)
-                # Also remove grips if this is a WireItem
-                if hasattr(scene_item, 'elbow_grips'):
-                    grips = list(scene_item.elbow_grips) + list(scene_item.segment_grips)
-                    scene_item.elbow_grips.clear()
-                    scene_item.segment_grips.clear()
-                    for g in grips:
-                        s = g.scene()
-                        if s:
-                            s.removeItem(g)
-                self.scene.removeItem(scene_item)
-                api.unregister_scene_item(model_id)
-        # Add or update scene items for model additions
-        elif action == "add" and item is not None:
-            model_id = getattr(item, "id", None)
-            if model_id and api.get_scene_item(model_id) is None:
-                from core.pin import Pin
-                if isinstance(item, Pin):
-                    parent_device_item = api.get_scene_item(getattr(item, "device_id", None))
-                    if parent_device_item is not None:
-                        from ui.items.pin import PinItem
-                        pin_item = PinItem(item, parent_device_item)
-                        pin_item.setPos(item.x, item.y)
-                        # Ensure the pin is added to the scene
-                        scene_ref = parent_device_item.scene() or self.scene
-                        if scene_ref is not None:
-                            scene_ref.addItem(pin_item)
-                        api.register_scene_item(model_id, pin_item)
-                    return
-                from core.wire import Wire
-                if isinstance(item, Wire):
-                    from ui.items.wire import WireItem
-                    wire_item = WireItem(item)
-                    self.scene.addItem(wire_item)
-                    api.register_scene_item(model_id, wire_item)
-                    return
-                from ui.items.device import DeviceItem
-                device_item = DeviceItem(item)
-                self.scene.addItem(device_item)
-                api.register_scene_item(model_id, device_item)
-                # Register PinItems created by DeviceItem
-                if hasattr(item, 'pins'):
-                    for pin in item.pins:
-                        pin_items = [child for child in device_item.childItems() 
-                                   if hasattr(child, 'model') and hasattr(child.model, 'id') 
-                                   and child.model.id == pin.id]
-                        if pin_items:
-                            api.register_scene_item(pin.id, pin_items[0])
-        # Update scene items when model properties change (includes position moves)
-        elif action in ("update", "move") and item is not None:
-            model_id = getattr(item, "id", None)
+        items = data.get("items") if isinstance(data, dict) else None
+        if category is None:
+            category = self._classify_action(action)
+
+        if category == "remove" and item is not None:
+            self._handle_remove(api, item)
+        elif category == "add" and item is not None:
+            self._handle_add(api, item)
+        elif category == "update" and (item is not None or items is not None):
+            self._handle_update(api, action, item, items)
+
+    # ── Category handlers ─────────────────────────────────────────
+
+    def _handle_remove(self, api, item):
+        """Remove a scene item (and its grips) for a deleted model object."""
+        model_id = getattr(item, "id", None)
+        scene_item = api.get_scene_item(model_id)
+        if scene_item is not None:
+            if hasattr(scene_item, "setSelected"):
+                scene_item.setSelected(False)
+            if hasattr(scene_item, 'elbow_grips'):
+                grips = list(scene_item.elbow_grips) + list(scene_item.segment_grips)
+                scene_item.elbow_grips.clear()
+                scene_item.segment_grips.clear()
+                for g in grips:
+                    s = g.scene()
+                    if s:
+                        s.removeItem(g)
+            self.scene.removeItem(scene_item)
+            api.unregister_scene_item(model_id)
+
+    def _handle_add(self, api, item):
+        """Create and register a scene item for a newly added model object."""
+        model_id = getattr(item, "id", None)
+        if not model_id or api.get_scene_item(model_id) is not None:
+            return
+        from core.pin import Pin
+        if isinstance(item, Pin):
+            parent_device_item = api.get_scene_item(getattr(item, "device_id", None))
+            if parent_device_item is not None:
+                from ui.items.pin import PinItem
+                pin_item = PinItem(item, parent_device_item)
+                pin_item.setPos(item.x, item.y)
+                scene_ref = parent_device_item.scene() or self.scene
+                if scene_ref is not None:
+                    scene_ref.addItem(pin_item)
+                api.register_scene_item(model_id, pin_item)
+            return
+        from core.wire import Wire
+        if isinstance(item, Wire):
+            from ui.items.wire import WireItem
+            wire_item = WireItem(item)
+            self.scene.addItem(wire_item)
+            api.register_scene_item(model_id, wire_item)
+            return
+        from ui.items.device import DeviceItem
+        device_item = DeviceItem(item)
+        self.scene.addItem(device_item)
+        api.register_scene_item(model_id, device_item)
+        if hasattr(item, 'pins'):
+            for pin in item.pins:
+                pin_items = [child for child in device_item.childItems()
+                           if hasattr(child, 'model') and hasattr(child.model, 'id')
+                           and child.model.id == pin.id]
+                if pin_items:
+                    api.register_scene_item(pin.id, pin_items[0])
+
+    def _handle_update(self, api, action, item, items):
+        """Update scene items to reflect model property changes."""
+        update_targets = items if items is not None else [item]
+        for target in update_targets:
+            model_id = getattr(target, "id", None)
             scene_item = api.get_scene_item(model_id)
             if scene_item is not None:
                 if hasattr(scene_item, 'update_from_model'):
                     scene_item.update_from_model()
                 else:
-                    # Update position if the item has x and y coordinates
-                    if hasattr(item, 'x') and hasattr(item, 'y'):
-                        scene_item.setPos(item.x, item.y)
-                    # Update other properties as needed (angle, label, etc.)
-                    if hasattr(item, 'rotation') and hasattr(scene_item, 'rotation'):
-                        scene_item.setRotation(item.rotation)
-            # Update connected wire endpoints when a device or pin moves
-            if action == "move":
-                api._update_connected_wires(item)
-        # For other actions, do nothing (extend as needed)
+                    if hasattr(target, 'x') and hasattr(target, 'y'):
+                        scene_item.setPos(target.x, target.y)
+                    if hasattr(target, 'rotation') and hasattr(scene_item, 'rotation'):
+                        scene_item.setRotation(target.rotation)
+            api._update_connected_wires(target)
+
+    # ── Bundle rendering ─────────────────────────────────────────
+
+    def _wire_lookup(self):
+        """Return a ``wire_id -> Wire`` map for the current harness."""
+        api = APIManager.get_instance()
+        harness = getattr(api.context, 'harness', None)
+        wires = getattr(harness, 'wires', []) if harness is not None else []
+        return {getattr(w, 'id', None): w for w in wires}
+
+    def _handle_bundle_added(self, bundle):
+        """Create and register a BundleItem for a newly emerged bundle."""
+        api = APIManager.get_instance()
+        model_id = getattr(bundle, "id", None)
+        if not model_id or api.get_scene_item(model_id) is not None:
+            return
+        from ui.items.bundle import BundleItem
+        item = BundleItem(bundle, self._wire_lookup())
+        self.scene.addItem(item)
+        api.register_scene_item(model_id, item)
+
+    def _handle_bundle_removed(self, bundle):
+        """Remove the BundleItem for a bundle that no longer exists."""
+        api = APIManager.get_instance()
+        model_id = getattr(bundle, "id", None)
+        scene_item = api.get_scene_item(model_id) if model_id else None
+        if scene_item is not None:
+            self.scene.removeItem(scene_item)
+            api.unregister_scene_item(model_id)
+
+    def _handle_bundle_updated(self, bundle):
+        """Refresh an existing BundleItem's trunk/breakouts after a layout change."""
+        api = APIManager.get_instance()
+        model_id = getattr(bundle, "id", None)
+        scene_item = api.get_scene_item(model_id) if model_id else None
+        if scene_item is not None and hasattr(scene_item, 'update_from_model'):
+            scene_item.update_from_model(bundle, self._wire_lookup())
 
     def drawBackground(self, painter, rect):
         """Draw the background grid with minor and major lines."""
@@ -255,16 +455,16 @@ class HarnessCanvas(QGraphicsView):
         from PySide6.QtGui import QColor, QPen
         from PySide6.QtCore import QLineF
 
-        grid_size = 5.0
+        grid_size = 2.54
         try:
             from api.manager import APIManager
             api = APIManager.get_instance()
-            grid_size = max(getattr(api.settings, 'grid_size_mm', 5.0), 0.5)
+            grid_size = max(getattr(api.settings, 'grid_size_mm', 2.54), 0.5)
         except Exception:
             pass
 
         major_every = 10  # every Nth minor line is a major line
-        base_color = QColor(self._theme.get("grid_color", "#444444"))
+        base_color = QColor(self._theme.get("grid_color", "#2d2d2d"))
 
         # Minor grid pen — faint dots
         minor_color = QColor(base_color)
@@ -340,6 +540,15 @@ class HarnessCanvas(QGraphicsView):
             item = WireItem(wire)
             self.scene.addItem(item)
             api.register_scene_item(wire.id, item)
+        # Bundles (emergent trunk lines under the wires)
+        from infra.bundle_inference import BUNDLING_ENABLED
+        if BUNDLING_ENABLED:
+            from ui.items.bundle import BundleItem
+            wire_lookup = {getattr(w, 'id', None): w for w in getattr(harness, 'wires', [])}
+            for bundle in getattr(harness, 'bundles', []):
+                item = BundleItem(bundle, wire_lookup)
+                self.scene.addItem(item)
+                api.register_scene_item(bundle.id, item)
 
     def zoom_extents(self):
         """Zoom the view to fit all items in the scene with padding."""

@@ -317,3 +317,15 @@ def edit_theme(context):
         dlg.accept()  # Auto-close for tests
     else:
         dlg.exec_()
+
+@register_action("edit.escape")
+def edit_escape(context):
+    """Cancel the active tool and clear the current selection."""
+    api = APIManager.get_instance()
+    # Reset to the default select tool
+    if api.tool_manager and api.tool_manager.active_tool:
+        select_tool = api.tool_manager.get_tool('select')
+        if select_tool and api.tool_manager.active_tool is not select_tool:
+            api.tool_manager.set_tool('select')
+    # Clear selection
+    api.clear_selection()

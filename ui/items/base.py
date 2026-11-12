@@ -29,7 +29,11 @@ class SelectableItemMixin:
         """Custom itemChange handler for selection and grid snapping."""
         # Grid Snapping (in MM) for ghost items only
         if change == QGraphicsItem.ItemPositionChange and self.scene() and self.is_ghost:
-            grid = 5.0 # Global grid setting
+            try:
+                from api.manager import APIManager
+                grid = APIManager.get_instance().settings.grid_size_mm
+            except Exception:
+                grid = 2.54
             new_pos = value
             x = round(new_pos.x() / grid) * grid
             y = round(new_pos.y() / grid) * grid
@@ -52,9 +56,10 @@ class SelectableItemMixin:
     def update_visual_state(self):
         """Update the item's visual state based on selection and ghost status."""
         if self.isSelected() and not self.is_ghost:
+            from ui.coordinates import THEME_FALLBACK
             effect = QGraphicsDropShadowEffect()
             effect.setBlurRadius(15)
-            effect.setColor(QColor(0, 200, 255))
+            effect.setColor(QColor(THEME_FALLBACK["selection_glow"]))
             effect.setOffset(0, 0)
             self.setGraphicsEffect(effect)
         else:

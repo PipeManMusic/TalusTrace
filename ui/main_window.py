@@ -26,8 +26,11 @@ class MainWindow(QMainWindow):
         """
         from api.actions import register_action
 
-        # Stub for coverage — not defined in api/commands/
-        register_action("tool.measure")(lambda ctx: None)
+        # Activate the measure tool (defined in tools/measure_tool.py and
+        # registered on the ToolManager in APIManager).
+        register_action("tool.measure")(
+            lambda ctx: self.api.tool_manager.set_tool("measure")
+        )
 
     def activate_device_wizard(self):
         """Open the device wizard dialog and handle completion."""
@@ -112,8 +115,9 @@ class MainWindow(QMainWindow):
         self.register_panel_toggles()
         self.register_toolbar_commands()
 
-        # 6. Subscribe to model_changed for dirty title indicator
+        # 6. Subscribe to model_changed and state_changed for dirty title indicator
         self.api.subscribe("model_changed", self._on_model_changed)
+        self.api.subscribe("state_changed", self._on_state_changed)
 
         # 7. Restore State (if saved)
         self._restore_state()
@@ -191,6 +195,10 @@ class MainWindow(QMainWindow):
 
     def _on_model_changed(self, data):
         """Update title bar dirty indicator when the model changes."""
+        self.update_title(is_dirty=self.api.context.is_dirty)
+
+    def _on_state_changed(self, data):
+        """Update title bar dirty indicator when state changes (e.g. save)."""
         self.update_title(is_dirty=self.api.context.is_dirty)
 
     def closeEvent(self, event):

@@ -16,17 +16,15 @@ def is_valid_uuid(val):
     uuid_regex = re.compile(r"^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
     return isinstance(val, str) and bool(uuid_regex.match(val))
 from dataclasses import dataclass, field
-from core.enums import Side
 from typing import Optional
 
 
 @dataclass
 class Pin:
     """
-    Represents a device pin with coordinates, side, metadata, and UUID.
+    Represents a device pin with coordinates, metadata, and UUID.
     Supports serialization and validation.
     """
-    side: Side = Side.TOP
     x: float = 0.0
     y: float = 0.0
     head: Optional[list[float]] = None
@@ -56,7 +54,6 @@ class Pin:
             dict: Dictionary representation of the pin.
         """
         return {
-            'side': self.side.value if hasattr(self.side, 'value') else self.side,
             'x': self.x,
             'y': self.y,
             'head': self.head,
@@ -77,21 +74,9 @@ class Pin:
         Returns:
             Pin: Instance created from the dictionary.
         """
-        from core.enums import Side
-        side = data.get('side', Side.TOP)
-        if isinstance(side, str):
-            # Accept both enum names ("TOP") and values ("top")
-            try:
-                side = Side[side]
-            except KeyError:
-                try:
-                    side = Side(side)
-                except ValueError:
-                    side = Side.TOP
         return cls(
-            side=side,
-            x=data.get('x', 0.0),
-            y=data.get('y', 0.0),
+            x=round(data.get('x', 0.0), 4),
+            y=round(data.get('y', 0.0), 4),
             head=data.get('head'),
             tail=data.get('tail'),
             device_id=data.get('device_id'),

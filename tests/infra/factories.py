@@ -7,7 +7,6 @@ from core.wire import Wire, WireSegment
 from core.device import Device
 from core.pin import Pin
 from core.harness import Harness
-from core.enums import Side
 import uuid
 
 

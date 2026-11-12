@@ -1,66 +1,208 @@
 wires:
-  # ... (Keep existing TXL definitions if needed) ...
 
-  # --- DIN 72551-6 / ISO 6722 (FLRY-B Thin Wall) ---
+  # ──────────────────────────────────────────────────
+  # SAE J1128 / GPT — Standard Automotive Primary Wire
+  # Common North American automotive wire gauges
+  # Colors follow DIN 72551 color code conventions
+  # ──────────────────────────────────────────────────
+
+  GPT-22:
+    label: "22 AWG (0.34mm²)"
+    description: "Low-current signals, sensors, ECU data lines, LED indicators."
+    family: SAE J1128 GPT
+    gauge: 22 AWG
+    cross_section_mm2: 0.34
+    od_mm: 1.60
+    resistance_ohm_m: 0.0530
+    max_amps: 5
+    weight_g_m: 5.5
+    color_code: vi    # violett — signal/data
+    color_hex: "#8B008B"
+
+  GPT-20:
+    label: "20 AWG (0.52mm²)"
+    description: "Instrument cluster, relay triggers, light-duty sensors."
+    family: SAE J1128 GPT
+    gauge: 20 AWG
+    cross_section_mm2: 0.52
+    od_mm: 1.85
+    resistance_ohm_m: 0.0339
+    max_amps: 7.5
+    weight_g_m: 7.0
+    color_code: gr    # grau — instruments
+    color_hex: "#808080"
+
+  GPT-18:
+    label: "18 AWG (0.82mm²)"
+    description: "Marker lights, turn signals, interior accessories."
+    family: SAE J1128 GPT
+    gauge: 18 AWG
+    cross_section_mm2: 0.82
+    od_mm: 2.15
+    resistance_ohm_m: 0.0210
+    max_amps: 10
+    weight_g_m: 10.5
+    color_code: gn    # grün — lighting
+    color_hex: "#008000"
+
+  GPT-16:
+    label: "16 AWG (1.31mm²)"
+    description: "Headlights, horns, fuel pump, wipers, brake lights."
+    family: SAE J1128 GPT
+    gauge: 16 AWG
+    cross_section_mm2: 1.31
+    od_mm: 2.60
+    resistance_ohm_m: 0.0132
+    max_amps: 15
+    weight_g_m: 15.0
+    color_code: bl    # blau — headlights/wipers
+    color_hex: "#0000FF"
+
+  GPT-14:
+    label: "14 AWG (2.08mm²)"
+    description: "High-beam headlights, cooling fans, heater blower."
+    family: SAE J1128 GPT
+    gauge: 14 AWG
+    cross_section_mm2: 2.08
+    od_mm: 3.10
+    resistance_ohm_m: 0.0083
+    max_amps: 20
+    weight_g_m: 23.0
+    color_code: ge    # gelb — high-beam/fans
+    color_hex: "#FFD700"
+
+  GPT-12:
+    label: "12 AWG (3.31mm²)"
+    description: "Electric windows, seat motors, high-current accessories."
+    family: SAE J1128 GPT
+    gauge: 12 AWG
+    cross_section_mm2: 3.31
+    od_mm: 3.70
+    resistance_ohm_m: 0.0052
+    max_amps: 25
+    weight_g_m: 35.0
+    color_code: or    # orange — accessories
+    color_hex: "#FF8C00"
+
+  GPT-10:
+    label: "10 AWG (5.26mm²)"
+    description: "Alternator output, main power distribution, starter solenoid feed."
+    family: SAE J1128 GPT
+    gauge: 10 AWG
+    cross_section_mm2: 5.26
+    od_mm: 4.60
+    resistance_ohm_m: 0.0033
+    max_amps: 30
+    weight_g_m: 54.0
+    color_code: rt    # rot — main power
+    color_hex: "#FF0000"
+
+  GPT-8:
+    label: "8 AWG (8.37mm²)"
+    description: "Battery cables, high-current charging, winch power."
+    family: SAE J1128 GPT
+    gauge: 8 AWG
+    cross_section_mm2: 8.37
+    od_mm: 5.60
+    resistance_ohm_m: 0.0021
+    max_amps: 40
+    weight_g_m: 85.0
+    color_code: br    # braun — battery/heavy power
+    color_hex: "#8B4513"
+
+  # ──────────────────────────────────────────────────
+  # DIN 72551-6 / ISO 6722 — FLRY-B Thin Wall
+  # European metric automotive wire
+  # Colors per DIN 72551 standard color code
+  # ──────────────────────────────────────────────────
+
   FLRY-0.35:
     label: "0.35mm² Signal (22 AWG equiv)"
     description: "Low current sensor signals, ECU logic, and LED indicators."
     family: DIN 72551 FLRY-B
-    gauge: 0.35mm2
+    gauge: 0.35mm²
+    cross_section_mm2: 0.35
     od_mm: 1.30
     resistance_ohm_m: 0.0520
+    max_amps: 5
     weight_g_m: 5.0
-    
+    color_code: vi    # violett — signal/data
+    color_hex: "#8B008B"
+
   FLRY-0.50:
     label: "0.50mm² General (20 AWG equiv)"
     description: "Standard relay triggers, sensors, and instrument cluster wiring."
     family: DIN 72551 FLRY-B
-    gauge: 0.50mm2
+    gauge: 0.50mm²
+    cross_section_mm2: 0.50
     od_mm: 1.60
     resistance_ohm_m: 0.0371
+    max_amps: 7
     weight_g_m: 6.6
+    color_code: gr    # grau — general/instruments
+    color_hex: "#808080"
 
   FLRY-0.75:
     label: "0.75mm² Lighting (18 AWG equiv)"
     description: "Side markers, license plate lights, and interior dome lights."
     family: DIN 72551 FLRY-B
-    gauge: 0.75mm2
+    gauge: 0.75mm²
+    cross_section_mm2: 0.75
     od_mm: 1.90
     resistance_ohm_m: 0.0247
+    max_amps: 10
     weight_g_m: 9.0
+    color_code: gn    # grün — lighting
+    color_hex: "#008000"
 
   FLRY-1.0:
     label: "1.0mm² Power/Signal (17 AWG equiv)"
     description: "Turn signals, brake lights, and standard 10A fused circuits."
     family: DIN 72551 FLRY-B
-    gauge: 1.0mm2
+    gauge: 1.0mm²
+    cross_section_mm2: 1.0
     od_mm: 2.10
     resistance_ohm_m: 0.0185
+    max_amps: 13
     weight_g_m: 11.0
+    color_code: ge    # gelb — turn signals/brake
+    color_hex: "#FFD700"
 
   FLRY-1.5:
     label: "1.5mm² High Load (15 AWG equiv)"
     description: "Headlights (Low/High Beam), Wipers, Fuel Pump, and Horn."
     family: DIN 72551 FLRY-B
-    gauge: 1.5mm2
+    gauge: 1.5mm²
+    cross_section_mm2: 1.5
     od_mm: 2.40
     resistance_ohm_m: 0.0127
+    max_amps: 17
     weight_g_m: 16.0
+    color_code: bl    # blau — headlights/wipers
+    color_hex: "#0000FF"
 
   FLRY-2.5:
     label: "2.5mm² Main Power (13 AWG equiv)"
     description: "Heater blowers, radiator fans, and main fuse box feeds."
     family: DIN 72551 FLRY-B
-    gauge: 2.5mm2
+    gauge: 2.5mm²
+    cross_section_mm2: 2.5
     od_mm: 3.00
     resistance_ohm_m: 0.0076
+    max_amps: 25
     weight_g_m: 26.0
+    color_code: rt    # rot — main power
+    color_hex: "#FF0000"
 
   FLRY-4.0:
     label: "4.0mm² Heavy Power (11 AWG equiv)"
     description: "Alternator charging, main battery distribution."
     family: DIN 72551 FLRY-B
-    gauge: 4.0mm2
+    gauge: 4.0mm²
+    cross_section_mm2: 4.0
     od_mm: 3.70
     resistance_ohm_m: 0.0047
+    max_amps: 32
     weight_g_m: 42.0
+    color_code: br    # braun — battery/heavy power
+    color_hex: "#8B4513"

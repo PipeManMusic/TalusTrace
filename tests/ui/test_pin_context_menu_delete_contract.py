@@ -31,7 +31,7 @@ def test_pin_context_menu_delete_removes_pin(qtbot):
     device_id = str(uuid.uuid4())
     pin_id = str(uuid.uuid4())
     device = Device(id=device_id, x=100, y=100, meta={"width_mm": 40, "height_mm": 30}, pins=[])
-    pin = Pin(id=pin_id, x=10, y=10, label="TestPin", side=0, device_id=device_id)
+    pin = Pin(id=pin_id, x=10, y=10, label="TestPin", device_id=device_id)
     # Use APIManager contract method to add device
     api.add_device(device)
     # Always reference the device from the harness after adding

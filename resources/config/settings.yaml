@@ -1,3 +1,4 @@
 workspace:
-  grid_size_mm: 2.54
+  grid_size_mm: 2.5
+  pin_size_mm: 2.5
   pixels_per_inch: 96.0

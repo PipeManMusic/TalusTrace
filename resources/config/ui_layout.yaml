@@ -5,8 +5,13 @@ menubar:
         label: "file.new"
       - command: "file.open"
         label: "file.open"
+      - type: "recent_files"
+        label: "Open Recent"
       - command: "file.save"
         label: "file.save"
+      - separator: true
+      - command: "device.create_wizard"
+        label: "device.create_wizard"
       - separator: true
       - command: "file.export_bom"
         label: "file.export_bom"
@@ -77,6 +82,8 @@ context_menu:
     - command: "device.add_pin"
     - separator: true
     - command: "edit.rotate_cw"
+    - separator: true
+    - command: "device.promote"
     - separator: true
     - command: "edit.delete"
       label: "Delete Item"

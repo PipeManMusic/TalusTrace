@@ -158,6 +158,9 @@ class InputSystem(QObject):
             logging.debug(f"[INPUT_SYSTEM][MOUSE_PRESS] event.button={btn_val} (type={type(btn_val)}), orig_event.button={orig_btn_val} (type={type(orig_btn_val)}) Qt.RightButton={Qt.RightButton}")
             is_right_click = btn_val == Qt.RightButton or orig_btn_val == Qt.RightButton
             if is_right_click:
+                # Interactive grips handle their own right-click (e.g. elbow delete)
+                if item is not None and getattr(item, '_interactive_grip', False):
+                    return False
                 # Select the right-clicked item so context menu commands apply to it
                 if item is not None and hasattr(item, 'model'):
                     model_id = getattr(item.model, 'id', None)

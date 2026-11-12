@@ -43,7 +43,7 @@ def test_wire_library_loading_and_structure():
     assert "0.75mm" in data["label"], "Label content does not match expected format."
     
     # Check for technical specs
-    assert data["gauge"] == "0.75mm2"
+    assert data["gauge"] == "0.75mm²"
     assert data["family"] == "DIN 72551 FLRY-B"
 
 def test_wire_library_fallback_safety():

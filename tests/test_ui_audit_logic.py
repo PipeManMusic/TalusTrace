@@ -11,7 +11,7 @@ def test_audit_selection_dispatch():
     controller = AuditController()
     mock_violation = {"target_id": "wire_55", "message": "High Current"}
     
-    with patch("api.manager.APIManager.dispatch") as mock_dispatch:
+    with patch.object(controller.api, 'dispatch') as mock_dispatch:
         # Simulate selecting an item (logic only)
         controller.select_violation(mock_violation)
         
